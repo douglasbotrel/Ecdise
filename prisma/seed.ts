@@ -243,7 +243,14 @@ async function main() {
   const senhaHash = await bcrypt.hash('admin@ecdise2024', 10)
   const admin = await prisma.usuario.upsert({
     where: { email: 'admin@ecdise.com' },
-    update: {},
+    update: {
+      nome: 'Administrador',
+      senha: senhaHash,
+      cargo: 'Administrador do Sistema',
+      role: 'ADMIN',
+      departamento: 'GESTAO_GERAL',
+      ativo: true,
+    },
     create: {
       nome: 'Administrador',
       email: 'admin@ecdise.com',
