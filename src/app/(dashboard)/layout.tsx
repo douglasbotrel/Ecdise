@@ -32,6 +32,7 @@ export default async function DashboardLayout({
       cargo: true,
       role: true,
       departamento: true,
+      modulosAcesso: true,
       ativo: true,
     },
   })

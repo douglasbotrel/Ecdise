@@ -74,10 +74,17 @@ interface SidebarProps {
   onToggle: () => void
   mobileOpen?: boolean
   onMobileClose?: () => void
+  modulosPermitidos?: string[] | null  // null = sem restrição (admin)
 }
 
-export function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose }: SidebarProps) {
+export function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose, modulosPermitidos }: SidebarProps) {
   const pathname = usePathname()
+
+  // null = sem restrição; array vazio ou preenchido = filtrar
+  function podeVer(modulo: string) {
+    if (modulosPermitidos === null || modulosPermitidos === undefined) return true
+    return modulosPermitidos.includes(modulo)
+  }
 
   return (
     <>
@@ -125,7 +132,7 @@ export function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose }: Side
 
         {/* Navigation */}
         <nav className="flex-1 overflow-y-auto py-4 px-2 space-y-1">
-          {navItems.map((item) => {
+          {navItems.filter(item => podeVer(item.modulo)).map((item) => {
             const Icon = item.icon
             const isActive = pathname === item.href || pathname.startsWith(item.href + '/')
 
@@ -167,7 +174,7 @@ export function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose }: Side
 
         {/* Config items */}
         <div className="px-2 py-3 border-t border-gray-100 space-y-1">
-          {configItems.map((item) => {
+          {configItems.filter(item => podeVer(item.modulo)).map((item) => {
             const Icon = item.icon
             const isActive = pathname === item.href || pathname.startsWith(item.href + '/')
             return (

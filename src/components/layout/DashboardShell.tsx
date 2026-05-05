@@ -12,6 +12,7 @@ interface Usuario {
   role: string
   departamento: string
   cargo?: string | null
+  modulosAcesso?: string | null
 }
 
 export function DashboardShell({
@@ -21,6 +22,13 @@ export function DashboardShell({
   usuario: Usuario
   children: React.ReactNode
 }) {
+  // Parse módulos: ADMIN/GESTOR_GERAL veem tudo; demais filtram pelo campo
+  const modulosPermitidos: string[] | null =
+    ['ADMIN', 'GESTOR_GERAL'].includes(usuario.role)
+      ? null  // null = sem restrição
+      : usuario.modulosAcesso
+        ? JSON.parse(usuario.modulosAcesso)
+        : null
   const [collapsed, setCollapsed] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
 
@@ -42,6 +50,7 @@ export function DashboardShell({
         onToggle={handleToggleSidebar}
         mobileOpen={mobileOpen}
         onMobileClose={() => setMobileOpen(false)}
+        modulosPermitidos={modulosPermitidos}
       />
       <div className={cn(
         'flex flex-col min-h-screen transition-all duration-300',
