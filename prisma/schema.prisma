@@ -11,7 +11,7 @@ datasource db {
 
 // ============================================================
 // USUÁRIOS E PERMISSÕES
-// Role: ADMIN | GESTOR_GERAL | GESTOR_ADMINISTRATIVO | GESTOR_OPERACIONAL | GESTOR_CAMPO | SUPERVISOR | ANALISTA | TECNICO_CAMPO
+// Role: ADMIN | GESTOR_GERAL | GESTOR_ADMINISTRATIVO | GESTOR_OPERACIONAL | GESTOR_CAMPO | SUPERVISOR | ANALISTA | ANALISTA_RAPIDO | TECNICO_CAMPO
 // Departamento: GESTAO_GERAL | COMERCIAL | FINANCEIRO | OPERACIONAL_AMBIENTAL | OPERACIONAL_REGULARIZACAO | GESTAO_CAMPO | CONTRATOS | BI
 // ============================================================
 
@@ -29,9 +29,10 @@ model Usuario {
   criadoEm    DateTime @default(now())
   atualizadoEm DateTime @updatedAt
 
-  projetosResponsavel Projeto[]   @relation("ProjetoResponsavel")
-  projetosSupervisor  Projeto[]   @relation("ProjetoSupervisor")
-  tarefasResponsavel  Tarefa[]    @relation("TarefaResponsavel")
+  projetosResponsavel    Projeto[]   @relation("ProjetoResponsavel")
+  projetosSupervisor     Projeto[]   @relation("ProjetoSupervisor")
+  projetosAnalistaRapido Projeto[]   @relation("ProjetoAnalistaRapido")
+  tarefasResponsavel     Tarefa[]    @relation("TarefaResponsavel")
   vistorias           Vistoria[]  @relation("VistoriaResponsavel")
   documentosUpload    Documento[]
   notificacoes        Notificacao[]
@@ -70,6 +71,7 @@ model Cliente {
 // PROJETOS
 // statusComercial: RECEBIDO | EM_ANALISE | PROPOSTA_ENVIADA | ACEITO | RECUSADO | AGUARDANDO_DOCS
 // statusOperacional: NAO_INICIADO | EM_ANDAMENTO | EM_CAMPO | AGUARDANDO_INFO | EM_REVISAO | CONCLUIDO | CANCELADO
+// etapaPipeline: SOLICITACAO | EM_ANALISE_RAPIDA | ANALISE_CONCLUIDA | EM_NEGOCIACAO | PROPOSTA_ACEITA | AGUARDANDO_CONTRATO | EM_CONTRATO | AGUARDANDO_SINAL | OPERACIONAL | EM_EXECUCAO | CONCLUIDO | CANCELADO
 // ============================================================
 
 model Projeto {
@@ -96,12 +98,23 @@ model Projeto {
   dataConclusao     DateTime?
   responsavelId     String?
   supervisorId      String?
+  analistaRapidoId  String?
+  // Pipeline de fluxo de trabalho
+  etapaPipeline        String   @default("SOLICITACAO")
+  servicosRecomendados String?  // JSON: ["Licenciamento Ambiental", "Outorga"]
+  observacoesAnalise   String?  // Notas do analista de serviço rápido
+  servicosContratados  String?  // JSON: serviços que o cliente fechou
+  valorSinal           Float?
+  valorPrestacao       Float?
+  numeroPrestacoes     Int?
+  gestorResponsavelId  String?  // gestor designado após fechamento
   criadoEm         DateTime @default(now())
   atualizadoEm     DateTime @updatedAt
 
-  cliente     Cliente          @relation(fields: [clienteId], references: [id])
-  responsavel Usuario?         @relation("ProjetoResponsavel", fields: [responsavelId], references: [id])
-  supervisor  Usuario?         @relation("ProjetoSupervisor", fields: [supervisorId], references: [id])
+  cliente           Cliente   @relation(fields: [clienteId], references: [id])
+  responsavel       Usuario?  @relation("ProjetoResponsavel", fields: [responsavelId], references: [id])
+  supervisor        Usuario?  @relation("ProjetoSupervisor", fields: [supervisorId], references: [id])
+  analistaRapido    Usuario?  @relation("ProjetoAnalistaRapido", fields: [analistaRapidoId], references: [id])
   contrato    Contrato?
   tarefas     Tarefa[]
   vistorias   Vistoria[]

@@ -9,8 +9,9 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url)
     const statusComercial = searchParams.get('statusComercial')
-    const statusOperacional = searchParams.get('statusOperacional')
+    const etapaPipeline = searchParams.get('etapaPipeline')
     const clienteId = searchParams.get('clienteId')
+    const analistaRapidoId = searchParams.get('analistaRapidoId')
     const responsavelId = searchParams.get('responsavelId')
     const search = searchParams.get('search')
     const limit = parseInt(searchParams.get('limit') || '50')
@@ -18,8 +19,9 @@ export async function GET(request: NextRequest) {
 
     const where: any = {}
     if (statusComercial) where.statusComercial = statusComercial
-    if (statusOperacional) where.statusOperacional = statusOperacional
+    if (etapaPipeline) where.etapaPipeline = etapaPipeline
     if (clienteId) where.clienteId = clienteId
+    if (analistaRapidoId) where.analistaRapidoId = analistaRapidoId
     if (responsavelId) where.responsavelId = responsavelId
     if (search) {
       where.OR = [
@@ -30,8 +32,10 @@ export async function GET(request: NextRequest) {
       ]
     }
 
-    // Restrição por departamento
-    if (user.role === 'ANALISTA' || user.role === 'TECNICO_CAMPO') {
+    // Restrição por role: analista rápido vê só os seus
+    if (user.role === 'ANALISTA_RAPIDO') {
+      where.analistaRapidoId = user.id
+    } else if (user.role === 'ANALISTA' || user.role === 'TECNICO_CAMPO') {
       where.responsavelId = user.id
     }
 
@@ -42,6 +46,7 @@ export async function GET(request: NextRequest) {
           cliente: { select: { id: true, nome: true, cpfCnpj: true } },
           responsavel: { select: { id: true, nome: true } },
           supervisor: { select: { id: true, nome: true } },
+          analistaRapido: { select: { id: true, nome: true } },
           contrato: { select: { id: true, statusContrato: true, valorTotal: true } },
           _count: { select: { tarefas: true, vistorias: true, documentos: true } },
         },
@@ -67,15 +72,15 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const {
       clienteId, tipoServico, descricao, imovelNome, imovelEndereco,
-      municipio, estado, car, areaHectares, valorProposto, tipoContrato,
-      observacoes, responsavelId, supervisorId
+      municipio, estado, car, areaHectares, valorProposto,
+      observacoes, analistaRapidoId,
     } = body
 
     if (!clienteId || !tipoServico) {
       return NextResponse.json({ error: 'Cliente e tipo de serviço são obrigatórios' }, { status: 400 })
     }
 
-    // Gera código sequencial
+    // Código sequencial
     const count = await prisma.projeto.count()
     const codigo = `PRJ-${String(count + 1).padStart(4, '0')}`
 
@@ -92,27 +97,38 @@ export async function POST(request: NextRequest) {
         car,
         areaHectares: areaHectares ? parseFloat(areaHectares) : null,
         valorProposto: valorProposto ? parseFloat(valorProposto) : null,
-        tipoContrato,
         observacoes,
-        responsavelId: responsavelId || null,
-        supervisorId: supervisorId || null,
+        analistaRapidoId: analistaRapidoId || null,
+        etapaPipeline: 'SOLICITACAO',
         statusComercial: 'RECEBIDO',
         statusOperacional: 'NAO_INICIADO',
       },
       include: {
         cliente: true,
-        responsavel: { select: { id: true, nome: true } },
+        analistaRapido: { select: { id: true, nome: true, email: true } },
       },
     })
 
-    // Log
+    // Notifica o analista rápido designado
+    if (analistaRapidoId) {
+      await prisma.notificacao.create({
+        data: {
+          usuarioId: analistaRapidoId,
+          titulo: 'Nova solicitação para análise',
+          mensagem: `Projeto ${codigo} — ${imovelNome || tipoServico} (${municipio || 'sem município'}) aguarda sua análise técnica rápida.`,
+          tipo: 'info',
+          link: `/comercial`,
+        },
+      })
+    }
+
     await prisma.log.create({
       data: {
         usuarioId: user.id,
         acao: 'CRIAR_PROJETO',
         entidade: 'Projeto',
         entidadeId: projeto.id,
-        detalhes: `Projeto ${codigo} criado`,
+        detalhes: `Projeto ${codigo} criado — etapa: SOLICITACAO`,
       },
     })
 
