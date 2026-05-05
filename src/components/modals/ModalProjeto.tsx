@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { toast } from 'sonner'
-import { X, Loader2, Upload, FileText, Trash2, CheckCircle, ArrowRight } from 'lucide-react'
+import { X, Loader2, Upload, FileText, Trash2, CheckCircle, ArrowRight, DollarSign } from 'lucide-react'
 
 const UFS = ['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO']
 
@@ -10,10 +10,7 @@ const ETAPA_LABELS: Record<string, string> = {
   SOLICITACAO:         'Nova Solicitação',
   EM_ANALISE_RAPIDA:   'Em Análise Rápida',
   ANALISE_CONCLUIDA:   'Análise Concluída — aguard. validação ADM',
-  EM_NEGOCIACAO:       'Em Negociação com Cliente',
-  PROPOSTA_ACEITA:     'Proposta Aceita — aguard. contrato',
   AGUARDANDO_CONTRATO: 'Aguardando Elaboração de Contrato',
-  EM_CONTRATO:         'Contrato em elaboração',
   AGUARDANDO_SINAL:    'Aguardando Pagamento do Sinal',
   OPERACIONAL:         'Aguardando atribuição operacional',
   EM_EXECUCAO:         'Em Execução',
@@ -21,13 +18,22 @@ const ETAPA_LABELS: Record<string, string> = {
   CANCELADO:           'Cancelado',
 }
 
+const TIPOS_CONTRATO = [
+  'Prestação de Serviços',
+  'Licenciamento Ambiental',
+  'Regularização Fundiária',
+  'Consultoria Ambiental',
+  'Monitoramento Ambiental',
+  'Recuperação de Área Degradada',
+  'Outros',
+]
+
 interface ModalProjetoProps {
   open: boolean
   onClose: () => void
   projeto?: any
   onSalvo: () => void
-  // Modo de ação específico por etapa
-  modoAcao?: 'criar' | 'analise' | 'validacao' | 'contrato_info' | 'operacional' | 'execucao' | 'editar'
+  modoAcao?: 'criar' | 'analise' | 'validacao' | 'contrato_info' | 'financeiro' | 'operacional' | 'execucao' | 'editar'
 }
 
 export function ModalProjeto({ open, onClose, projeto, onSalvo, modoAcao = 'editar' }: ModalProjetoProps) {
@@ -39,12 +45,13 @@ export function ModalProjeto({ open, onClose, projeto, onSalvo, modoAcao = 'edit
   const [arquivos, setArquivos] = useState<{ nome: string; url: string; uploading?: boolean }[]>([])
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  // Determina o modo real baseado na etapa do projeto se não especificado
+  // Auto-detect mode from pipeline stage when modoAcao='editar'
   const modoReal = !projeto ? 'criar' : (modoAcao !== 'editar' ? modoAcao :
-    projeto.etapaPipeline === 'EM_ANALISE_RAPIDA' ? 'analise' :
-    projeto.etapaPipeline === 'ANALISE_CONCLUIDA' ? 'validacao' :
-    projeto.etapaPipeline === 'PROPOSTA_ACEITA' ? 'contrato_info' :
-    projeto.etapaPipeline === 'OPERACIONAL' ? 'operacional' :
+    projeto.etapaPipeline === 'EM_ANALISE_RAPIDA'   ? 'analise'      :
+    projeto.etapaPipeline === 'ANALISE_CONCLUIDA'   ? 'validacao'    :
+    projeto.etapaPipeline === 'AGUARDANDO_CONTRATO' ? 'contrato_info':
+    projeto.etapaPipeline === 'AGUARDANDO_SINAL'    ? 'financeiro'   :
+    projeto.etapaPipeline === 'OPERACIONAL'         ? 'operacional'  :
     'editar'
   )
 
@@ -57,10 +64,15 @@ export function ModalProjeto({ open, onClose, projeto, onSalvo, modoAcao = 'edit
     analistaRapidoId: '',
     // Análise técnica rápida
     observacoesAnalise: '', servicosRecomendados: [] as string[],
-    // Validação / negociação ADM
+    // Validação ADM
     servicosContratados: [] as string[], valorSinal: '', valorPrestacao: '', numeroPrestacoes: '',
+    gestorResponsavelId: '', supervisorId: '',
+    // Contrato (setor de contratos)
+    tipoContrato: '', observacoesContrato: '', dataAssinaturaContrato: '', dataVencimentoContrato: '',
+    // Financeiro (registro de pagamento)
+    dataPagamento: '', formaPagamento: '',
     // Operacional
-    responsavelId: '', supervisorId: '', gestorResponsavelId: '', dataPrazo: '',
+    responsavelId: '', dataPrazo: '',
   })
 
   useEffect(() => {
@@ -68,10 +80,10 @@ export function ModalProjeto({ open, onClose, projeto, onSalvo, modoAcao = 'edit
       loadDados()
       if (projeto) {
         const srec = projeto.servicosRecomendados ? JSON.parse(projeto.servicosRecomendados) : []
-        const scon = projeto.servicosContratados ? JSON.parse(projeto.servicosContratados) : []
-        setForm({
+        const scon = projeto.servicosContratados  ? JSON.parse(projeto.servicosContratados)  : []
+        setForm(prev => ({
+          ...prev,
           clienteId: projeto.clienteId || '',
-          clienteNome: '', clienteCpfCnpj: '', clienteEmail: '', clienteTelefone: '',
           tipoServico: projeto.tipoServico || '',
           descricao: projeto.descricao || '',
           imovelNome: projeto.imovelNome || '',
@@ -88,12 +100,19 @@ export function ModalProjeto({ open, onClose, projeto, onSalvo, modoAcao = 'edit
           valorSinal: projeto.valorSinal?.toString() || '',
           valorPrestacao: projeto.valorPrestacao?.toString() || '',
           numeroPrestacoes: projeto.numeroPrestacoes?.toString() || '',
-          responsavelId: projeto.responsavelId || '',
-          supervisorId: projeto.supervisorId || '',
           gestorResponsavelId: projeto.gestorResponsavelId || '',
+          supervisorId: projeto.supervisorId || '',
+          tipoContrato: projeto.contrato?.tipoContrato || '',
+          observacoesContrato: projeto.contrato?.observacoes || '',
+          dataAssinaturaContrato: projeto.contrato?.dataAssinatura
+            ? new Date(projeto.contrato.dataAssinatura).toISOString().split('T')[0] : '',
+          dataVencimentoContrato: projeto.contrato?.dataVencimento
+            ? new Date(projeto.contrato.dataVencimento).toISOString().split('T')[0] : '',
+          dataPagamento: projeto.dataAprovacao
+            ? new Date(projeto.dataAprovacao).toISOString().split('T')[0] : '',
+          responsavelId: projeto.responsavelId || '',
           dataPrazo: projeto.dataPrazo ? new Date(projeto.dataPrazo).toISOString().split('T')[0] : '',
-        })
-        // Documentos existentes
+        }))
         if (projeto.documentos) {
           setArquivos(projeto.documentos.map((d: any) => ({ nome: d.nome, url: d.url })))
         }
@@ -109,7 +128,10 @@ export function ModalProjeto({ open, onClose, projeto, onSalvo, modoAcao = 'edit
       tipoServico: '', descricao: '', imovelNome: '', municipio: '', estado: '', car: '', areaHectares: '',
       valorProposto: '', observacoes: '', analistaRapidoId: '', observacoesAnalise: '',
       servicosRecomendados: [], servicosContratados: [], valorSinal: '', valorPrestacao: '',
-      numeroPrestacoes: '', responsavelId: '', supervisorId: '', gestorResponsavelId: '', dataPrazo: '',
+      numeroPrestacoes: '', gestorResponsavelId: '', supervisorId: '',
+      tipoContrato: '', observacoesContrato: '', dataAssinaturaContrato: '', dataVencimentoContrato: '',
+      dataPagamento: '', formaPagamento: '',
+      responsavelId: '', dataPrazo: '',
     })
     setArquivos([])
     setNovoCliente(false)
@@ -118,7 +140,7 @@ export function ModalProjeto({ open, onClose, projeto, onSalvo, modoAcao = 'edit
   async function loadDados() {
     const [resC, resS, resU] = await Promise.all([
       fetch('/api/clientes'),
-      fetch('/api/pre-cadastros?tipo=servicos'),
+      fetch('/api/pre-cadastros?tipo=servicos_todos'),
       fetch('/api/usuarios?ativo=true'),
     ])
     if (resC.ok) setClientes((await resC.json()).clientes)
@@ -143,27 +165,22 @@ export function ModalProjeto({ open, onClose, projeto, onSalvo, modoAcao = 'edit
   async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file) return
-
     const novoArquivo = { nome: file.name, url: '', uploading: true }
     setArquivos(prev => [...prev, novoArquivo])
-
     try {
       const fd = new FormData()
       fd.append('arquivo', file)
       fd.append('categoria', 'SOLICITACAO')
       if (projeto?.id) fd.append('projetoId', projeto.id)
-
       const res = await fetch('/api/upload', { method: 'POST', body: fd })
       if (!res.ok) throw new Error()
       const { url } = await res.json()
-
       setArquivos(prev => prev.map(a => a.nome === file.name && a.uploading ? { nome: file.name, url } : a))
       toast.success('Arquivo enviado com sucesso')
     } catch {
       setArquivos(prev => prev.filter(a => !(a.nome === file.name && a.uploading)))
       toast.error('Erro ao enviar arquivo')
     }
-
     if (fileInputRef.current) fileInputRef.current.value = ''
   }
 
@@ -173,7 +190,9 @@ export function ModalProjeto({ open, onClose, projeto, onSalvo, modoAcao = 'edit
     if (modoReal === 'criar') {
       if (!form.tipoServico) { toast.error('Selecione o tipo de serviço'); return }
       if (!novoCliente && !form.clienteId) { toast.error('Selecione ou cadastre um cliente'); return }
-      if (novoCliente && (!form.clienteNome || !form.clienteCpfCnpj)) { toast.error('Preencha nome e CPF/CNPJ do cliente'); return }
+      if (novoCliente && (!form.clienteNome || !form.clienteCpfCnpj)) {
+        toast.error('Preencha nome e CPF/CNPJ do cliente'); return
+      }
     }
 
     setLoading(true)
@@ -194,9 +213,7 @@ export function ModalProjeto({ open, onClose, projeto, onSalvo, modoAcao = 'edit
         clienteId = (await res.json()).cliente.id
       }
 
-      // Monta payload dependendo do modo
       let payload: any = {}
-      let avancarPipeline = false
 
       if (modoReal === 'criar') {
         payload = {
@@ -206,27 +223,54 @@ export function ModalProjeto({ open, onClose, projeto, onSalvo, modoAcao = 'edit
           observacoes: form.observacoes, analistaRapidoId: form.analistaRapidoId || null,
         }
       } else if (modoReal === 'analise') {
-        // Analista rápido: marca em análise ou conclui
         payload = {
           observacoesAnalise: form.observacoesAnalise,
           servicosRecomendados: JSON.stringify(form.servicosRecomendados),
           avancarPipeline: true,
           observacaoTransicao: 'Análise técnica concluída pelo analista de serviço rápido',
         }
-        avancarPipeline = true
       } else if (modoReal === 'validacao') {
-        // ADM valida e inclui dados de negociação
         payload = {
           servicosContratados: JSON.stringify(form.servicosContratados),
-          valorSinal: form.valorSinal, valorPrestacao: form.valorPrestacao,
+          valorSinal: form.valorSinal,
+          valorPrestacao: form.valorPrestacao,
           numeroPrestacoes: form.numeroPrestacoes,
           gestorResponsavelId: form.gestorResponsavelId || null,
           supervisorId: form.supervisorId || null,
           avancarPipeline: true,
-          observacaoTransicao: 'Proposta validada pelo ADM — serviços e valores definidos',
+          observacaoTransicao: 'Serviços e valores validados pelo ADM — encaminhado ao setor de contratos',
+        }
+      } else if (modoReal === 'contrato_info') {
+        // Save contrato record first
+        const resContrato = await fetch('/api/contratos', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            projetoId: projeto.id,
+            tipoContrato: form.tipoContrato,
+            dataAssinatura: form.dataAssinaturaContrato || null,
+            dataVencimento: form.dataVencimentoContrato || null,
+            observacoes: form.observacoesContrato || null,
+          }),
+        })
+        if (!resContrato.ok) {
+          toast.error('Erro ao salvar dados do contrato')
+          setLoading(false)
+          return
+        }
+        // Then advance pipeline
+        payload = {
+          avancarPipeline: true,
+          observacaoTransicao: 'Contrato elaborado — encaminhado ao financeiro para aguardar sinal',
+        }
+      } else if (modoReal === 'financeiro') {
+        if (!form.dataPagamento) { toast.error('Informe a data do pagamento'); setLoading(false); return }
+        payload = {
+          dataAprovacao: form.dataPagamento,
+          avancarPipeline: true,
+          observacaoTransicao: `Sinal recebido em ${form.dataPagamento} — projeto liberado para área técnica`,
         }
       } else if (modoReal === 'operacional') {
-        // Gestor designa analista e prazo
         payload = {
           responsavelId: form.responsavelId || null,
           dataPrazo: form.dataPrazo || null,
@@ -235,7 +279,6 @@ export function ModalProjeto({ open, onClose, projeto, onSalvo, modoAcao = 'edit
           observacaoTransicao: 'Analista e prazo definidos — projeto em execução',
         }
       } else {
-        // Modo editar livre
         payload = {
           tipoServico: form.tipoServico, descricao: form.descricao,
           imovelNome: form.imovelNome, municipio: form.municipio, estado: form.estado,
@@ -256,18 +299,14 @@ export function ModalProjeto({ open, onClose, projeto, onSalvo, modoAcao = 'edit
 
       if (!res.ok) { toast.error((await res.json()).error || 'Erro ao salvar'); return }
 
-      const { projeto: projetoSalvo } = await res.json()
-
-      // Se há arquivos pendentes sem projetoId, refaz upload com o id
-      const semId = arquivos.filter(a => a.url && !a.url.includes(projetoSalvo?.id))
-      // (arquivos já foram enviados com URL — nada a fazer nesse caso)
-
       const msgs: Record<string, string> = {
-        criar: '✅ Projeto criado! Analista notificado.',
-        analise: '✅ Análise concluída! ADM notificado para validação.',
-        validacao: '✅ Proposta validada! Setor de contratos notificado.',
-        operacional: '✅ Projeto atribuído! Analista notificado para execução.',
-        editar: 'Projeto atualizado.',
+        criar:         '✅ Projeto criado! Analista notificado.',
+        analise:       '✅ Análise concluída! ADM notificado para validação.',
+        validacao:     '✅ Proposta validada! Setor de contratos notificado.',
+        contrato_info: '✅ Contrato salvo! Financeiro notificado para aguardar sinal.',
+        financeiro:    '✅ Pagamento registrado! Área técnica notificada.',
+        operacional:   '✅ Projeto atribuído! Analista notificado para execução.',
+        editar:        'Projeto atualizado.',
       }
       toast.success(msgs[modoReal] || 'Salvo com sucesso!')
       onSalvo()
@@ -281,18 +320,62 @@ export function ModalProjeto({ open, onClose, projeto, onSalvo, modoAcao = 'edit
   if (!open) return null
 
   const titulo = {
-    criar: 'Nova Solicitação de Projeto',
-    analise: `Análise Técnica — ${projeto?.codigo}`,
-    validacao: `Validar Proposta — ${projeto?.codigo}`,
-    contrato_info: `Informações para Contrato — ${projeto?.codigo}`,
-    operacional: `Atribuir Analista — ${projeto?.codigo}`,
-    execucao: `Execução — ${projeto?.codigo}`,
-    editar: `Editar Projeto — ${projeto?.codigo}`,
+    criar:         'Nova Solicitação de Projeto',
+    analise:       `Análise Técnica — ${projeto?.codigo}`,
+    validacao:     `Validar e Encaminhar Contrato — ${projeto?.codigo}`,
+    contrato_info: `Elaborar Contrato — ${projeto?.codigo}`,
+    financeiro:    `Registrar Pagamento — ${projeto?.codigo}`,
+    operacional:   `Atribuir Analista — ${projeto?.codigo}`,
+    execucao:      `Execução — ${projeto?.codigo}`,
+    editar:        `Editar Projeto — ${projeto?.codigo}`,
   }[modoReal]
 
   const analistasRapidos = usuarios.filter(u => u.role === 'ANALISTA_RAPIDO' || u.role === 'ANALISTA')
   const gestores = usuarios.filter(u => ['ADMIN','GESTOR_GERAL','GESTOR_OPERACIONAL','GESTOR_CAMPO','SUPERVISOR'].includes(u.role))
   const analistasOp = usuarios.filter(u => ['ANALISTA','TECNICO_CAMPO'].includes(u.role))
+
+  // Group services by category
+  const servicosAmbiental    = servicos.filter(s => s.categoria === 'ambiental')
+  const servicosRegularizacao = servicos.filter(s => s.categoria === 'regularizacao')
+
+  function ServiceCheckList({ lista }: { lista: 'servicosRecomendados' | 'servicosContratados' }) {
+    return (
+      <div className="space-y-3">
+        {servicosAmbiental.length > 0 && (
+          <div>
+            <p className="text-xs font-semibold text-green-700 uppercase tracking-wide mb-1.5">Ambiental</p>
+            <div className="space-y-1.5">
+              {servicosAmbiental.map(s => (
+                <label key={s.id} className={`flex items-center gap-3 p-2.5 rounded-xl border cursor-pointer transition-colors ${
+                  form[lista].includes(s.nome) ? 'border-green-500 bg-green-50' : 'border-gray-200 hover:border-gray-300'
+                }`}>
+                  <input type="checkbox" checked={form[lista].includes(s.nome)}
+                    onChange={() => toggleServico(lista, s.nome)} className="w-4 h-4 text-green-600" />
+                  <span className="text-sm font-medium text-gray-900">{s.nome}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+        )}
+        {servicosRegularizacao.length > 0 && (
+          <div>
+            <p className="text-xs font-semibold text-blue-700 uppercase tracking-wide mb-1.5">Regularização</p>
+            <div className="space-y-1.5">
+              {servicosRegularizacao.map(s => (
+                <label key={s.id} className={`flex items-center gap-3 p-2.5 rounded-xl border cursor-pointer transition-colors ${
+                  form[lista].includes(s.nome) ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300'
+                }`}>
+                  <input type="checkbox" checked={form[lista].includes(s.nome)}
+                    onChange={() => toggleServico(lista, s.nome)} className="w-4 h-4 text-blue-600" />
+                  <span className="text-sm font-medium text-gray-900">{s.nome}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    )
+  }
 
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
@@ -316,7 +399,6 @@ export function ModalProjeto({ open, onClose, projeto, onSalvo, modoAcao = 'edit
 
           {/* ── MODO CRIAR ──────────────────────────────────────── */}
           {modoReal === 'criar' && (<>
-            {/* Cliente */}
             <div>
               <div className="flex items-center justify-between mb-1.5">
                 <label className="text-sm font-medium text-gray-700">Cliente *</label>
@@ -345,16 +427,23 @@ export function ModalProjeto({ open, onClose, projeto, onSalvo, modoAcao = 'edit
               )}
             </div>
 
-            {/* Tipo de serviço */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1.5">Tipo de Serviço *</label>
               <select value={form.tipoServico} onChange={e => set('tipoServico', e.target.value)} className="input-field" required>
                 <option value="">Selecione o tipo...</option>
-                {servicos.map(s => <option key={s.id} value={s.nome}>{s.nome}</option>)}
+                {servicosAmbiental.length > 0 && (
+                  <optgroup label="Ambiental">
+                    {servicosAmbiental.map(s => <option key={s.id} value={s.nome}>{s.nome}</option>)}
+                  </optgroup>
+                )}
+                {servicosRegularizacao.length > 0 && (
+                  <optgroup label="Regularização">
+                    {servicosRegularizacao.map(s => <option key={s.id} value={s.nome}>{s.nome}</option>)}
+                  </optgroup>
+                )}
               </select>
             </div>
 
-            {/* Dados do imóvel */}
             <div className="grid grid-cols-2 gap-3">
               <div className="col-span-2">
                 <label className="block text-sm font-medium text-gray-700 mb-1.5">Nome da Fazenda / Imóvel</label>
@@ -385,14 +474,12 @@ export function ModalProjeto({ open, onClose, projeto, onSalvo, modoAcao = 'edit
               </div>
             </div>
 
-            {/* Descrição / contexto */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1.5">Descrição / contexto do pedido</label>
               <textarea value={form.descricao} onChange={e => set('descricao', e.target.value)}
                 placeholder="Informações recebidas pelo cliente (WhatsApp, reunião, etc.)..." rows={3} className="input-field resize-none" />
             </div>
 
-            {/* Analista de serviço rápido */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1.5">
                 Analista de Serviço Rápido <span className="text-gray-400 font-normal">(quem fará a análise técnica inicial)</span>
@@ -403,15 +490,12 @@ export function ModalProjeto({ open, onClose, projeto, onSalvo, modoAcao = 'edit
               </select>
             </div>
 
-            {/* Upload de documentos */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Documentos de referência <span className="text-gray-400 font-normal">(KML, PDF, mapa, etc.)</span>
               </label>
-              <div
-                onClick={() => fileInputRef.current?.click()}
-                className="border-2 border-dashed border-gray-200 rounded-xl p-4 text-center cursor-pointer hover:border-green-400 hover:bg-green-50 transition-colors"
-              >
+              <div onClick={() => fileInputRef.current?.click()}
+                className="border-2 border-dashed border-gray-200 rounded-xl p-4 text-center cursor-pointer hover:border-green-400 hover:bg-green-50 transition-colors">
                 <Upload className="w-6 h-6 text-gray-400 mx-auto mb-1" />
                 <p className="text-sm text-gray-500">Clique para enviar arquivo</p>
                 <p className="text-xs text-gray-400 mt-0.5">PDF, KML, KMZ, imagens, ZIP — máx. 50MB</p>
@@ -443,7 +527,6 @@ export function ModalProjeto({ open, onClose, projeto, onSalvo, modoAcao = 'edit
               <p className="text-xs text-yellow-600 mt-1">Ao salvar, o ADM será notificado para validar sua análise.</p>
             </div>
 
-            {/* Info do projeto */}
             <div className="bg-gray-50 rounded-xl p-4 space-y-1">
               <p className="text-sm"><span className="font-medium">Imóvel:</span> {projeto?.imovelNome || '—'}</p>
               <p className="text-sm"><span className="font-medium">Município/UF:</span> {projeto?.municipio} / {projeto?.estado}</p>
@@ -452,7 +535,6 @@ export function ModalProjeto({ open, onClose, projeto, onSalvo, modoAcao = 'edit
               {projeto?.descricao && <p className="text-sm"><span className="font-medium">Contexto:</span> {projeto.descricao}</p>}
             </div>
 
-            {/* Documentos enviados */}
             {arquivos.length > 0 && (
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Documentos disponíveis</label>
@@ -468,23 +550,11 @@ export function ModalProjeto({ open, onClose, projeto, onSalvo, modoAcao = 'edit
               </div>
             )}
 
-            {/* Serviços recomendados */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Serviços que podem ser prestados *</label>
-              <div className="grid grid-cols-1 gap-2">
-                {servicos.map(s => (
-                  <label key={s.id} className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-colors ${
-                    form.servicosRecomendados.includes(s.nome) ? 'border-green-500 bg-green-50' : 'border-gray-200 hover:border-gray-300'
-                  }`}>
-                    <input type="checkbox" checked={form.servicosRecomendados.includes(s.nome)}
-                      onChange={() => toggleServico('servicosRecomendados', s.nome)} className="w-4 h-4 text-green-600" />
-                    <span className="text-sm font-medium text-gray-900">{s.nome}</span>
-                  </label>
-                ))}
-              </div>
+              <ServiceCheckList lista="servicosRecomendados" />
             </div>
 
-            {/* Observações técnicas */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1.5">Observações técnicas da análise</label>
               <textarea value={form.observacoesAnalise} onChange={e => set('observacoesAnalise', e.target.value)}
@@ -492,7 +562,6 @@ export function ModalProjeto({ open, onClose, projeto, onSalvo, modoAcao = 'edit
                 rows={4} className="input-field resize-none" />
             </div>
 
-            {/* Upload complementar */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Enviar documentos complementares</label>
               <div onClick={() => fileInputRef.current?.click()}
@@ -508,11 +577,10 @@ export function ModalProjeto({ open, onClose, projeto, onSalvo, modoAcao = 'edit
           {/* ── MODO VALIDAÇÃO (ADM) ─────────────────────────────── */}
           {modoReal === 'validacao' && (<>
             <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
-              <p className="text-sm font-medium text-blue-800">✅ Análise técnica concluída — valide e defina a proposta comercial</p>
-              <p className="text-xs text-blue-600 mt-1">Ao salvar, o setor de contratos será notificado para elaborar o contrato.</p>
+              <p className="text-sm font-medium text-blue-800">✅ Análise técnica concluída — valide os serviços e defina os valores</p>
+              <p className="text-xs text-blue-600 mt-1">Ao salvar, o setor de contratos será notificado diretamente para elaborar o contrato.</p>
             </div>
 
-            {/* Análise do analista */}
             <div className="bg-gray-50 rounded-xl p-4 space-y-2">
               <p className="text-sm font-semibold text-gray-700">Análise do {projeto?.analistaRapido?.nome || 'Analista'}:</p>
               <p className="text-sm text-gray-600">{projeto?.observacoesAnalise || 'Sem observações registradas.'}</p>
@@ -521,7 +589,7 @@ export function ModalProjeto({ open, onClose, projeto, onSalvo, modoAcao = 'edit
                   const s = JSON.parse(projeto.servicosRecomendados)
                   return s.length > 0 ? (
                     <div>
-                      <p className="text-xs font-medium text-gray-500 mt-1">Serviços recomendados:</p>
+                      <p className="text-xs font-medium text-gray-500 mt-1">Serviços recomendados pelo analista:</p>
                       <div className="flex flex-wrap gap-1 mt-1">
                         {s.map((sv: string) => <span key={sv} className="text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full">{sv}</span>)}
                       </div>
@@ -531,23 +599,11 @@ export function ModalProjeto({ open, onClose, projeto, onSalvo, modoAcao = 'edit
               })()}
             </div>
 
-            {/* Serviços contratados */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Serviços contratados com o cliente *</label>
-              <div className="grid grid-cols-1 gap-2">
-                {servicos.map(s => (
-                  <label key={s.id} className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-colors ${
-                    form.servicosContratados.includes(s.nome) ? 'border-green-500 bg-green-50' : 'border-gray-200 hover:border-gray-300'
-                  }`}>
-                    <input type="checkbox" checked={form.servicosContratados.includes(s.nome)}
-                      onChange={() => toggleServico('servicosContratados', s.nome)} className="w-4 h-4 text-green-600" />
-                    <span className="text-sm font-medium text-gray-900">{s.nome}</span>
-                  </label>
-                ))}
-              </div>
+              <ServiceCheckList lista="servicosContratados" />
             </div>
 
-            {/* Valores */}
             <div className="grid grid-cols-3 gap-3">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1.5">Valor do Sinal (R$)</label>
@@ -566,7 +622,6 @@ export function ModalProjeto({ open, onClose, projeto, onSalvo, modoAcao = 'edit
               </div>
             </div>
 
-            {/* Gestor responsável */}
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1.5">Gestor/Supervisor responsável</label>
@@ -585,6 +640,111 @@ export function ModalProjeto({ open, onClose, projeto, onSalvo, modoAcao = 'edit
             </div>
           </>)}
 
+          {/* ── MODO CONTRATO (Setor de Contratos) ──────────────── */}
+          {modoReal === 'contrato_info' && (<>
+            <div className="bg-pink-50 border border-pink-200 rounded-xl p-4">
+              <p className="text-sm font-medium text-pink-800">📄 Elabore o contrato com os dados fornecidos pelo ADM</p>
+              <p className="text-xs text-pink-600 mt-1">Ao salvar, o setor financeiro será notificado para aguardar o pagamento do sinal.</p>
+            </div>
+
+            {/* Resumo do projeto */}
+            <div className="bg-gray-50 rounded-xl p-4 space-y-1.5">
+              <p className="text-sm font-semibold text-gray-700 mb-2">Dados do projeto</p>
+              <p className="text-sm"><span className="font-medium">Cliente:</span> {projeto?.cliente?.nome}</p>
+              <p className="text-sm"><span className="font-medium">Imóvel:</span> {projeto?.imovelNome || '—'} — {projeto?.municipio}/{projeto?.estado}</p>
+              {projeto?.servicosContratados && (() => {
+                try {
+                  const s = JSON.parse(projeto.servicosContratados)
+                  return s.length > 0 ? (
+                    <div className="flex flex-wrap gap-1 mt-1">
+                      {s.map((sv: string) => <span key={sv} className="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded-full font-medium">{sv}</span>)}
+                    </div>
+                  ) : null
+                } catch { return null }
+              })()}
+              <div className="flex gap-4 pt-1 text-sm">
+                {projeto?.valorSinal > 0 && <span><span className="font-medium">Sinal:</span> R$ {Number(projeto.valorSinal).toLocaleString('pt-BR', {minimumFractionDigits: 2})}</span>}
+                {projeto?.valorPrestacao > 0 && <span><span className="font-medium">Parcelas:</span> {projeto.numeroPrestacoes}× R$ {Number(projeto.valorPrestacao).toLocaleString('pt-BR', {minimumFractionDigits: 2})}</span>}
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">Tipo de Contrato *</label>
+              <select value={form.tipoContrato} onChange={e => set('tipoContrato', e.target.value)} className="input-field" required>
+                <option value="">Selecione o tipo...</option>
+                {TIPOS_CONTRATO.map(t => <option key={t} value={t}>{t}</option>)}
+              </select>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Data de Assinatura</label>
+                <input type="date" value={form.dataAssinaturaContrato} onChange={e => set('dataAssinaturaContrato', e.target.value)} className="input-field" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Data de Vencimento</label>
+                <input type="date" value={form.dataVencimentoContrato} onChange={e => set('dataVencimentoContrato', e.target.value)} className="input-field" />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">Observações do contrato</label>
+              <textarea value={form.observacoesContrato} onChange={e => set('observacoesContrato', e.target.value)}
+                placeholder="Condições especiais, cláusulas adicionais, observações relevantes..."
+                rows={3} className="input-field resize-none" />
+            </div>
+          </>)}
+
+          {/* ── MODO FINANCEIRO (Registrar pagamento) ───────────── */}
+          {modoReal === 'financeiro' && (<>
+            <div className="bg-orange-50 border border-orange-200 rounded-xl p-4">
+              <p className="text-sm font-medium text-orange-800">💰 Registre a data em que o sinal foi recebido</p>
+              <p className="text-xs text-orange-600 mt-1">Ao confirmar, o projeto será liberado para a área técnica iniciar o trabalho.</p>
+            </div>
+
+            {/* Resumo financeiro */}
+            <div className="bg-gray-50 rounded-xl p-4 space-y-1.5">
+              <p className="text-sm font-semibold text-gray-700 mb-2">Dados financeiros</p>
+              <p className="text-sm"><span className="font-medium">Projeto:</span> {projeto?.codigo} — {projeto?.imovelNome}</p>
+              <p className="text-sm"><span className="font-medium">Cliente:</span> {projeto?.cliente?.nome}</p>
+              {projeto?.servicosContratados && (() => {
+                try {
+                  const s = JSON.parse(projeto.servicosContratados)
+                  return s.length > 0 ? <p className="text-sm"><span className="font-medium">Serviços:</span> {s.join(', ')}</p> : null
+                } catch { return null }
+              })()}
+              <div className="flex gap-4 pt-1 text-sm">
+                {projeto?.valorSinal > 0 && (
+                  <span className="font-semibold text-green-700">
+                    Sinal esperado: R$ {Number(projeto.valorSinal).toLocaleString('pt-BR', {minimumFractionDigits: 2})}
+                  </span>
+                )}
+              </div>
+              {projeto?.contrato && (
+                <p className="text-sm"><span className="font-medium">Contrato:</span> {projeto.contrato.tipoContrato} — {projeto.contrato.codigo}</p>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">Data de recebimento do sinal *</label>
+              <input type="date" value={form.dataPagamento} onChange={e => set('dataPagamento', e.target.value)}
+                className="input-field" required />
+              <p className="text-xs text-gray-400 mt-1">Esta data será registrada no fluxo de caixa.</p>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">Forma de pagamento</label>
+              <select value={form.formaPagamento} onChange={e => set('formaPagamento', e.target.value)} className="input-field">
+                <option value="">Selecione...</option>
+                <option value="PIX">PIX</option>
+                <option value="TRANSFERENCIA">Transferência Bancária</option>
+                <option value="BOLETO">Boleto</option>
+                <option value="DINHEIRO">Dinheiro</option>
+                <option value="CHEQUE">Cheque</option>
+              </select>
+            </div>
+          </>)}
+
           {/* ── MODO OPERACIONAL (Gestor atribui analista) ──────── */}
           {modoReal === 'operacional' && (<>
             <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-4">
@@ -598,8 +758,10 @@ export function ModalProjeto({ open, onClose, projeto, onSalvo, modoAcao = 'edit
               <p className="text-sm"><span className="font-medium">Município:</span> {projeto?.municipio}/{projeto?.estado}</p>
               <p className="text-sm"><span className="font-medium">Área:</span> {projeto?.areaHectares} ha</p>
               {projeto?.servicosContratados && (() => {
-                try { const s = JSON.parse(projeto.servicosContratados); return s.length > 0 ? <p className="text-sm"><span className="font-medium">Serviços:</span> {s.join(', ')}</p> : null }
-                catch { return null }
+                try {
+                  const s = JSON.parse(projeto.servicosContratados)
+                  return s.length > 0 ? <p className="text-sm"><span className="font-medium">Serviços:</span> {s.join(', ')}</p> : null
+                } catch { return null }
               })()}
             </div>
 
@@ -662,17 +824,18 @@ export function ModalProjeto({ open, onClose, projeto, onSalvo, modoAcao = 'edit
             <button type="submit" disabled={loading}
               className="px-5 py-2.5 bg-green-600 hover:bg-green-700 disabled:bg-green-400 text-white font-semibold rounded-xl text-sm flex items-center gap-2">
               {loading && <Loader2 className="w-4 h-4 animate-spin" />}
-              {modoReal === 'criar' && 'Criar e Notificar Analista'}
-              {modoReal === 'analise' && <><CheckCircle className="w-4 h-4" /> Concluir Análise</>}
-              {modoReal === 'validacao' && <><CheckCircle className="w-4 h-4" /> Validar e Encaminhar Contrato</>}
-              {modoReal === 'operacional' && <><ArrowRight className="w-4 h-4" /> Atribuir e Iniciar</>}
-              {modoReal === 'editar' && 'Salvar Alterações'}
+              {modoReal === 'criar'         && 'Criar e Notificar Analista'}
+              {modoReal === 'analise'       && <><CheckCircle className="w-4 h-4" /> Concluir Análise</>}
+              {modoReal === 'validacao'     && <><CheckCircle className="w-4 h-4" /> Validar e Encaminhar Contrato</>}
+              {modoReal === 'contrato_info' && <><FileText className="w-4 h-4" /> Salvar Contrato e Notificar Financeiro</>}
+              {modoReal === 'financeiro'    && <><DollarSign className="w-4 h-4" /> Confirmar Recebimento</>}
+              {modoReal === 'operacional'   && <><ArrowRight className="w-4 h-4" /> Atribuir e Iniciar</>}
+              {modoReal === 'editar'        && 'Salvar Alterações'}
             </button>
           </div>
         </form>
       </div>
 
-      {/* Estilos inline para input-field */}
       <style jsx global>{`
         .input-field {
           width: 100%;

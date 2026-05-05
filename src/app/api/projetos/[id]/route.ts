@@ -6,12 +6,9 @@ import { getCurrentUser } from '@/lib/auth'
 const PROXIMA_ETAPA: Record<string, string> = {
   SOLICITACAO:         'EM_ANALISE_RAPIDA',
   EM_ANALISE_RAPIDA:   'ANALISE_CONCLUIDA',
-  ANALISE_CONCLUIDA:   'EM_NEGOCIACAO',
-  EM_NEGOCIACAO:       'PROPOSTA_ACEITA',
-  PROPOSTA_ACEITA:     'AGUARDANDO_CONTRATO',
-  AGUARDANDO_CONTRATO: 'EM_CONTRATO',
-  EM_CONTRATO:         'AGUARDANDO_SINAL',
-  AGUARDANDO_SINAL:    'OPERACIONAL',
+  ANALISE_CONCLUIDA:   'AGUARDANDO_CONTRATO',  // ADM valida → direto para contratos
+  AGUARDANDO_CONTRATO: 'AGUARDANDO_SINAL',      // Contratos elabora → financeiro aguarda sinal
+  AGUARDANDO_SINAL:    'OPERACIONAL',            // Financeiro confirma pagamento → área técnica
   OPERACIONAL:         'EM_EXECUCAO',
   EM_EXECUCAO:         'CONCLUIDO',
 }
@@ -43,7 +40,7 @@ async function criarNotificacaoEtapa(etapa: string, projeto: any) {
       contratos.forEach(c => notifs.push({
         usuarioId: c.id,
         titulo: '📄 Novo contrato para elaborar',
-        mensagem: `${base}: proposta aceita. Elabore o contrato com os dados fornecidos.`,
+        mensagem: `${base}: serviços e valores validados pelo ADM. Elabore o contrato com os dados fornecidos.`,
         tipo: 'info',
         link: '/contratos',
       }))
@@ -221,6 +218,7 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
         ...(body.dataPrazo !== undefined && { dataPrazo: body.dataPrazo ? new Date(body.dataPrazo) : null }),
         ...(body.dataInicio !== undefined && { dataInicio: body.dataInicio ? new Date(body.dataInicio) : null }),
         ...(body.dataConclusao !== undefined && { dataConclusao: body.dataConclusao ? new Date(body.dataConclusao) : null }),
+        ...(body.dataAprovacao !== undefined && { dataAprovacao: body.dataAprovacao ? new Date(body.dataAprovacao) : null }),
       },
       include: {
         cliente: true,

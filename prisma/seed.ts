@@ -12,7 +12,7 @@ async function main() {
   const tiposServico = [
     {
       nome: 'Licenciamento Ambiental',
-      categoria: 'licenciamento_ambiental',
+      categoria: 'ambiental',
       descricao: 'Processo de licenciamento ambiental completo',
       ordem: 1,
       documentosRequeridos: JSON.stringify([
@@ -33,7 +33,7 @@ async function main() {
     },
     {
       nome: 'Outorga',
-      categoria: 'outorga',
+      categoria: 'ambiental',
       descricao: 'Outorga de direito de uso de recursos hídricos',
       ordem: 2,
       documentosRequeridos: JSON.stringify([
@@ -51,7 +51,7 @@ async function main() {
     },
     {
       nome: 'ACAIO',
-      categoria: 'acaio',
+      categoria: 'ambiental',
       descricao: 'Autorização de Corte de Arvores Isoladas e/ou Obstrução',
       ordem: 3,
       documentosRequeridos: JSON.stringify([
@@ -70,7 +70,7 @@ async function main() {
     },
     {
       nome: 'AEF',
-      categoria: 'aef',
+      categoria: 'ambiental',
       descricao: 'Autorização de Exploração Florestal',
       ordem: 4,
       documentosRequeridos: JSON.stringify([
@@ -91,7 +91,7 @@ async function main() {
     },
     {
       nome: 'PRAD',
-      categoria: 'prad',
+      categoria: 'ambiental',
       descricao: 'Plano de Recuperação de Áreas Degradadas',
       ordem: 5,
       documentosRequeridos: JSON.stringify([
@@ -109,7 +109,7 @@ async function main() {
     },
     {
       nome: 'Tipologia Florestal',
-      categoria: 'tipologia_florestal',
+      categoria: 'ambiental',
       descricao: 'Estudo de tipologia e fitossociologia florestal',
       ordem: 6,
       documentosRequeridos: JSON.stringify([
@@ -127,7 +127,7 @@ async function main() {
     },
     {
       nome: 'Trecho de Drenagem',
-      categoria: 'trecho_drenagem',
+      categoria: 'ambiental',
       descricao: 'Análise e regularização de trecho de drenagem',
       ordem: 7,
       documentosRequeridos: JSON.stringify([

@@ -63,7 +63,7 @@ const navItems = [
 const configItems = [
   {
     href: '/configuracoes',
-    label: 'Configurações',
+    label: 'Cadastro Base',
     icon: Settings,
     modulo: 'configuracoes',
   },

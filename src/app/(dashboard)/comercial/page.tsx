@@ -10,10 +10,7 @@ const ETAPA_LABELS: Record<string, string> = {
   SOLICITACAO:         'Nova Solicitação',
   EM_ANALISE_RAPIDA:   'Em Análise',
   ANALISE_CONCLUIDA:   'Análise Concluída',
-  EM_NEGOCIACAO:       'Em Negociação',
-  PROPOSTA_ACEITA:     'Proposta Aceita',
   AGUARDANDO_CONTRATO: 'Aguard. Contrato',
-  EM_CONTRATO:         'Em Contrato',
   AGUARDANDO_SINAL:    'Aguard. Sinal',
   OPERACIONAL:         'Operacional',
   EM_EXECUCAO:         'Em Execução',
@@ -36,7 +33,7 @@ const ETAPA_BADGES: Record<string, string> = {
   CANCELADO:           'bg-red-100 text-red-800',
 }
 
-// Botão de ação rápida por etapa (o que o usuário deve fazer nessa etapa)
+// Botão de ação rápida por etapa
 function BotaoAcaoEtapa({ projeto, onAcao }: { projeto: any; onAcao: (p: any, modo: string) => void }) {
   const etapa = projeto.etapaPipeline
   if (etapa === 'SOLICITACAO') return (
@@ -54,13 +51,19 @@ function BotaoAcaoEtapa({ projeto, onAcao }: { projeto: any; onAcao: (p: any, mo
   if (etapa === 'ANALISE_CONCLUIDA') return (
     <button onClick={() => onAcao(projeto, 'validacao')}
       className="text-xs px-2.5 py-1 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium flex items-center gap-1 transition-colors">
-      <CheckCircle className="w-3 h-3" /> Validar Proposta
+      <CheckCircle className="w-3 h-3" /> Validar → Contratos
     </button>
   )
-  if (etapa === 'PROPOSTA_ACEITA') return (
+  if (etapa === 'AGUARDANDO_CONTRATO') return (
     <button onClick={() => onAcao(projeto, 'contrato_info')}
       className="text-xs px-2.5 py-1 bg-pink-600 hover:bg-pink-700 text-white rounded-lg font-medium flex items-center gap-1 transition-colors">
-      <FileText className="w-3 h-3" /> Encaminhar Contrato
+      <FileText className="w-3 h-3" /> Elaborar Contrato
+    </button>
+  )
+  if (etapa === 'AGUARDANDO_SINAL') return (
+    <button onClick={() => onAcao(projeto, 'financeiro')}
+      className="text-xs px-2.5 py-1 bg-orange-500 hover:bg-orange-600 text-white rounded-lg font-medium flex items-center gap-1 transition-colors">
+      <ArrowRight className="w-3 h-3" /> Registrar Pagamento
     </button>
   )
   if (etapa === 'OPERACIONAL') return (
@@ -74,12 +77,12 @@ function BotaoAcaoEtapa({ projeto, onAcao }: { projeto: any; onAcao: (p: any, mo
 
 // Contadores de etapas para os cards
 const ETAPAS_FUNIL = [
-  { value: 'SOLICITACAO', label: 'Solicitações', cor: 'border-gray-300' },
-  { value: 'ANALISE_CONCLUIDA', label: 'Para validar', cor: 'border-blue-400', destaque: true },
-  { value: 'EM_NEGOCIACAO', label: 'Negociação', cor: 'border-purple-400' },
+  { value: 'SOLICITACAO',         label: 'Solicitações',    cor: 'border-gray-300' },
+  { value: 'ANALISE_CONCLUIDA',   label: 'Para validar',    cor: 'border-blue-400', destaque: true },
   { value: 'AGUARDANDO_CONTRATO', label: 'Aguard. Contrato', cor: 'border-pink-400' },
-  { value: 'AGUARDANDO_SINAL', label: 'Aguard. Sinal', cor: 'border-orange-400' },
-  { value: 'EM_EXECUCAO', label: 'Em Execução', cor: 'border-green-400' },
+  { value: 'AGUARDANDO_SINAL',    label: 'Aguard. Sinal',   cor: 'border-orange-400' },
+  { value: 'OPERACIONAL',         label: 'Operacional',     cor: 'border-indigo-400' },
+  { value: 'EM_EXECUCAO',         label: 'Em Execução',     cor: 'border-green-400' },
 ]
 
 export default function ComercialPage() {

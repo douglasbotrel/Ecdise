@@ -171,8 +171,8 @@ export default function ConfiguracoesPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Configurações</h1>
-        <p className="text-gray-500 text-sm mt-1">Gerenciamento de usuários e pré-cadastros do sistema</p>
+        <h1 className="text-2xl font-bold text-gray-900">Cadastro Base</h1>
+        <p className="text-gray-500 text-sm mt-1">Usuários, perfis, tipos de serviço e tarefas padrão</p>
       </div>
 
       {/* Abas */}
