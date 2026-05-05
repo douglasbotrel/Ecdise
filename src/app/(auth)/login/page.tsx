@@ -1,13 +1,11 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import { toast } from 'sonner'
 import { Eye, EyeOff, Loader2, Leaf } from 'lucide-react'
 
 export default function LoginPage() {
-  const router = useRouter()
   const [email, setEmail] = useState('')
   const [senha, setSenha] = useState('')
   const [showSenha, setShowSenha] = useState(false)
@@ -32,8 +30,7 @@ export default function LoginPage() {
         return
       }
       toast.success(`Bem-vindo, ${data.usuario.nome}!`)
-      router.push('/dashboard')
-      router.refresh()
+      window.location.href = '/dashboard'
     } catch {
       toast.error('Erro ao conectar com o servidor')
     } finally {

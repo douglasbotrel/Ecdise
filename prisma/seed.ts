@@ -1,4 +1,4 @@
-import { PrismaClient, Role, Departamento } from '@prisma/client'
+import { PrismaClient } from '@prisma/client'
 import bcrypt from 'bcryptjs'
 
 const prisma = new PrismaClient()
@@ -186,43 +186,43 @@ async function main() {
   const departamentos = [
     {
       nome: 'Gestão Geral',
-      codigo: Departamento.GESTAO_GERAL,
+      codigo: 'GESTAO_GERAL',
       acessos: JSON.stringify(['dashboard', 'comercial', 'contratos', 'operacional', 'campo', 'financeiro', 'configuracoes', 'bi']),
       descricao: 'Acesso total ao sistema',
     },
     {
       nome: 'Comercial',
-      codigo: Departamento.COMERCIAL,
+      codigo: 'COMERCIAL',
       acessos: JSON.stringify(['comercial', 'contratos', 'financeiro']),
       descricao: 'Gestão comercial e contratos',
     },
     {
       nome: 'Financeiro',
-      codigo: Departamento.FINANCEIRO,
+      codigo: 'FINANCEIRO',
       acessos: JSON.stringify(['financeiro', 'contratos']),
       descricao: 'Controle financeiro e pagamentos',
     },
     {
       nome: 'Operacional Ambiental',
-      codigo: Departamento.OPERACIONAL_AMBIENTAL,
+      codigo: 'OPERACIONAL_AMBIENTAL',
       acessos: JSON.stringify(['operacional', 'campo', 'dashboard']),
       descricao: 'Projetos ambientais e licenciamento',
     },
     {
       nome: 'Operacional Regularização',
-      codigo: Departamento.OPERACIONAL_REGULARIZACAO,
+      codigo: 'OPERACIONAL_REGULARIZACAO',
       acessos: JSON.stringify(['operacional', 'campo', 'dashboard']),
       descricao: 'Projetos de regularização fundiária',
     },
     {
       nome: 'Gestão Campo',
-      codigo: Departamento.GESTAO_CAMPO,
+      codigo: 'GESTAO_CAMPO',
       acessos: JSON.stringify(['campo', 'operacional']),
       descricao: 'Vistorias e trabalho de campo',
     },
     {
       nome: 'Contratos',
-      codigo: Departamento.CONTRATOS,
+      codigo: 'CONTRATOS',
       acessos: JSON.stringify(['contratos', 'financeiro', 'comercial']),
       descricao: 'Gestão de contratos',
     },
@@ -249,8 +249,8 @@ async function main() {
       email: 'admin@ecdise.com',
       senha: senhaHash,
       cargo: 'Administrador do Sistema',
-      role: Role.ADMIN,
-      departamento: Departamento.GESTAO_GERAL,
+      role: 'ADMIN',
+      departamento: 'GESTAO_GERAL',
       ativo: true,
     },
   })
@@ -266,8 +266,8 @@ async function main() {
       email: 'gestor@ecdise.com',
       senha: senhaGestor,
       cargo: 'Gestor Geral',
-      role: Role.GESTOR_GERAL,
-      departamento: Departamento.GESTAO_GERAL,
+      role: 'GESTOR_GERAL',
+      departamento: 'GESTAO_GERAL',
       ativo: true,
     },
   })
@@ -282,8 +282,8 @@ async function main() {
       email: 'analista@ecdise.com',
       senha: senhaAnalista,
       cargo: 'Analista Ambiental',
-      role: Role.ANALISTA,
-      departamento: Departamento.OPERACIONAL_AMBIENTAL,
+      role: 'ANALISTA',
+      departamento: 'OPERACIONAL_AMBIENTAL',
       ativo: true,
     },
   })
