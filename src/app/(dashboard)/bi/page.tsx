@@ -6,10 +6,10 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   LineChart, Line, PieChart, Pie, Cell, Legend
 } from 'recharts'
-import { BarChart3, Download, RefreshCw } from 'lucide-react'
-import { formatCurrency, STATUS_OPERACIONAL_LABELS } from '@/lib/utils'
+import { BarChart3, RefreshCw } from 'lucide-react'
+import { formatCurrency, ETAPA_LABELS } from '@/lib/utils'
 
-const CORES = ['#22c55e', '#3b82f6', '#8b5cf6', '#f59e0b', '#ef4444', '#06b6d4', '#ec4899']
+const CORES = ['#22c55e', '#3b82f6', '#8b5cf6', '#f59e0b', '#ef4444', '#06b6d4', '#ec4899', '#84cc16', '#f43f5e', '#0ea5e9', '#a855f7', '#f97316']
 
 export default function BIPage() {
   const [dados, setDados] = useState<any>(null)
@@ -43,10 +43,10 @@ export default function BIPage() {
 
   if (!dados) return null
 
-  const { estatisticas, projetosPorStatus, evolucaoMensal } = dados
+  const { estatisticas, porEtapa, evolucaoMensal } = dados
 
-  const pieData = projetosPorStatus.map((p: any, i: number) => ({
-    name: STATUS_OPERACIONAL_LABELS[p.status] || p.status,
+  const pieData = (porEtapa || []).map((p: any, i: number) => ({
+    name: ETAPA_LABELS[p.etapa] || p.etapa,
     value: p.count,
     color: CORES[i % CORES.length],
   }))
@@ -83,10 +83,10 @@ export default function BIPage() {
       {/* KPIs principais */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {[
-          { label: 'Total de Projetos', value: estatisticas.totalProjetos, color: 'bg-blue-600' },
-          { label: 'Em Andamento', value: estatisticas.projetosAtivos, color: 'bg-green-600' },
-          { label: 'Concluídos', value: estatisticas.projetosConcluidos, color: 'bg-purple-600' },
-          { label: 'Cancelados', value: estatisticas.projetosCancelados, color: 'bg-red-600' },
+          { label: 'Total de Projetos', value: estatisticas.totalProjetos ?? 0, color: 'bg-blue-600' },
+          { label: 'Em Andamento', value: estatisticas.projetosAtivos ?? 0, color: 'bg-green-600' },
+          { label: 'Concluídos', value: estatisticas.projetosConcluidos ?? 0, color: 'bg-purple-600' },
+          { label: 'Tarefas Atrasadas', value: estatisticas.tarefasAtrasadas ?? 0, color: 'bg-red-600' },
         ].map((kpi) => (
           <div key={kpi.label} className="bg-white rounded-2xl border border-gray-100 p-5">
             <div className={`w-1.5 h-8 ${kpi.color} rounded-full mb-3`} />
@@ -121,7 +121,7 @@ export default function BIPage() {
         <div className="bg-white rounded-2xl border border-gray-100 p-6">
           <h3 className="font-semibold text-gray-900 mb-4">Novos Projetos por Mês</h3>
           <ResponsiveContainer width="100%" height={240}>
-            <LineChart data={evolucaoMensal} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
+            <LineChart data={evolucaoMensal || []} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
               <XAxis dataKey="mes" tick={{ fontSize: 12 }} />
               <YAxis tick={{ fontSize: 12 }} allowDecimals={false} />
@@ -206,8 +206,8 @@ export default function BIPage() {
               },
               {
                 label: 'Taxa de Cancelamento',
-                value: `${Math.round((estatisticas.projetosCancelados / Math.max(estatisticas.totalProjetos, 1)) * 100)}%`,
-                pct: (estatisticas.projetosCancelados / Math.max(estatisticas.totalProjetos, 1)) * 100,
+                value: `${Math.round(((estatisticas.projetosCancelados ?? 0) / Math.max(estatisticas.totalProjetos ?? 1, 1)) * 100)}%`,
+                pct: ((estatisticas.projetosCancelados ?? 0) / Math.max(estatisticas.totalProjetos ?? 1, 1)) * 100,
                 color: 'bg-red-400',
               },
             ].map((ind) => (

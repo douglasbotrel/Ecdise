@@ -256,85 +256,9 @@ async function main() {
   })
   console.log('✅ Usuário admin criado:', admin.email)
 
-  // Gestor Geral de exemplo
-  const senhaGestor = await bcrypt.hash('gestor@ecdise2024', 10)
-  await prisma.usuario.upsert({
-    where: { email: 'gestor@ecdise.com' },
-    update: {},
-    create: {
-      nome: 'Gestor Geral',
-      email: 'gestor@ecdise.com',
-      senha: senhaGestor,
-      cargo: 'Gestor Geral',
-      role: 'GESTOR_GERAL',
-      departamento: 'GESTAO_GERAL',
-      ativo: true,
-    },
-  })
-
-  // Analista Ambiental de exemplo
-  const senhaAnalista = await bcrypt.hash('analista@ecdise2024', 10)
-  await prisma.usuario.upsert({
-    where: { email: 'analista@ecdise.com' },
-    update: {},
-    create: {
-      nome: 'Analista Ambiental',
-      email: 'analista@ecdise.com',
-      senha: senhaAnalista,
-      cargo: 'Analista Ambiental',
-      role: 'ANALISTA',
-      departamento: 'OPERACIONAL_AMBIENTAL',
-      ativo: true,
-    },
-  })
-  console.log('✅ Usuários de exemplo criados')
-
-  // ============================================================
-  // CLIENTE DE EXEMPLO
-  // ============================================================
-  const cliente = await prisma.cliente.upsert({
-    where: { cpfCnpj: '12.345.678/0001-99' },
-    update: {},
-    create: {
-      nome: 'Fazenda Boa Vista Ltda',
-      cpfCnpj: '12.345.678/0001-99',
-      email: 'contato@fazendaboavista.com.br',
-      telefone: '(65) 99999-0000',
-      endereco: 'Rodovia MT-246, Km 12',
-      municipio: 'Sinop',
-      estado: 'MT',
-    },
-  })
-  console.log('✅ Cliente de exemplo criado')
-
-  // ============================================================
-  // PROJETO DE EXEMPLO
-  // ============================================================
-  await prisma.projeto.upsert({
-    where: { codigo: 'DEMO-001' },
-    update: {},
-    create: {
-      codigo: 'DEMO-001',
-      clienteId: cliente.id,
-      tipoServico: 'Licenciamento Ambiental',
-      statusComercial: 'ACEITO',
-      statusOperacional: 'EM_ANDAMENTO',
-      descricao: 'Licenciamento ambiental para atividade agrícola',
-      imovelNome: 'Fazenda Boa Vista',
-      municipio: 'Sinop',
-      estado: 'MT',
-      areaHectares: 1250.5,
-      valorProposto: 15000,
-      responsavelId: admin.id,
-    },
-  })
-  console.log('✅ Projeto de exemplo criado')
-
   console.log('\n🎉 Seed concluído com sucesso!')
   console.log('\n📋 Credenciais de acesso:')
-  console.log('   Admin:    admin@ecdise.com     | admin@ecdise2024')
-  console.log('   Gestor:   gestor@ecdise.com    | gestor@ecdise2024')
-  console.log('   Analista: analista@ecdise.com  | analista@ecdise2024')
+  console.log('   Admin: admin@ecdise.com  |  admin@ecdise2024')
 }
 
 main()

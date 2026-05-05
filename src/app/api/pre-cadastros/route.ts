@@ -18,6 +18,14 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ servicos })
     }
 
+    // Para a tela de configurações — retorna todos, inclusive inativos
+    if (tipo === 'servicos_todos') {
+      const servicos = await prisma.tipoServico.findMany({
+        orderBy: { ordem: 'asc' }
+      })
+      return NextResponse.json({ servicos })
+    }
+
     if (tipo === 'custos') {
       const custos = await prisma.tipoCusto.findMany({
         where: { ativo: true },

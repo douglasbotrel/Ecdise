@@ -121,7 +121,23 @@ export const ROLE_LABELS: Record<string, string> = {
   GESTOR_CAMPO: 'Gestor de Campo',
   SUPERVISOR: 'Supervisor',
   ANALISTA: 'Analista',
+  ANALISTA_RAPIDO: 'Analista de Serviço Rápido',
   TECNICO_CAMPO: 'Técnico de Campo',
+}
+
+export const ETAPA_LABELS: Record<string, string> = {
+  SOLICITACAO:         'Nova Solicitação',
+  EM_ANALISE_RAPIDA:   'Em Análise',
+  ANALISE_CONCLUIDA:   'Análise Concluída',
+  EM_NEGOCIACAO:       'Em Negociação',
+  PROPOSTA_ACEITA:     'Proposta Aceita',
+  AGUARDANDO_CONTRATO: 'Aguard. Contrato',
+  EM_CONTRATO:         'Em Contrato',
+  AGUARDANDO_SINAL:    'Aguard. Sinal',
+  OPERACIONAL:         'Operacional',
+  EM_EXECUCAO:         'Em Execução',
+  CONCLUIDO:           'Concluído',
+  CANCELADO:           'Cancelado',
 }
 
 export const DEPARTAMENTO_LABELS: Record<string, string> = {

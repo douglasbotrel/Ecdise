@@ -25,6 +25,7 @@ model Usuario {
   avatar       String?
   role         String   @default("ANALISTA")
   departamento String   @default("OPERACIONAL_AMBIENTAL")
+  modulosAcesso String?  // JSON: ["dashboard","comercial","operacional",...]
   ativo        Boolean  @default(true)
   criadoEm    DateTime @default(now())
   atualizadoEm DateTime @updatedAt

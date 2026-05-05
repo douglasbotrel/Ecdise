@@ -235,6 +235,47 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
       await criarNotificacaoEtapa(novaEtapa, projetoAtualizado)
     }
 
+    // ── AUTO-CRIAR TAREFAS ao entrar em EM_EXECUCAO ─────────────
+    if (novaEtapa === 'EM_EXECUCAO' && projeto.etapaPipeline !== 'EM_EXECUCAO') {
+      try {
+        const servicosRaw = projetoAtualizado.servicosContratados
+        if (servicosRaw) {
+          const nomesServicos: string[] = JSON.parse(servicosRaw)
+          const tiposServico = await prisma.tipoServico.findMany({
+            where: { nome: { in: nomesServicos }, ativo: true },
+            orderBy: { ordem: 'asc' },
+          })
+          const tarefasParaCriar: {
+            projetoId: string; titulo: string; etapa: string | null
+            ordem: number; responsavelId: string | null; status: string; obrigatorio: boolean
+          }[] = []
+          let ordemBase = 0
+          for (const tipo of tiposServico) {
+            if (tipo.tarefasPadrao) {
+              const tasks: { titulo: string; etapa: string; ordem: number }[] = JSON.parse(tipo.tarefasPadrao)
+              for (const t of tasks) {
+                tarefasParaCriar.push({
+                  projetoId: params.id,
+                  titulo: `[${tipo.nome}] ${t.titulo}`,
+                  etapa: t.etapa || null,
+                  ordem: ordemBase + t.ordem,
+                  responsavelId: projetoAtualizado.responsavelId || null,
+                  status: 'PENDENTE',
+                  obrigatorio: true,
+                })
+              }
+              ordemBase += tasks.length
+            }
+          }
+          if (tarefasParaCriar.length > 0) {
+            await prisma.tarefa.createMany({ data: tarefasParaCriar })
+          }
+        }
+      } catch (e) {
+        console.error('Erro ao criar tarefas automáticas:', e)
+      }
+    }
+
     await prisma.log.create({
       data: {
         usuarioId: user.id,
