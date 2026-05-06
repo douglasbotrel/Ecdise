@@ -49,6 +49,25 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'projetoId obrigatório' }, { status: 400 })
     }
 
+    // ── Validação de datas ────────────────────────────────────
+    if (dataAssinatura && dataVencimento) {
+      if (new Date(dataVencimento) <= new Date(dataAssinatura)) {
+        return NextResponse.json(
+          { error: 'A data de vencimento deve ser posterior à data de assinatura.' },
+          { status: 400 }
+        )
+      }
+    }
+    if (dataVencimento && !dataAssinatura) {
+      // Se só tem vencimento, valida contra hoje
+      if (new Date(dataVencimento) < new Date()) {
+        return NextResponse.json(
+          { error: 'A data de vencimento não pode ser anterior à data atual.' },
+          { status: 400 }
+        )
+      }
+    }
+
     // Load project to get financial values and clienteId
     const projeto = await prisma.projeto.findUnique({ where: { id: projetoId } })
     if (!projeto) return NextResponse.json({ error: 'Projeto não encontrado' }, { status: 404 })

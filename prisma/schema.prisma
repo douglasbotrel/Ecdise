@@ -177,6 +177,13 @@ model Tarefa {
   ordem         Int      @default(0)
   etapa         String?
   obrigatorio   Boolean  @default(false)
+  // ── Vistoria de Campo ──────────────────────────────────────
+  // requerVistoriaCampo: marcado pelo operacional → solicita ao setor campo
+  // statusVistoria: null | SOLICITADA | AGENDADA | REALIZADA
+  // dataCampo: definida APENAS pelo GESTOR_CAMPO ou ADMIN (read-only para operacional)
+  requerVistoriaCampo Boolean   @default(false)
+  statusVistoria      String?
+  dataCampo           DateTime?
   criadoEm     DateTime @default(now())
   atualizadoEm DateTime @updatedAt
 

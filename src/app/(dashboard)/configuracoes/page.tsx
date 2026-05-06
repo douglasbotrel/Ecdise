@@ -47,6 +47,13 @@ export default function ConfiguracoesPage() {
   const [tarefasEdicao, setTarefasEdicao] = useState<{ titulo: string; etapa: string; ordem: number }[]>([])
   const [salvandoTarefas, setSalvandoTarefas] = useState(false)
 
+  // Edição de serviço
+  const [servicoEditando, setServicoEditando] = useState<any | null>(null)
+  const [formServico, setFormServico] = useState({ nome: '', categoria: '' })
+
+  // Confirmação de exclusão
+  const [confirmandoExclusao, setConfirmandoExclusao] = useState<string | null>(null)
+
   // Form novo usuário
   const [formUser, setFormUser] = useState({
     nome: '', email: '', senha: '', cargo: '', telefone: '',
@@ -215,6 +222,38 @@ export default function ConfiguracoesPage() {
 
   function updateTarefa(i: number, field: string, value: string) {
     setTarefasEdicao(p => p.map((t, idx) => idx === i ? { ...t, [field]: value } : t))
+  }
+
+  function abrirEdicaoServico(s: any) {
+    setFormServico({ nome: s.nome, categoria: s.categoria || '' })
+    setServicoEditando(s)
+  }
+
+  async function salvarEdicaoServico() {
+    if (!servicoEditando || !formServico.nome) { toast.error('Nome é obrigatório'); return }
+    setSalvando(true)
+    try {
+      const res = await fetch('/api/pre-cadastros', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tipo: 'servico', id: servicoEditando.id, nome: formServico.nome, categoria: formServico.categoria }),
+      })
+      if (!res.ok) { const err = await res.json(); toast.error(err.error || 'Erro ao salvar'); return }
+      toast.success('Serviço atualizado!')
+      setServicoEditando(null)
+      loadDados()
+    } finally { setSalvando(false) }
+  }
+
+  async function excluirServico(id: string) {
+    try {
+      const res = await fetch(`/api/pre-cadastros?tipo=servico&id=${id}`, { method: 'DELETE' })
+      const data = await res.json()
+      if (!res.ok) { toast.error(data.error || 'Erro ao excluir'); return }
+      toast.success('Serviço excluído!')
+      setConfirmandoExclusao(null)
+      loadDados()
+    } catch { toast.error('Erro ao excluir') }
   }
 
   async function salvarTarefas(servicoId: string) {
@@ -419,10 +458,14 @@ export default function ConfiguracoesPage() {
                       </span>
                     )}
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1">
                     <button onClick={() => toggleAtivoServico(s)}
-                      className="text-xs text-gray-500 hover:text-gray-700 font-medium">
+                      className="text-xs text-gray-500 hover:text-gray-700 font-medium px-2 py-1.5 rounded-lg hover:bg-gray-100 transition-colors">
                       {s.ativo ? 'Desativar' : 'Ativar'}
+                    </button>
+                    <button onClick={() => abrirEdicaoServico(s)}
+                      className="flex items-center gap-1 text-xs text-blue-600 hover:bg-blue-50 px-2 py-1.5 rounded-lg font-medium transition-colors">
+                      <Edit2 className="w-3.5 h-3.5" /> Editar
                     </button>
                     <button onClick={() => abrirTarefas(s)}
                       className={`flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg transition-colors ${
@@ -433,6 +476,24 @@ export default function ConfiguracoesPage() {
                       {servicoExpandido === s.id ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
                       Tarefas Padrão
                     </button>
+                    {confirmandoExclusao === s.id ? (
+                      <div className="flex items-center gap-1 bg-red-50 border border-red-200 rounded-lg px-2 py-1">
+                        <span className="text-xs text-red-700 font-medium">Confirmar?</span>
+                        <button onClick={() => excluirServico(s.id)}
+                          className="text-xs bg-red-600 text-white px-2 py-0.5 rounded font-medium hover:bg-red-700">
+                          Sim
+                        </button>
+                        <button onClick={() => setConfirmandoExclusao(null)}
+                          className="text-xs text-gray-500 hover:text-gray-700 px-1">
+                          Não
+                        </button>
+                      </div>
+                    ) : (
+                      <button onClick={() => setConfirmandoExclusao(s.id)}
+                        className="flex items-center gap-1 text-xs text-red-500 hover:bg-red-50 px-2 py-1.5 rounded-lg font-medium transition-colors">
+                        <Trash2 className="w-3.5 h-3.5" /> Excluir
+                      </button>
+                    )}
                   </div>
                 </div>
 
@@ -520,6 +581,56 @@ export default function ConfiguracoesPage() {
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {/* ── MODAL EDITAR SERVIÇO ── */}
+      {servicoEditando && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm">
+            <div className="flex items-center justify-between p-5 border-b border-gray-100">
+              <div>
+                <h2 className="text-base font-semibold text-gray-900">Editar Tipo de Serviço</h2>
+                <p className="text-xs text-gray-400 mt-0.5">Altere o nome ou a categoria</p>
+              </div>
+              <button onClick={() => setServicoEditando(null)} className="text-gray-400 hover:text-gray-600">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-5 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Nome *</label>
+                <input
+                  type="text"
+                  value={formServico.nome}
+                  onChange={e => setFormServico(p => ({ ...p, nome: e.target.value }))}
+                  autoFocus
+                  className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Categoria</label>
+                <input
+                  type="text"
+                  value={formServico.categoria}
+                  onChange={e => setFormServico(p => ({ ...p, categoria: e.target.value }))}
+                  placeholder="Ex: Ambiental, Regularização..."
+                  className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                />
+              </div>
+              <div className="flex justify-end gap-3 pt-2 border-t border-gray-100">
+                <button onClick={() => setServicoEditando(null)}
+                  className="px-4 py-2 border border-gray-200 rounded-xl text-sm text-gray-700 hover:bg-gray-50">
+                  Cancelar
+                </button>
+                <button onClick={salvarEdicaoServico} disabled={salvando}
+                  className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-xl text-sm font-semibold flex items-center gap-2">
+                  {salvando && <Loader2 className="w-4 h-4 animate-spin" />}
+                  Salvar
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { toast } from 'sonner'
-import { Plus, MapPin, Calendar, Clock } from 'lucide-react'
+import { Plus, MapPin, Calendar, Clock, AlertCircle, CheckCircle2, Loader2 } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
 import { ModalVistoria } from '@/components/modals/ModalVistoria'
 
@@ -17,26 +17,53 @@ const STATUS_VISTORIA_COLORS: Record<string, string> = {
 }
 
 export default function CampoPage() {
-  const [vistorias, setVistorias] = useState<any[]>([])
-  const [loading, setLoading] = useState(true)
-  const [modalOpen, setModalOpen] = useState(false)
-  const [filtro, setFiltro] = useState('')
+  const [vistorias, setVistorias]       = useState<any[]>([])
+  const [loading, setLoading]           = useState(true)
+  const [modalOpen, setModalOpen]       = useState(false)
+  const [filtro, setFiltro]             = useState('')
   const [visualizacao, setVisualizacao] = useState<'lista' | 'calendario'>('lista')
+
+  // Solicitações de vistoria vindas do operacional
+  const [solicitacoes, setSolicitacoes]   = useState<any[]>([])
+  const [datasSol, setDatasSol]           = useState<Record<string, string>>({})  // tarefaId → data
+  const [salvandoSol, setSalvandoSol]     = useState<string | null>(null)
 
   const load = useCallback(async () => {
     setLoading(true)
     try {
       const params = new URLSearchParams()
       if (filtro) params.set('status', filtro)
-      const res = await fetch(`/api/vistorias?${params}`)
-      if (!res.ok) throw new Error()
-      const data = await res.json()
-      setVistorias(data.vistorias)
-    } catch { toast.error('Erro ao carregar vistorias') }
+      const [resV, resS] = await Promise.all([
+        fetch(`/api/vistorias?${params}`),
+        fetch('/api/tarefas?solicitadasCampo=true'),
+      ])
+      if (resV.ok) setVistorias((await resV.json()).vistorias)
+      if (resS.ok) {
+        const d = await resS.json()
+        setSolicitacoes(d.tarefas || [])
+      }
+    } catch { toast.error('Erro ao carregar dados') }
     finally { setLoading(false) }
   }, [filtro])
 
   useEffect(() => { load() }, [load])
+
+  async function definirDataCampo(tarefaId: string) {
+    const data = datasSol[tarefaId]
+    if (!data) { toast.error('Informe a data antes de confirmar'); return }
+    setSalvandoSol(tarefaId)
+    try {
+      const res = await fetch('/api/tarefas', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: tarefaId, dataCampo: data }),
+      })
+      if (!res.ok) { const d = await res.json(); toast.error(d.error); return }
+      toast.success('Data confirmada! Operacional foi notificado.')
+      load()
+    } catch { toast.error('Erro ao confirmar data') }
+    finally { setSalvandoSol(null) }
+  }
 
   async function atualizarStatus(id: string, status: string) {
     try {
@@ -73,6 +100,60 @@ export default function CampoPage() {
           Agendar Vistoria
         </button>
       </div>
+
+      {/* ── Solicitações de vistoria do Operacional ──────────────── */}
+      {solicitacoes.length > 0 && (
+        <div className="bg-blue-50 border border-blue-200 rounded-2xl overflow-hidden">
+          <div className="flex items-center gap-2 px-5 py-3 bg-blue-100/60 border-b border-blue-200">
+            <AlertCircle className="w-4 h-4 text-blue-600 flex-shrink-0" />
+            <h3 className="font-semibold text-blue-900 text-sm">
+              Solicitações de Vistoria do Operacional
+            </h3>
+            <span className="ml-auto bg-blue-600 text-white text-xs font-bold px-2 py-0.5 rounded-full">
+              {solicitacoes.length}
+            </span>
+          </div>
+          <div className="divide-y divide-blue-100">
+            {solicitacoes.map(tarefa => (
+              <div key={tarefa.id} className="px-5 py-4 flex flex-col sm:flex-row sm:items-center gap-3">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-0.5">
+                    <span className="font-mono text-xs text-gray-400">{tarefa.projeto?.codigo}</span>
+                    <span className="text-xs text-gray-400">•</span>
+                    <span className="text-xs text-gray-500">{tarefa.projeto?.imovelNome}</span>
+                  </div>
+                  <p className="text-sm font-semibold text-gray-900">{tarefa.titulo}</p>
+                  <p className="text-xs text-gray-400 mt-0.5">
+                    {tarefa.etapa && <span className="mr-2">{tarefa.etapa}</span>}
+                    {tarefa.projeto?.municipio && `📍 ${tarefa.projeto.municipio}${tarefa.projeto.estado ? `/${tarefa.projeto.estado}` : ''}`}
+                  </p>
+                </div>
+                {/* Campo define a data */}
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  <input
+                    type="date"
+                    value={datasSol[tarefa.id] || ''}
+                    onChange={e => setDatasSol(prev => ({ ...prev, [tarefa.id]: e.target.value }))}
+                    min={new Date().toISOString().split('T')[0]}
+                    className="border border-blue-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                  />
+                  <button
+                    onClick={() => definirDataCampo(tarefa.id)}
+                    disabled={salvandoSol === tarefa.id || !datasSol[tarefa.id]}
+                    className="flex items-center gap-1.5 px-4 py-1.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-sm font-semibold rounded-lg transition-colors"
+                  >
+                    {salvandoSol === tarefa.id
+                      ? <Loader2 className="w-4 h-4 animate-spin" />
+                      : <CheckCircle2 className="w-4 h-4" />
+                    }
+                    Confirmar data
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Cards resumo */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">

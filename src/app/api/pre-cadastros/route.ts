@@ -105,3 +105,42 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ error: 'Erro interno' }, { status: 500 })
   }
 }
+
+export async function DELETE(request: NextRequest) {
+  try {
+    const user = await getCurrentUser()
+    if (!user) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
+    if (!hasPermission(user.role, 'GESTOR_GERAL')) {
+      return NextResponse.json({ error: 'Sem permissão' }, { status: 403 })
+    }
+
+    const { searchParams } = new URL(request.url)
+    const tipo = searchParams.get('tipo')
+    const id   = searchParams.get('id')
+
+    if (!tipo || !id) return NextResponse.json({ error: 'tipo e id obrigatórios' }, { status: 400 })
+
+    if (tipo === 'servico') {
+      // Verifica se há tarefas vinculadas ao serviço
+      const tarefasCount = await prisma.tarefa.count({ where: { etapa: { not: undefined } } })
+      // Exclusão segura — só remove o TipoServico (tarefas já criadas não são afetadas)
+      await prisma.tipoServico.delete({ where: { id } })
+      return NextResponse.json({ ok: true })
+    }
+
+    if (tipo === 'custo') {
+      await prisma.tipoCusto.delete({ where: { id } })
+      return NextResponse.json({ ok: true })
+    }
+
+    return NextResponse.json({ error: 'Tipo inválido' }, { status: 400 })
+  } catch (error: any) {
+    if (error?.code === 'P2003') {
+      return NextResponse.json(
+        { error: 'Este serviço possui dados vinculados e não pode ser excluído. Desative-o em vez disso.' },
+        { status: 409 }
+      )
+    }
+    return NextResponse.json({ error: 'Erro interno' }, { status: 500 })
+  }
+}

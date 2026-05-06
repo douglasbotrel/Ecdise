@@ -191,6 +191,36 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
       }).catch(() => {})
     }
 
+    // ── Validações de datas ──────────────────────────────────────────────────
+    const dataInicio     = body.dataInicio     ? new Date(body.dataInicio)     : projeto.dataInicio
+    const dataPrazo      = body.dataPrazo      ? new Date(body.dataPrazo)      : projeto.dataPrazo
+    const dataConclusao  = body.dataConclusao  ? new Date(body.dataConclusao)  : null
+
+    if (body.dataPrazo && dataInicio && dataPrazo) {
+      if (dataPrazo < dataInicio) {
+        return NextResponse.json(
+          { error: 'O prazo do projeto não pode ser anterior à data de início.' },
+          { status: 400 }
+        )
+      }
+    }
+    if (body.dataConclusao && dataInicio && dataConclusao) {
+      if (dataConclusao < dataInicio) {
+        return NextResponse.json(
+          { error: 'A data de conclusão não pode ser anterior à data de início.' },
+          { status: 400 }
+        )
+      }
+    }
+    if (body.dataInicio && dataPrazo && dataInicio) {
+      if (dataPrazo < dataInicio) {
+        return NextResponse.json(
+          { error: 'A data de início não pode ser posterior ao prazo já definido.' },
+          { status: 400 }
+        )
+      }
+    }
+
     const projetoAtualizado = await prisma.projeto.update({
       where: { id: params.id },
       data: {

@@ -17,9 +17,13 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '50')
     const page = parseInt(searchParams.get('page') || '1')
 
+    // suporta múltiplas etapas via "etapas=A,B,C"
+    const etapasParam = searchParams.get('etapas')
+
     const where: any = {}
     if (statusComercial) where.statusComercial = statusComercial
     if (etapaPipeline) where.etapaPipeline = etapaPipeline
+    if (etapasParam) where.etapaPipeline = { in: etapasParam.split(',').map(e => e.trim()) }
     if (clienteId) where.clienteId = clienteId
     if (analistaRapidoId) where.analistaRapidoId = analistaRapidoId
     if (responsavelId) where.responsavelId = responsavelId

@@ -39,12 +39,21 @@ export default function ProjetoDetalhe() {
   const [formTarefa, setFormTarefa] = useState({ titulo: '', etapa: '', prazo: '', responsavelId: '' })
   const [salvandoT, setSalvandoT]   = useState(false)
 
+  // Etapas que têm acesso ao módulo Operacional (após primeiro pagamento)
+  const ETAPAS_VALIDAS = ['OPERACIONAL', 'EM_EXECUCAO', 'CONCLUIDO']
+
   const loadProjeto = useCallback(async () => {
     setLoading(true)
     try {
       const res = await fetch(`/api/projetos/${id}`)
       if (!res.ok) { router.push('/operacional'); return }
       const data = await res.json()
+      // Guard: bloqueia acesso a projetos que ainda não chegaram ao Operacional
+      if (!ETAPAS_VALIDAS.includes(data.projeto?.etapaPipeline)) {
+        toast.error('Este projeto ainda não passou pelo financeiro')
+        router.push('/operacional')
+        return
+      }
       setProjeto(data.projeto)
     } catch {
       toast.error('Erro ao carregar projeto')
@@ -78,12 +87,15 @@ export default function ProjetoDetalhe() {
     setSalvandoId(tarefaId)
     try {
       const e = editando[tarefaId]
+      const tarefa = (projeto?.tarefas || []).find((t: any) => t.id === tarefaId)
+      // Não envia prazo se tarefa aguarda campo definir
+      const podeEnviarPrazo = !tarefa?.requerVistoriaCampo || tarefa?.statusVistoria === null
       await fetch('/api/tarefas', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           id: tarefaId,
-          prazo: e.prazo || null,
+          ...(podeEnviarPrazo && { prazo: e.prazo || null }),
           responsavelId: e.responsavelId || null,
         }),
       })
@@ -91,6 +103,21 @@ export default function ProjetoDetalhe() {
       loadProjeto()
     } catch { toast.error('Erro ao salvar') }
     finally { setSalvandoId(null) }
+  }
+
+  // ── Solicitar vistoria de campo para uma tarefa ────────────
+  async function toggleVistoriaCampo(tarefaId: string, atual: boolean) {
+    try {
+      const res = await fetch('/api/tarefas', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: tarefaId, requerVistoriaCampo: !atual }),
+      })
+      if (!res.ok) { const d = await res.json(); toast.error(d.error); return }
+      if (!atual) toast.success('Solicitação enviada ao setor de campo!')
+      else toast.success('Solicitação de campo removida')
+      loadProjeto()
+    } catch { toast.error('Erro') }
   }
 
   // ── Iniciar execução: avança pipeline para EM_EXECUCAO ────
@@ -310,57 +337,116 @@ export default function ProjetoDetalhe() {
 
                   {/* Linhas de tarefas */}
                   {tarefasPorEtapa[etapa].map((tarefa: any) => {
-                    const edit    = editando[tarefa.id] || { prazo: '', responsavelId: '' }
-                    const isSaving = salvandoId === tarefa.id
+                    const edit      = editando[tarefa.id] || { prazo: '', responsavelId: '' }
+                    const isSaving  = salvandoId === tarefa.id
                     const atribuida = tarefa.prazo && tarefa.responsavelId
+                    const aguardaCampo  = tarefa.requerVistoriaCampo && tarefa.statusVistoria === 'SOLICITADA'
+                    const campoAgendado = tarefa.requerVistoriaCampo && tarefa.statusVistoria === 'AGENDADA'
 
                     return (
                       <div
                         key={tarefa.id}
-                        className={`px-4 sm:px-6 py-3 ${atribuida ? 'bg-green-50/30' : 'bg-white/60'}`}
+                        className={`px-4 sm:px-6 py-3 border-b border-amber-50 last:border-0 ${
+                          campoAgendado ? 'bg-green-50/40'
+                          : aguardaCampo ? 'bg-blue-50/30'
+                          : atribuida   ? 'bg-green-50/20'
+                          : 'bg-white/60'
+                        }`}
                       >
-                        {/* Layout mobile: empilhado */}
-                        <div className="flex flex-col sm:flex-row sm:items-center gap-2">
-                          {/* Título */}
-                          <div className="flex items-center gap-2 flex-1 min-w-0">
-                            <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${atribuida ? 'bg-green-500' : 'bg-amber-400'}`} />
-                            <span className="text-sm text-gray-800 truncate">{tarefa.titulo}</span>
+                        <div className="flex flex-col gap-2">
+                          {/* Linha 1: indicador + título + checkbox campo */}
+                          <div className="flex items-center gap-2">
+                            <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${
+                              campoAgendado ? 'bg-green-500'
+                              : aguardaCampo ? 'bg-blue-400'
+                              : atribuida   ? 'bg-green-400'
+                              : 'bg-amber-400'
+                            }`} />
+                            <span className="text-sm text-gray-800 flex-1 min-w-0 truncate">{tarefa.titulo}</span>
+
+                            {/* Checkbox: Requer vistoria de campo */}
+                            <label className={`flex items-center gap-1.5 text-xs cursor-pointer select-none flex-shrink-0 px-2 py-1 rounded-lg transition-colors ${
+                              tarefa.requerVistoriaCampo
+                                ? aguardaCampo  ? 'bg-blue-100 text-blue-700'
+                                  : campoAgendado ? 'bg-green-100 text-green-700'
+                                  : 'bg-blue-100 text-blue-700'
+                                : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
+                            }`}>
+                              <input
+                                type="checkbox"
+                                checked={tarefa.requerVistoriaCampo}
+                                onChange={() => toggleVistoriaCampo(tarefa.id, tarefa.requerVistoriaCampo)}
+                                className="accent-blue-600 w-3.5 h-3.5"
+                              />
+                              <span>Vistoria de campo</span>
+                            </label>
                           </div>
 
-                          {/* Prazo + Responsável + Salvar */}
-                          <div className="flex flex-col xs:flex-row gap-2 sm:flex-row sm:items-center sm:flex-shrink-0">
-                            <input
-                              type="date"
-                              value={edit.prazo}
-                              onChange={e => setEditando(prev => ({
-                                ...prev,
-                                [tarefa.id]: { ...prev[tarefa.id], prazo: e.target.value },
-                              }))}
-                              className="border border-gray-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-amber-400 w-full xs:w-auto"
-                            />
-                            <select
-                              value={edit.responsavelId}
-                              onChange={e => setEditando(prev => ({
-                                ...prev,
-                                [tarefa.id]: { ...prev[tarefa.id], responsavelId: e.target.value },
-                              }))}
-                              className="border border-gray-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-amber-400 bg-white w-full xs:w-36 sm:w-40"
-                            >
-                              <option value="">Responsável...</option>
-                              {usuarios.map(u => <option key={u.id} value={u.id}>{u.nome}</option>)}
-                            </select>
-                            <button
-                              onClick={() => salvarAtribuicao(tarefa.id)}
-                              disabled={isSaving}
-                              className="flex items-center justify-center gap-1 px-3 py-1.5 bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white rounded-lg text-xs font-medium transition-colors"
-                            >
-                              {isSaving
-                                ? <Loader2 className="w-3 h-3 animate-spin" />
-                                : <Save className="w-3 h-3" />
-                              }
-                              Salvar
-                            </button>
-                          </div>
+                          {/* Linha 2: status campo OU inputs de prazo/responsável */}
+                          {aguardaCampo ? (
+                            <div className="ml-4 flex items-center gap-2">
+                              <span className="inline-flex items-center gap-1.5 text-xs text-blue-600 bg-blue-50 border border-blue-200 px-2.5 py-1.5 rounded-lg font-medium">
+                                🔵 Aguardando Gestão de Campo definir data
+                              </span>
+                            </div>
+                          ) : campoAgendado ? (
+                            <div className="ml-4 flex items-center gap-2 flex-wrap">
+                              <span className="inline-flex items-center gap-1.5 text-xs text-green-700 bg-green-50 border border-green-200 px-2.5 py-1.5 rounded-lg font-medium">
+                                ✅ Data definida pelo Campo: {tarefa.dataCampo
+                                  ? new Date(tarefa.dataCampo).toLocaleDateString('pt-BR')
+                                  : '—'}
+                              </span>
+                              <span className="text-xs text-gray-400 italic">Data gerenciada pelo setor de campo</span>
+                              {/* Responsável ainda pode ser definido */}
+                              <select
+                                value={edit.responsavelId}
+                                onChange={e => setEditando(prev => ({
+                                  ...prev, [tarefa.id]: { ...prev[tarefa.id], responsavelId: e.target.value },
+                                }))}
+                                className="border border-gray-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-amber-400 bg-white w-36"
+                              >
+                                <option value="">Responsável...</option>
+                                {usuarios.map(u => <option key={u.id} value={u.id}>{u.nome}</option>)}
+                              </select>
+                              <button
+                                onClick={() => salvarAtribuicao(tarefa.id)}
+                                disabled={isSaving}
+                                className="flex items-center gap-1 px-3 py-1.5 bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white rounded-lg text-xs font-medium"
+                              >
+                                {isSaving ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />}
+                                Salvar
+                              </button>
+                            </div>
+                          ) : (
+                            <div className="ml-4 flex flex-col xs:flex-row gap-2 sm:flex-row sm:items-center">
+                              <input
+                                type="date"
+                                value={edit.prazo}
+                                onChange={e => setEditando(prev => ({
+                                  ...prev, [tarefa.id]: { ...prev[tarefa.id], prazo: e.target.value },
+                                }))}
+                                className="border border-gray-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-amber-400"
+                              />
+                              <select
+                                value={edit.responsavelId}
+                                onChange={e => setEditando(prev => ({
+                                  ...prev, [tarefa.id]: { ...prev[tarefa.id], responsavelId: e.target.value },
+                                }))}
+                                className="border border-gray-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-amber-400 bg-white w-36 sm:w-40"
+                              >
+                                <option value="">Responsável...</option>
+                                {usuarios.map(u => <option key={u.id} value={u.id}>{u.nome}</option>)}
+                              </select>
+                              <button
+                                onClick={() => salvarAtribuicao(tarefa.id)}
+                                disabled={isSaving}
+                                className="flex items-center justify-center gap-1 px-3 py-1.5 bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white rounded-lg text-xs font-medium"
+                              >
+                                {isSaving ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />}
+                                Salvar
+                              </button>
+                            </div>
+                          )}
                         </div>
                       </div>
                     )

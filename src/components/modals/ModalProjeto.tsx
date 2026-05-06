@@ -34,6 +34,56 @@ function maskTelefone(value: string): string {
     .replace(/(\d{5})(\d{1,4})$/, '$1-$2')
 }
 
+// ── Validações ────────────────────────────────────────────────
+function validarCPF(cpf: string): boolean {
+  const n = cpf.replace(/\D/g, '')
+  if (n.length !== 11) return false
+  if (/^(\d)\1{10}$/.test(n)) return false // sequências iguais (111.111.111-11)
+  let soma = 0
+  for (let i = 0; i < 9; i++) soma += parseInt(n[i]) * (10 - i)
+  let resto = (soma * 10) % 11
+  if (resto === 10 || resto === 11) resto = 0
+  if (resto !== parseInt(n[9])) return false
+  soma = 0
+  for (let i = 0; i < 10; i++) soma += parseInt(n[i]) * (11 - i)
+  resto = (soma * 10) % 11
+  if (resto === 10 || resto === 11) resto = 0
+  return resto === parseInt(n[10])
+}
+
+function validarCNPJ(cnpj: string): boolean {
+  const n = cnpj.replace(/\D/g, '')
+  if (n.length !== 14) return false
+  if (/^(\d)\1{13}$/.test(n)) return false
+  const calc = (s: string, pesos: number[]) =>
+    s.split('').reduce((acc, d, i) => acc + parseInt(d) * pesos[i], 0)
+  const p1 = [5,4,3,2,9,8,7,6,5,4,3,2]
+  let r1 = 11 - (calc(n.slice(0,12), p1) % 11)
+  if (r1 >= 10) r1 = 0
+  if (r1 !== parseInt(n[12])) return false
+  const p2 = [6,5,4,3,2,9,8,7,6,5,4,3,2]
+  let r2 = 11 - (calc(n.slice(0,13), p2) % 11)
+  if (r2 >= 10) r2 = 0
+  return r2 === parseInt(n[13])
+}
+
+function validarCpfCnpj(valor: string): string {
+  const n = valor.replace(/\D/g, '')
+  if (n.length === 0) return 'CPF ou CNPJ é obrigatório'
+  if (n.length < 11) return `CPF incompleto — faltam ${11 - n.length} dígito(s)`
+  if (n.length === 11) return validarCPF(n) ? '' : 'CPF inválido — verifique os dígitos'
+  if (n.length < 14) return `CNPJ incompleto — faltam ${14 - n.length} dígito(s)`
+  return validarCNPJ(n) ? '' : 'CNPJ inválido — verifique os dígitos'
+}
+
+function validarTelefone(valor: string): string {
+  const n = valor.replace(/\D/g, '')
+  if (n.length === 0) return '' // telefone é opcional no cliente
+  if (n.length < 10) return `Número incompleto — faltam ${10 - n.length} dígito(s)`
+  if (n.length > 11) return 'Número inválido — máximo 11 dígitos'
+  return ''
+}
+
 const ETAPA_LABELS: Record<string, string> = {
   SOLICITACAO:         'Nova Solicitação',
   EM_ANALISE_RAPIDA:   'Em Análise Rápida',
@@ -72,6 +122,19 @@ export function ModalProjeto({ open, onClose, projeto, onSalvo, modoAcao = 'edit
   const [novoCliente, setNovoCliente] = useState(false)
   const [arquivos, setArquivos] = useState<{ nome: string; url: string; uploading?: boolean }[]>([])
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  // Erros de validação dos campos de cliente
+  const [erros, setErros] = useState<{ cpfCnpj?: string; telefone?: string }>({})
+
+  function validarCamposCliente(): boolean {
+    const novosErros: { cpfCnpj?: string; telefone?: string } = {}
+    const erroCpf = validarCpfCnpj(form.clienteCpfCnpj)
+    if (erroCpf) novosErros.cpfCnpj = erroCpf
+    const erroTel = validarTelefone(form.clienteTelefone)
+    if (erroTel) novosErros.telefone = erroTel
+    setErros(novosErros)
+    return Object.keys(novosErros).length === 0
+  }
 
   // Auto-detect mode from pipeline stage when modoAcao='editar'
   const modoReal = !projeto ? 'criar' : (modoAcao !== 'editar' ? modoAcao :
@@ -130,7 +193,11 @@ export function ModalProjeto({ open, onClose, projeto, onSalvo, modoAcao = 'edit
           numeroPrestacoes: projeto.numeroPrestacoes?.toString() || '',
           gestorResponsavelId: projeto.gestorResponsavelId || '',
           supervisorId: projeto.supervisorId || '',
-          tipoContrato: projeto.contrato?.tipoContrato || '',
+          // Tipo de contrato: usa o do contrato existente, ou deriva do tipoServico do projeto
+          tipoContrato: projeto.contrato?.tipoContrato ||
+            (projeto.tipoServico === 'Ambiental'      ? 'Licenciamento Ambiental'  :
+             projeto.tipoServico === 'Regularização'  ? 'Regularização Fundiária'  :
+             projeto.tipoServico || ''),
           observacoesContrato: projeto.contrato?.observacoes || '',
           dataAssinaturaContrato: projeto.contrato?.dataAssinatura
             ? new Date(projeto.contrato.dataAssinatura).toISOString().split('T')[0] : '',
@@ -163,6 +230,7 @@ export function ModalProjeto({ open, onClose, projeto, onSalvo, modoAcao = 'edit
     })
     setArquivos([])
     setNovoCliente(false)
+    setErros({})
   }
 
   async function loadDados() {
@@ -218,8 +286,12 @@ export function ModalProjeto({ open, onClose, projeto, onSalvo, modoAcao = 'edit
     if (modoReal === 'criar') {
       if (!form.tipoServico) { toast.error('Selecione o tipo de serviço'); return }
       if (!novoCliente && !form.clienteId) { toast.error('Selecione ou cadastre um cliente'); return }
-      if (novoCliente && (!form.clienteNome || !form.clienteCpfCnpj)) {
-        toast.error('Preencha nome e CPF/CNPJ do cliente'); return
+      if (novoCliente) {
+        if (!form.clienteNome) { toast.error('Informe o nome do cliente'); return }
+        if (!validarCamposCliente()) {
+          toast.error('Corrija os campos marcados em vermelho')
+          return
+        }
       }
     }
 
@@ -443,29 +515,59 @@ export function ModalProjeto({ open, onClose, projeto, onSalvo, modoAcao = 'edit
                       <input
                         type="text"
                         value={form.clienteCpfCnpj}
-                        onChange={e => set('clienteCpfCnpj', maskCpfCnpj(e.target.value))}
+                        onChange={e => {
+                          set('clienteCpfCnpj', maskCpfCnpj(e.target.value))
+                          setErros(prev => ({ ...prev, cpfCnpj: undefined }))
+                        }}
+                        onBlur={() => {
+                          if (form.clienteCpfCnpj) {
+                            const err = validarCpfCnpj(form.clienteCpfCnpj)
+                            setErros(prev => ({ ...prev, cpfCnpj: err || undefined }))
+                          }
+                        }}
                         placeholder="CPF ou CNPJ *"
                         maxLength={18}
                         inputMode="numeric"
-                        className="input-field"
+                        className={`input-field ${erros.cpfCnpj ? 'input-field-error' : ''}`}
                       />
-                      <p className="text-xs text-gray-400 mt-0.5 pl-1">
-                        {form.clienteCpfCnpj.replace(/\D/g, '').length <= 11 ? 'CPF (11 dígitos)' : 'CNPJ (14 dígitos)'}
-                      </p>
+                      {erros.cpfCnpj ? (
+                        <p className="text-xs text-red-500 mt-0.5 pl-1 flex items-center gap-1">
+                          <span>⚠</span> {erros.cpfCnpj}
+                        </p>
+                      ) : (
+                        <p className="text-xs text-gray-400 mt-0.5 pl-1">
+                          {form.clienteCpfCnpj.replace(/\D/g, '').length <= 11 ? 'CPF (11 dígitos)' : 'CNPJ (14 dígitos)'}
+                        </p>
+                      )}
                     </div>
                     <div>
                       <input
                         type="text"
                         value={form.clienteTelefone}
-                        onChange={e => set('clienteTelefone', maskTelefone(e.target.value))}
+                        onChange={e => {
+                          set('clienteTelefone', maskTelefone(e.target.value))
+                          setErros(prev => ({ ...prev, telefone: undefined }))
+                        }}
+                        onBlur={() => {
+                          if (form.clienteTelefone) {
+                            const err = validarTelefone(form.clienteTelefone)
+                            setErros(prev => ({ ...prev, telefone: err || undefined }))
+                          }
+                        }}
                         placeholder="(00) 00000-0000"
                         maxLength={15}
                         inputMode="numeric"
-                        className="input-field"
+                        className={`input-field ${erros.telefone ? 'input-field-error' : ''}`}
                       />
-                      <p className="text-xs text-gray-400 mt-0.5 pl-1">
-                        {form.clienteTelefone.replace(/\D/g, '').length <= 10 ? 'Fixo (10 dígitos)' : 'Celular (11 dígitos)'}
-                      </p>
+                      {erros.telefone ? (
+                        <p className="text-xs text-red-500 mt-0.5 pl-1 flex items-center gap-1">
+                          <span>⚠</span> {erros.telefone}
+                        </p>
+                      ) : (
+                        <p className="text-xs text-gray-400 mt-0.5 pl-1">
+                          {form.clienteTelefone.replace(/\D/g, '').length <= 10 ? 'Fixo (10 dígitos)' : 'Celular (11 dígitos)'}
+                        </p>
+                      )}
                     </div>
                   </div>
                   <input type="email" value={form.clienteEmail} onChange={e => set('clienteEmail', e.target.value)}
@@ -737,11 +839,15 @@ export function ModalProjeto({ open, onClose, projeto, onSalvo, modoAcao = 'edit
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">Tipo de Contrato *</label>
-              <select value={form.tipoContrato} onChange={e => set('tipoContrato', e.target.value)} className="input-field" required>
-                <option value="">Selecione o tipo...</option>
-                {TIPOS_CONTRATO.map(t => <option key={t} value={t}>{t}</option>)}
-              </select>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">Tipo de Contrato</label>
+              {/* Read-only: derivado do tipo de serviço escolhido no início pelo comercial */}
+              <div className="flex items-center gap-2 px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl">
+                <span className="text-sm font-medium text-gray-800">{form.tipoContrato || projeto?.tipoServico || '—'}</span>
+                <span className="ml-auto text-xs text-gray-400 italic">Definido na etapa comercial</span>
+              </div>
+              <p className="text-xs text-gray-400 mt-1 pl-1">
+                Tipo de serviço: <strong>{projeto?.tipoServico}</strong> — definido pela equipe comercial, não editável aqui.
+              </p>
             </div>
 
             <div className="grid grid-cols-2 gap-3">
@@ -918,6 +1024,13 @@ export function ModalProjeto({ open, onClose, projeto, onSalvo, modoAcao = 'edit
         .input-field:focus {
           border-color: transparent;
           box-shadow: 0 0 0 2px #22c55e;
+        }
+        .input-field-error {
+          border-color: #ef4444 !important;
+          background-color: #fff5f5;
+        }
+        .input-field-error:focus {
+          box-shadow: 0 0 0 2px #ef4444;
         }
       `}</style>
     </div>
