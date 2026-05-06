@@ -3,7 +3,11 @@ import bcrypt from 'bcryptjs'
 import { cookies } from 'next/headers'
 import { prisma } from './prisma'
 
-const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret-dev'
+// Falha rápida se JWT_SECRET não estiver definido — nunca use fallback em produção
+const JWT_SECRET = process.env.JWT_SECRET
+if (!JWT_SECRET) {
+  throw new Error('❌ JWT_SECRET não definido. Adicione ao arquivo .env antes de iniciar o servidor.')
+}
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d'
 
 export interface JWTPayload {
@@ -15,12 +19,12 @@ export interface JWTPayload {
 }
 
 export function signToken(payload: JWTPayload): string {
-  return jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN as jwt.SignOptions['expiresIn'] })
+  return jwt.sign(payload, JWT_SECRET!, { expiresIn: JWT_EXPIRES_IN as jwt.SignOptions['expiresIn'] })
 }
 
 export function verifyToken(token: string): JWTPayload | null {
   try {
-    return jwt.verify(token, JWT_SECRET) as JWTPayload
+    return jwt.verify(token, JWT_SECRET!) as JWTPayload
   } catch {
     return null
   }
@@ -39,7 +43,20 @@ export async function getCurrentUser(): Promise<JWTPayload | null> {
     const cookieStore = cookies()
     const token = cookieStore.get('ecdise_token')?.value
     if (!token) return null
-    return verifyToken(token)
+
+    const payload = verifyToken(token)
+    if (!payload) return null
+
+    // Verifica se o usuário ainda existe e está ativo no banco.
+    // Isso invalida sessões de usuários desativados imediatamente,
+    // sem precisar esperar o token expirar.
+    const usuario = await prisma.usuario.findUnique({
+      where: { id: payload.id },
+      select: { ativo: true },
+    })
+    if (!usuario || !usuario.ativo) return null
+
+    return payload
   } catch {
     return null
   }
