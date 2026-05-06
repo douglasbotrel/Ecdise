@@ -1,11 +1,12 @@
 'use client'
 
 import Link from 'next/link'
+import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 import {
   LayoutDashboard, Briefcase, FileText, Settings,
   ClipboardList, MapPin, DollarSign, CheckSquare,
-  BarChart3, Leaf, ChevronLeft, ChevronRight, X
+  BarChart3, ChevronLeft, ChevronRight, X
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -107,16 +108,34 @@ export function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose, modulo
         {/* Logo */}
         <div className={cn(
           'flex items-center border-b border-gray-100 flex-shrink-0',
-          collapsed ? 'justify-center p-4' : 'px-4 py-4 gap-3'
+          collapsed ? 'justify-center p-3' : 'px-4 py-3 gap-3'
         )}>
-          <div className="w-9 h-9 bg-green-600 rounded-xl flex items-center justify-center flex-shrink-0">
-            <Leaf className="w-5 h-5 text-white" />
-          </div>
-          {!collapsed && (
-            <div>
-              <h1 className="font-bold text-gray-900 text-lg leading-none">Ecdise</h1>
-              <p className="text-xs text-gray-400 leading-none mt-0.5">Gestão Ambiental</p>
+          {collapsed ? (
+            <div className="w-9 h-9 flex items-center justify-center flex-shrink-0">
+              <Image
+                src="/logo.png"
+                alt="Ecdise"
+                width={36}
+                height={36}
+                className="object-contain"
+              />
             </div>
+          ) : (
+            <>
+              <div className="w-9 h-9 flex items-center justify-center flex-shrink-0">
+                <Image
+                  src="/logo.png"
+                  alt="Ecdise"
+                  width={36}
+                  height={36}
+                  className="object-contain"
+                />
+              </div>
+              <div>
+                <h1 className="font-bold text-gray-900 text-lg leading-none">ecdise</h1>
+                <p className="text-xs text-gray-400 leading-none mt-0.5">Gestão Ambiental</p>
+              </div>
+            </>
           )}
 
           {/* Close button mobile */}

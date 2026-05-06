@@ -6,6 +6,34 @@ import { X, Loader2, Upload, FileText, Trash2, CheckCircle, ArrowRight, DollarSi
 
 const UFS = ['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO']
 
+// ── Máscaras de input ─────────────────────────────────────────
+function maskCpfCnpj(value: string): string {
+  const nums = value.replace(/\D/g, '').slice(0, 14)
+  if (nums.length <= 11) {
+    return nums
+      .replace(/(\d{3})(\d)/, '$1.$2')
+      .replace(/(\d{3})(\d)/, '$1.$2')
+      .replace(/(\d{3})(\d{1,2})$/, '$1-$2')
+  }
+  return nums
+    .replace(/(\d{2})(\d)/, '$1.$2')
+    .replace(/(\d{3})(\d)/, '$1.$2')
+    .replace(/(\d{3})(\d)/, '$1/$2')
+    .replace(/(\d{4})(\d{1,2})$/, '$1-$2')
+}
+
+function maskTelefone(value: string): string {
+  const nums = value.replace(/\D/g, '').slice(0, 11)
+  if (nums.length <= 10) {
+    return nums
+      .replace(/(\d{2})(\d)/, '($1) $2')
+      .replace(/(\d{4})(\d{1,4})$/, '$1-$2')
+  }
+  return nums
+    .replace(/(\d{2})(\d)/, '($1) $2')
+    .replace(/(\d{5})(\d{1,4})$/, '$1-$2')
+}
+
 const ETAPA_LABELS: Record<string, string> = {
   SOLICITACAO:         'Nova Solicitação',
   EM_ANALISE_RAPIDA:   'Em Análise Rápida',
@@ -411,10 +439,34 @@ export function ModalProjeto({ open, onClose, projeto, onSalvo, modoAcao = 'edit
                   <input type="text" value={form.clienteNome} onChange={e => set('clienteNome', e.target.value)}
                     placeholder="Nome do cliente / empresa *" className="input-field" />
                   <div className="grid grid-cols-2 gap-2">
-                    <input type="text" value={form.clienteCpfCnpj} onChange={e => set('clienteCpfCnpj', e.target.value)}
-                      placeholder="CPF ou CNPJ *" className="input-field" />
-                    <input type="text" value={form.clienteTelefone} onChange={e => set('clienteTelefone', e.target.value)}
-                      placeholder="Telefone/WhatsApp" className="input-field" />
+                    <div>
+                      <input
+                        type="text"
+                        value={form.clienteCpfCnpj}
+                        onChange={e => set('clienteCpfCnpj', maskCpfCnpj(e.target.value))}
+                        placeholder="CPF ou CNPJ *"
+                        maxLength={18}
+                        inputMode="numeric"
+                        className="input-field"
+                      />
+                      <p className="text-xs text-gray-400 mt-0.5 pl-1">
+                        {form.clienteCpfCnpj.replace(/\D/g, '').length <= 11 ? 'CPF (11 dígitos)' : 'CNPJ (14 dígitos)'}
+                      </p>
+                    </div>
+                    <div>
+                      <input
+                        type="text"
+                        value={form.clienteTelefone}
+                        onChange={e => set('clienteTelefone', maskTelefone(e.target.value))}
+                        placeholder="(00) 00000-0000"
+                        maxLength={15}
+                        inputMode="numeric"
+                        className="input-field"
+                      />
+                      <p className="text-xs text-gray-400 mt-0.5 pl-1">
+                        {form.clienteTelefone.replace(/\D/g, '').length <= 10 ? 'Fixo (10 dígitos)' : 'Celular (11 dígitos)'}
+                      </p>
+                    </div>
                   </div>
                   <input type="email" value={form.clienteEmail} onChange={e => set('clienteEmail', e.target.value)}
                     placeholder="E-mail (opcional)" className="input-field" />
@@ -429,19 +481,35 @@ export function ModalProjeto({ open, onClose, projeto, onSalvo, modoAcao = 'edit
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1.5">Tipo de Serviço *</label>
-              <select value={form.tipoServico} onChange={e => set('tipoServico', e.target.value)} className="input-field" required>
-                <option value="">Selecione o tipo...</option>
-                {servicosAmbiental.length > 0 && (
-                  <optgroup label="Ambiental">
-                    {servicosAmbiental.map(s => <option key={s.id} value={s.nome}>{s.nome}</option>)}
-                  </optgroup>
-                )}
-                {servicosRegularizacao.length > 0 && (
-                  <optgroup label="Regularização">
-                    {servicosRegularizacao.map(s => <option key={s.id} value={s.nome}>{s.nome}</option>)}
-                  </optgroup>
-                )}
-              </select>
+              <div className="grid grid-cols-2 gap-3">
+                {[
+                  { value: 'Ambiental',      label: 'Ambiental',      desc: 'Licenciamento, Outorga, PRAD, AEF…', color: 'green' },
+                  { value: 'Regularização',  label: 'Regularização',  desc: 'ACAIO, CAR, Tipologia Florestal…',    color: 'blue'  },
+                ].map(({ value, label, desc, color }) => (
+                  <button
+                    key={value}
+                    type="button"
+                    onClick={() => set('tipoServico', value)}
+                    className={`flex flex-col items-start p-3.5 rounded-xl border-2 text-left transition-all ${
+                      form.tipoServico === value
+                        ? color === 'green'
+                          ? 'border-green-500 bg-green-50'
+                          : 'border-blue-500 bg-blue-50'
+                        : 'border-gray-200 hover:border-gray-300 bg-white'
+                    }`}
+                  >
+                    <span className={`text-sm font-semibold mb-0.5 ${
+                      form.tipoServico === value
+                        ? color === 'green' ? 'text-green-700' : 'text-blue-700'
+                        : 'text-gray-800'
+                    }`}>{label}</span>
+                    <span className="text-xs text-gray-400 leading-snug">{desc}</span>
+                  </button>
+                ))}
+              </div>
+              {!form.tipoServico && (
+                <p className="text-xs text-red-500 mt-1 pl-1">Selecione o tipo de serviço</p>
+              )}
             </div>
 
             <div className="grid grid-cols-2 gap-3">

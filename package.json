@@ -2,6 +2,9 @@
   "name": "ecdise",
   "version": "0.1.0",
   "private": true,
+  "prisma": {
+    "seed": "ts-node --project tsconfig.seed.json prisma/seed.ts"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -11,6 +14,7 @@
     "db:push": "prisma db push",
     "db:migrate": "prisma migrate dev",
     "db:seed": "ts-node --project tsconfig.seed.json prisma/seed.ts",
+    "db:reset": "prisma db push --force-reset && ts-node --project tsconfig.seed.json prisma/seed.ts",
     "db:studio": "prisma studio"
   },
   "dependencies": {

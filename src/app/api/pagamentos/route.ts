@@ -136,7 +136,10 @@ export async function PATCH(request: NextRequest) {
             let tarefasPadrao: string[] = []
             try { tarefasPadrao = JSON.parse(ts.tarefasPadrao || '[]') } catch {}
 
-            for (const titulo of tarefasPadrao) {
+            for (const item of tarefasPadrao) {
+              // suporta tanto string simples quanto objeto { titulo, etapa, ordem }
+              const titulo = typeof item === 'string' ? item : (item as any).titulo
+              if (!titulo) continue
               await prisma.tarefa.create({
                 data: {
                   projetoId,
