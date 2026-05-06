@@ -135,7 +135,7 @@ export function Header({ onMobileMenuOpen, usuario }: HeaderProps) {
           </button>
 
           {notifOpen && (
-            <div className="absolute right-0 top-full mt-2 w-96 bg-white rounded-xl shadow-xl border border-gray-100 z-50 overflow-hidden">
+            <div className="absolute right-0 top-full mt-2 w-[calc(100vw-2rem)] sm:w-96 max-w-sm sm:max-w-none bg-white rounded-xl shadow-xl border border-gray-100 z-50 overflow-hidden">
               {/* Header do painel */}
               <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between bg-gray-50">
                 <div className="flex items-center gap-2">

@@ -50,6 +50,27 @@ export async function PATCH(request: NextRequest) {
 
     if (!id) return NextResponse.json({ error: 'ID obrigatório' }, { status: 400 })
 
+    // Busca pagamento atual com contrato + projeto + servicosContratados
+    const pagamentoAtual = await prisma.pagamento.findUnique({
+      where: { id },
+      include: {
+        contrato: {
+          include: {
+            projeto: {
+              select: {
+                id: true,
+                codigo: true,
+                etapaPipeline: true,
+                servicosContratados: true,
+              },
+            },
+          },
+        },
+      },
+    })
+    if (!pagamentoAtual) return NextResponse.json({ error: 'Pagamento não encontrado' }, { status: 404 })
+
+    // Atualiza pagamento
     const pagamento = await prisma.pagamento.update({
       where: { id },
       data: {
@@ -59,13 +80,6 @@ export async function PATCH(request: NextRequest) {
         ...(comprovante    !== undefined && { comprovante }),
         ...(observacoes    !== undefined && { observacoes }),
         ...(status === 'PAGO' && !dataPagamento && { dataPagamento: new Date() }),
-      },
-      include: {
-        contrato: {
-          include: {
-            projeto: true,
-          },
-        },
       },
     })
 
@@ -79,29 +93,64 @@ export async function PATCH(request: NextRequest) {
     })
 
     // ── Avanço automático de pipeline ─────────────────────────
-    // Se este pagamento foi marcado como PAGO e o projeto ainda
-    // está em AGUARDANDO_SINAL, verificamos se é o 1º pagamento pago.
-    // Se sim, avançamos para OPERACIONAL e notificamos a equipe técnica.
-    if (status === 'PAGO' && pagamento.contrato?.projeto?.etapaPipeline === 'AGUARDANDO_SINAL') {
-      const contratoId   = pagamento.contratoId
-      const projetoId    = pagamento.contrato.projetoId
+    // Primeiro pagamento PAGO de um contrato cujo projeto está em AGUARDANDO_SINAL
+    // → avança para OPERACIONAL e cria tarefas automaticamente
+    if (
+      status === 'PAGO' &&
+      pagamentoAtual.contrato?.projeto?.etapaPipeline === 'AGUARDANDO_SINAL'
+    ) {
+      const contrato  = pagamentoAtual.contrato
+      const projeto   = contrato.projeto
+      const projetoId = contrato.projetoId
 
-      // Conta pagamentos PAGO deste contrato (já inclui o que acabou de mudar)
-      const pagosCount = await prisma.pagamento.count({
-        where: { contratoId, status: 'PAGO' },
+      // Conta quantos PAGO este contrato já tinha antes desta atualização
+      const pagosAntesCount = await prisma.pagamento.count({
+        where: { contratoId: contrato.id, status: 'PAGO' },
       })
 
-      if (pagosCount === 1) {
-        // Primeiro pagamento — avança pipeline
+      // pagosAntesCount === 1 significa que só este (que acabou de virar PAGO) existe
+      if (pagosAntesCount === 1) {
+
+        // 1. Avança pipeline
         await prisma.projeto.update({
           where: { id: projetoId },
-          data: {
-            etapaPipeline: 'OPERACIONAL',
-            dataAprovacao: new Date(),
-          },
+          data: { etapaPipeline: 'OPERACIONAL', dataAprovacao: new Date() },
         })
 
-        // Notifica gestores operacionais e de campo
+        // 2. Identifica serviços contratados
+        let nomesServicos: string[] = []
+        try {
+          const raw = contrato.servicosContratados || projeto.servicosContratados || '[]'
+          nomesServicos = JSON.parse(raw as string)
+        } catch {}
+
+        // 3. Busca TipoServico e cria tarefas
+        if (nomesServicos.length > 0) {
+          const tiposServico = await prisma.tipoServico.findMany({
+            where: { nome: { in: nomesServicos } },
+            orderBy: { ordem: 'asc' },
+          })
+
+          let ordem = 1
+          for (const ts of tiposServico) {
+            let tarefasPadrao: string[] = []
+            try { tarefasPadrao = JSON.parse(ts.tarefasPadrao || '[]') } catch {}
+
+            for (const titulo of tarefasPadrao) {
+              await prisma.tarefa.create({
+                data: {
+                  projetoId,
+                  titulo,
+                  etapa: ts.nome,
+                  ordem: ordem++,
+                  // prazo e responsavelId ficam em branco para o gestor preencher
+                },
+              })
+            }
+          }
+        }
+
+        // 4. Notifica gestores operacionais e de campo
         const gestores = await prisma.usuario.findMany({
           where: {
             ativo: true,
@@ -110,15 +159,17 @@ export async function PATCH(request: NextRequest) {
           select: { id: true },
         })
 
-        await prisma.notificacao.createMany({
-          data: gestores.map(g => ({
-            usuarioId: g.id,
-            titulo: '🚀 Projeto liberado para execução',
-            mensagem: `O projeto ${pagamento.contrato.projeto?.codigo} teve o sinal confirmado e está aguardando planejamento operacional.`,
-            tipo: 'sucesso',
-            link: `/operacional/${projetoId}`,
-          })),
-        })
+        if (gestores.length > 0) {
+          await prisma.notificacao.createMany({
+            data: gestores.map(g => ({
+              usuarioId: g.id,
+              titulo: '🚀 Projeto liberado para execução',
+              mensagem: `Projeto ${projeto.codigo} teve sinal confirmado. Acesse Operacional para definir prazos e responsáveis.`,
+              tipo: 'sucesso',
+              link: `/operacional/${projetoId}`,
+            })),
+          })
+        }
 
         return NextResponse.json({
           pagamento,
