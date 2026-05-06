@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { toast } from 'sonner'
-import { Plus, X, Loader2, Check, ChevronDown, ChevronUp, Trash2 } from 'lucide-react'
+import { Plus, X, Loader2, Check, ChevronDown, ChevronUp, Trash2, Edit2, ToggleLeft, ToggleRight } from 'lucide-react'
 import { ROLE_LABELS, DEPARTAMENTO_LABELS } from '@/lib/utils'
 
 const MODULOS = [
@@ -53,6 +53,70 @@ export default function ConfiguracoesPage() {
     role: 'ANALISTA', departamento: 'OPERACIONAL_AMBIENTAL',
     modulosAcesso: ['dashboard', 'operacional'] as string[],
   })
+
+  // Edição de usuário existente
+  const [usuarioEditando, setUsuarioEditando] = useState<any | null>(null)
+  const [formEdit, setFormEdit] = useState({
+    nome: '', cargo: '', telefone: '',
+    role: 'ANALISTA', departamento: 'OPERACIONAL_AMBIENTAL',
+    modulosAcesso: [] as string[],
+    ativo: true,
+    novaSenha: '',
+  })
+
+  function abrirEdicao(u: any) {
+    setFormEdit({
+      nome: u.nome || '',
+      cargo: u.cargo || '',
+      telefone: u.telefone || '',
+      role: u.role || 'ANALISTA',
+      departamento: u.departamento || 'OPERACIONAL_AMBIENTAL',
+      modulosAcesso: u.modulosAcesso ? JSON.parse(u.modulosAcesso) : [],
+      ativo: u.ativo,
+      novaSenha: '',
+    })
+    setUsuarioEditando(u)
+  }
+
+  function toggleModuloEdit(id: string) {
+    setFormEdit(p => ({
+      ...p,
+      modulosAcesso: p.modulosAcesso.includes(id)
+        ? p.modulosAcesso.filter(m => m !== id)
+        : [...p.modulosAcesso, id],
+    }))
+  }
+
+  async function salvarEdicao() {
+    if (!usuarioEditando) return
+    setSalvando(true)
+    try {
+      const body: any = {
+        nome: formEdit.nome,
+        cargo: formEdit.cargo,
+        telefone: formEdit.telefone,
+        role: formEdit.role,
+        departamento: formEdit.departamento,
+        modulosAcesso: JSON.stringify(formEdit.modulosAcesso),
+        ativo: formEdit.ativo,
+      }
+      if (formEdit.novaSenha) body.senha = formEdit.novaSenha
+
+      const res = await fetch(`/api/usuarios/${usuarioEditando.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      })
+      if (!res.ok) {
+        const err = await res.json()
+        toast.error(err.error || 'Erro ao salvar')
+        return
+      }
+      toast.success('Usuário atualizado com sucesso!')
+      setUsuarioEditando(null)
+      loadDados()
+    } finally { setSalvando(false) }
+  }
 
   useEffect(() => { loadDados() }, [aba])
 
@@ -219,6 +283,7 @@ export default function ConfiguracoesPage() {
                     <th className="text-left text-xs font-semibold text-gray-500 px-4 py-3">Perfil</th>
                     <th className="text-left text-xs font-semibold text-gray-500 px-4 py-3">Módulos</th>
                     <th className="text-left text-xs font-semibold text-gray-500 px-4 py-3">Status</th>
+                    <th className="text-right text-xs font-semibold text-gray-500 px-4 py-3">Ações</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-50">
@@ -261,6 +326,14 @@ export default function ConfiguracoesPage() {
                           <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${u.ativo ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-500'}`}>
                             {u.ativo ? 'Ativo' : 'Inativo'}
                           </span>
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          <button
+                            onClick={() => abrirEdicao(u)}
+                            className="flex items-center gap-1.5 text-xs text-blue-600 hover:text-blue-800 hover:bg-blue-50 px-2.5 py-1.5 rounded-lg transition-colors font-medium ml-auto"
+                          >
+                            <Edit2 className="w-3.5 h-3.5" /> Editar
+                          </button>
                         </td>
                       </tr>
                     )
@@ -447,6 +520,129 @@ export default function ConfiguracoesPage() {
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {/* ── MODAL EDITAR USUÁRIO ── */}
+      {usuarioEditando && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between p-6 border-b border-gray-100">
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900">Editar Usuário</h2>
+                <p className="text-xs text-gray-400 mt-0.5">{usuarioEditando.email}</p>
+              </div>
+              <button onClick={() => setUsuarioEditando(null)} className="text-gray-400 hover:text-gray-600">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-6 space-y-4">
+
+              {/* Status ativo/inativo */}
+              <div className="flex items-center justify-between p-3 bg-gray-50 rounded-xl">
+                <div>
+                  <p className="text-sm font-medium text-gray-700">Status do usuário</p>
+                  <p className="text-xs text-gray-400">Desativar impede o login imediatamente</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setFormEdit(p => ({ ...p, ativo: !p.ativo }))}
+                  className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-sm font-medium transition-colors ${
+                    formEdit.ativo
+                      ? 'bg-green-100 text-green-800 hover:bg-green-200'
+                      : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
+                  }`}
+                >
+                  {formEdit.ativo
+                    ? <><ToggleRight className="w-4 h-4" /> Ativo</>
+                    : <><ToggleLeft className="w-4 h-4" /> Inativo</>
+                  }
+                </button>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Nome *</label>
+                  <input type="text" value={formEdit.nome} onChange={e => setFormEdit(p => ({ ...p, nome: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-green-500" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Cargo</label>
+                  <input type="text" value={formEdit.cargo} onChange={e => setFormEdit(p => ({ ...p, cargo: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-green-500" />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Telefone</label>
+                <input type="text" value={formEdit.telefone} onChange={e => setFormEdit(p => ({ ...p, telefone: e.target.value }))}
+                  placeholder="(00) 00000-0000"
+                  className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-green-500" />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Perfil de Acesso</label>
+                  <select value={formEdit.role} onChange={e => setFormEdit(p => ({ ...p, role: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-green-500 bg-white">
+                    {Object.entries(ROLE_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Departamento</label>
+                  <select value={formEdit.departamento} onChange={e => setFormEdit(p => ({ ...p, departamento: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-green-500 bg-white">
+                    {Object.entries(DEPARTAMENTO_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+                  </select>
+                </div>
+              </div>
+
+              {/* Módulos */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Módulos com Acesso
+                  <span className="text-xs text-gray-400 font-normal ml-1">({formEdit.modulosAcesso.length} selecionado(s))</span>
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  {MODULOS.map(m => (
+                    <label key={m.id}
+                      className={`flex items-center gap-2.5 p-2.5 rounded-lg border cursor-pointer transition-all ${
+                        formEdit.modulosAcesso.includes(m.id)
+                          ? 'border-green-400 bg-green-50 shadow-sm'
+                          : 'border-gray-200 bg-white hover:border-gray-300'
+                      }`}>
+                      <input type="checkbox" checked={formEdit.modulosAcesso.includes(m.id)}
+                        onChange={() => toggleModuloEdit(m.id)}
+                        className="accent-green-600 w-4 h-4 flex-shrink-0" />
+                      <span className="text-sm text-gray-700">{m.label}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              {/* Redefinir senha */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Nova Senha <span className="text-gray-400 font-normal">(deixe em branco para não alterar)</span>
+                </label>
+                <input type="password" value={formEdit.novaSenha} onChange={e => setFormEdit(p => ({ ...p, novaSenha: e.target.value }))}
+                  placeholder="Mín. 8 chars, 1 maiúscula, 1 número"
+                  className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-green-500" />
+              </div>
+
+              <div className="flex justify-end gap-3 pt-2 border-t border-gray-100">
+                <button onClick={() => setUsuarioEditando(null)}
+                  className="px-4 py-2 border border-gray-200 rounded-xl text-sm text-gray-700 hover:bg-gray-50">
+                  Cancelar
+                </button>
+                <button onClick={salvarEdicao} disabled={salvando}
+                  className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-xl text-sm font-semibold flex items-center gap-2">
+                  {salvando && <Loader2 className="w-4 h-4 animate-spin" />}
+                  Salvar Alterações
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 

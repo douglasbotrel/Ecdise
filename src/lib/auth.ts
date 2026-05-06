@@ -73,6 +73,7 @@ export async function requireAuth(): Promise<JWTPayload> {
 // Hierarquia de roles (maior número = mais permissão)
 export const ROLE_HIERARCHY: Record<string, number> = {
   TECNICO_CAMPO: 1,
+  ANALISTA_RAPIDO: 2,
   ANALISTA: 2,
   SUPERVISOR: 3,
   GESTOR_CAMPO: 4,
