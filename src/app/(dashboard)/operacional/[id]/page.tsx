@@ -6,7 +6,7 @@ import { toast } from 'sonner'
 import {
   ArrowLeft, Plus, Check, FileText,
   DollarSign, User, Calendar, Loader2,
-  PlayCircle, Edit2, Save, Clock, AlertCircle,
+  Edit2, Save, Clock, AlertCircle,
 } from 'lucide-react'
 import {
   formatDate, formatCurrency,
@@ -32,8 +32,6 @@ export default function ProjetoDetalhe() {
   // Edição inline de prazo/responsável (modo atribuição)
   const [editando, setEditando]     = useState<Record<string, TarefaEdit>>({})
   const [salvandoId, setSalvandoId] = useState<string | null>(null)
-  const [iniciando, setIniciando]   = useState(false)
-
   // Nova tarefa avulsa (pós-OPERACIONAL)
   const [novaT, setNovaT]           = useState(false)
   const [formTarefa, setFormTarefa] = useState({ titulo: '', etapa: '', prazo: '', responsavelId: '' })
@@ -120,22 +118,6 @@ export default function ProjetoDetalhe() {
     } catch { toast.error('Erro') }
   }
 
-  // ── Iniciar execução: avança pipeline para EM_EXECUCAO ────
-  async function iniciarExecucao() {
-    setIniciando(true)
-    try {
-      const res = await fetch(`/api/projetos/${id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ avancarPipeline: true }),
-      })
-      if (!res.ok) throw new Error()
-      toast.success('Execução iniciada! Equipe notificada.')
-      loadProjeto()
-    } catch { toast.error('Erro ao iniciar execução') }
-    finally { setIniciando(false) }
-  }
-
   // ── Atualizar status operacional ──────────────────────────
   async function atualizarStatus(novoStatus: string) {
     try {
@@ -149,19 +131,28 @@ export default function ProjetoDetalhe() {
     } catch { toast.error('Erro') }
   }
 
-  // ── Marcar tarefa como concluída/pendente ─────────────────
+  // ── Marcar tarefa como concluída/pendente (optimistic, sem scroll) ──
   async function toggleTarefa(tarefaId: string, atual: string) {
+    const novoStatus = atual === 'CONCLUIDA' ? 'PENDENTE' : 'CONCLUIDA'
+    // Atualiza localmente sem re-renderizar a página toda
+    setProjeto((prev: any) => ({
+      ...prev,
+      tarefas: prev.tarefas.map((t: any) =>
+        t.id === tarefaId ? { ...t, status: novoStatus } : t
+      ),
+    }))
     try {
       await fetch('/api/tarefas', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          id: tarefaId,
-          status: atual === 'CONCLUIDA' ? 'PENDENTE' : 'CONCLUIDA',
-        }),
+        body: JSON.stringify({ id: tarefaId, status: novoStatus }),
       })
+      // Reload silencioso para sincronizar statusOperacional e etapaPipeline
       loadProjeto()
-    } catch { toast.error('Erro') }
+    } catch {
+      toast.error('Erro ao atualizar tarefa')
+      loadProjeto() // reverte
+    }
   }
 
   // ── Nova tarefa avulsa ─────────────────────────────────────
@@ -297,23 +288,10 @@ export default function ProjetoDetalhe() {
                 Atribua prazos e responsáveis antes de iniciar a execução.
               </p>
             </div>
-            <div className="flex items-center gap-3 flex-shrink-0">
-              {/* Progresso */}
-              <div className="text-center">
-                <div className="text-lg font-bold text-amber-700">{pctAtribuido}%</div>
-                <div className="text-xs text-amber-600">atribuído</div>
-              </div>
-              <button
-                onClick={iniciarExecucao}
-                disabled={iniciando}
-                className="flex items-center gap-2 px-4 py-2.5 bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white text-sm font-semibold rounded-xl transition-colors"
-              >
-                {iniciando
-                  ? <Loader2 className="w-4 h-4 animate-spin" />
-                  : <PlayCircle className="w-4 h-4" />
-                }
-                Iniciar Execução
-              </button>
+            <div className="text-center flex-shrink-0">
+              <div className="text-lg font-bold text-amber-700">{pctAtribuido}%</div>
+              <div className="text-xs text-amber-600">atribuído</div>
+              <div className="text-xs text-amber-500 mt-0.5">execução inicia ao 1º check</div>
             </div>
           </div>
 

@@ -215,6 +215,58 @@ export async function PATCH(request: NextRequest) {
       include: { responsavel: { select: { id: true, nome: true } } }
     })
 
+    // ── Auto-avanço de pipeline ao concluir tarefas ──────────────────────
+    if (updateData.status) {
+      const todasTarefas = await prisma.tarefa.findMany({
+        where: { projetoId: tarefaAtual.projetoId },
+        select: { id: true, status: true },
+      })
+      const totalTarefas  = todasTarefas.length
+      const concluidas    = todasTarefas.filter(t => t.status === 'CONCLUIDA').length
+
+      const proj = await prisma.projeto.findUnique({
+        where: { id: tarefaAtual.projetoId },
+        select: { id: true, etapaPipeline: true, statusOperacional: true },
+      })
+
+      if (proj) {
+        if (updateData.status === 'CONCLUIDA') {
+          // Primeira tarefa concluída → avança de OPERACIONAL para EM_EXECUCAO
+          if (proj.etapaPipeline === 'OPERACIONAL' && concluidas === 1) {
+            await prisma.projeto.update({
+              where: { id: proj.id },
+              data: { etapaPipeline: 'EM_EXECUCAO', statusOperacional: 'EM_ANDAMENTO' },
+            })
+            await prisma.historicoStatus.create({
+              data: {
+                projetoId: proj.id,
+                statusAnterior: 'NAO_INICIADO',
+                statusNovo: 'EM_ANDAMENTO',
+                campo: 'statusOperacional',
+                observacao: 'Iniciado automaticamente ao concluir primeira tarefa',
+                usuarioId: user.id,
+              },
+            }).catch(() => {}) // não bloqueia se falhar
+          }
+          // Todas concluídas → finaliza parte operacional
+          if (totalTarefas > 0 && concluidas === totalTarefas) {
+            await prisma.projeto.update({
+              where: { id: proj.id },
+              data: { statusOperacional: 'CONCLUIDO' },
+            })
+          }
+        } else if (updateData.status === 'PENDENTE') {
+          // Desmarcou → se estava CONCLUIDO, volta para EM_ANDAMENTO
+          if (proj.statusOperacional === 'CONCLUIDO') {
+            await prisma.projeto.update({
+              where: { id: proj.id },
+              data: { statusOperacional: 'EM_ANDAMENTO' },
+            })
+          }
+        }
+      }
+    }
+
     return NextResponse.json({ tarefa })
   } catch (error) {
     console.error(error)

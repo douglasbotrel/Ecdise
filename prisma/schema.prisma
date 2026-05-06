@@ -39,6 +39,7 @@ model Usuario {
   notificacoes        Notificacao[]
   logs                Log[]
   comentarios         Comentario[]
+  diarias             Diaria[]
 
   @@map("usuarios")
 }
@@ -208,11 +209,16 @@ model Vistoria {
   status        String   @default("AGENDADA")
   dataAgendada  DateTime
   dataRealizada DateTime?
+  dataSaida     DateTime?
+  dataVolta     DateTime?
+  diasCampo     Int?
   local         String?
   municipio     String?
   coordenadas   String?
   responsavelId String?
+  equipeId      String?
   equipe        String?
+  frotaId       String?
   frota         String?
   kmSaida       Float?
   kmChegada     Float?
@@ -220,15 +226,83 @@ model Vistoria {
   horaChegada   String?
   resultado     String?
   observacoes   String?
+  manutencaoObs String?
   criadoEm     DateTime @default(now())
   atualizadoEm DateTime @updatedAt
 
   projeto     Projeto     @relation(fields: [projetoId], references: [id])
   responsavel Usuario?    @relation("VistoriaResponsavel", fields: [responsavelId], references: [id])
+  equipeRef   Equipe?     @relation(fields: [equipeId], references: [id])
+  frotaRef    Frota?      @relation(fields: [frotaId], references: [id])
   gastos      GastoCampo[]
+  diarias     Diaria[]
   documentos  Documento[]
 
   @@map("vistorias")
+}
+
+// ============================================================
+// EQUIPES DE CAMPO
+// ============================================================
+
+model Equipe {
+  id           String   @id @default(cuid())
+  nome         String
+  cor          String   @default("#3b82f6")
+  membros      String?  // JSON: [usuarioId, ...]
+  ativa        Boolean  @default(true)
+  criadoEm     DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
+
+  vistorias Vistoria[]
+
+  @@map("equipes")
+}
+
+// ============================================================
+// FROTA
+// tipo: CARRO | CAMINHONETE | VAN | MOTO | OUTRO
+// ============================================================
+
+model Frota {
+  id           String   @id @default(cuid())
+  placa        String   @unique
+  tipo         String   @default("CARRO")
+  marca        String?
+  modelo       String?
+  ano          Int?
+  cor          String?
+  kmAtual      Float?
+  documentoUrl String?
+  ativa        Boolean  @default(true)
+  criadoEm     DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
+
+  vistorias Vistoria[]
+
+  @@map("frota")
+}
+
+// ============================================================
+// DIÁRIAS / GASTOS DO TÉCNICO
+// tipo: ALIMENTACAO | HOSPEDAGEM | COMBUSTIVEL | PEDAGIO | OUTRO
+// ============================================================
+
+model Diaria {
+  id          String   @id @default(cuid())
+  vistoriaId  String
+  usuarioId   String
+  data        DateTime @default(now())
+  tipo        String   @default("OUTRO")
+  descricao   String?
+  valor       Float
+  comprovante String?
+  criadoEm    DateTime @default(now())
+
+  vistoria Vistoria @relation(fields: [vistoriaId], references: [id])
+  usuario  Usuario  @relation(fields: [usuarioId], references: [id])
+
+  @@map("diarias")
 }
 
 model GastoCampo {

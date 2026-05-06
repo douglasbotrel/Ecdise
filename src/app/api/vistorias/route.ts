@@ -8,16 +8,19 @@ export async function GET(request: NextRequest) {
     if (!user) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
 
     const { searchParams } = new URL(request.url)
-    const projetoId = searchParams.get('projetoId')
-    const status = searchParams.get('status')
-    const responsavelId = searchParams.get('responsavelId')
-    const dataInicio = searchParams.get('dataInicio')
-    const dataFim = searchParams.get('dataFim')
+    const projetoId          = searchParams.get('projetoId')
+    const status             = searchParams.get('status')
+    const responsavelId      = searchParams.get('responsavelId')
+    const responsavelAtual   = searchParams.get('responsavelAtual') // técnico vê as suas
+    const dataInicio         = searchParams.get('dataInicio')
+    const dataFim            = searchParams.get('dataFim')
 
     const where: any = {}
     if (projetoId) where.projetoId = projetoId
     if (status) where.status = status
     if (responsavelId) where.responsavelId = responsavelId
+    // Técnico: filtra apenas as vistorias atribuídas a ele
+    if (responsavelAtual === 'true') where.responsavelId = user.id
     if (dataInicio || dataFim) {
       where.dataAgendada = {}
       if (dataInicio) where.dataAgendada.gte = new Date(dataInicio)
@@ -27,9 +30,11 @@ export async function GET(request: NextRequest) {
     const vistorias = await prisma.vistoria.findMany({
       where,
       include: {
-        projeto: { select: { id: true, codigo: true, imovelNome: true, municipio: true } },
+        projeto: { select: { id: true, codigo: true, imovelNome: true, municipio: true, tipoServico: true } },
         responsavel: { select: { id: true, nome: true } },
+        equipeRef: { select: { id: true, nome: true, cor: true } },
         gastos: true,
+        diarias: { include: { usuario: { select: { id: true, nome: true } } } },
         _count: { select: { documentos: true } }
       },
       orderBy: { dataAgendada: 'desc' }

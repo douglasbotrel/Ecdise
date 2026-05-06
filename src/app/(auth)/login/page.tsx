@@ -51,10 +51,10 @@ export default function LoginPage() {
               width={240}
               height={240}
               className="object-contain drop-shadow-2xl"
+              style={{ mixBlendMode: 'multiply' }}
               priority
             />
           </div>
-          <h1 className="text-4xl font-bold text-white tracking-wide mb-3">ecdise</h1>
           <p className="text-green-100 text-center text-lg leading-relaxed max-w-xs">
             Sistema de Gestão de<br />Licenciamento Ambiental
           </p>

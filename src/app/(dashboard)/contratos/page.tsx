@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { toast } from 'sonner'
-import { Plus, FileText, Clock, AlertCircle } from 'lucide-react'
+import { Plus, FileText, Clock, AlertCircle, X, Upload, CheckCircle2, XCircle, Loader2 } from 'lucide-react'
 import { formatDate, formatCurrency } from '@/lib/utils'
 import { ModalContrato } from '@/components/modals/ModalContrato'
 import { ModalProjeto } from '@/components/modals/ModalProjeto'
@@ -10,12 +10,13 @@ import { ModalProjeto } from '@/components/modals/ModalProjeto'
 const STATUS_CONTRATO_LABELS: Record<string, string> = {
   ATIVO: 'Ativo', ASSINADO: 'Assinado', AGUARDANDO_ASSINATURA: 'Aguard. Assinatura',
   FINALIZADO: 'Finalizado', CANCELADO: 'Cancelado', SUSPENSO: 'Suspenso',
+  DESISTENCIA: 'Desistência',
 }
 const STATUS_CONTRATO_COLORS: Record<string, string> = {
   ATIVO: 'bg-blue-100 text-blue-800', ASSINADO: 'bg-green-100 text-green-800',
   AGUARDANDO_ASSINATURA: 'bg-yellow-100 text-yellow-800',
   FINALIZADO: 'bg-gray-100 text-gray-800', CANCELADO: 'bg-red-100 text-red-800',
-  SUSPENSO: 'bg-orange-100 text-orange-800',
+  SUSPENSO: 'bg-orange-100 text-orange-800', DESISTENCIA: 'bg-red-100 text-red-800',
 }
 
 export default function ContratosPage() {
@@ -27,6 +28,12 @@ export default function ContratosPage() {
   // Modal de elaboração de contrato
   const [projetoSelecionado, setProjetoSelecionado] = useState<any | null>(null)
   const [modalProjetoOpen, setModalProjetoOpen]     = useState(false)
+  // Popup de ações no contrato
+  const [contratoAcao, setContratoAcao]           = useState<any | null>(null)
+  const [uploading, setUploading]                 = useState(false)
+  const [confirmDesistencia, setConfirmDesistencia] = useState(false)
+  const [salvandoAcao, setSalvandoAcao]           = useState(false)
+  const fileRef = useRef<HTMLInputElement>(null)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -46,6 +53,63 @@ export default function ContratosPage() {
   function abrirElaboracao(projeto: any) {
     setProjetoSelecionado(projeto)
     setModalProjetoOpen(true)
+  }
+
+  async function uploadDocumentoAssinado(file: File): Promise<string | null> {
+    setUploading(true)
+    try {
+      const fd = new FormData()
+      fd.append('file', file)
+      fd.append('tipo', 'contrato')
+      const res = await fetch('/api/upload', { method: 'POST', body: fd })
+      if (!res.ok) throw new Error()
+      const d = await res.json()
+      return d.url
+    } catch {
+      toast.error('Erro ao enviar documento')
+      return null
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  async function marcarAssinado() {
+    if (!contratoAcao) return
+    const file = fileRef.current?.files?.[0]
+    setSalvandoAcao(true)
+    try {
+      let arquivoUrl = contratoAcao.arquivoUrl
+      if (file) {
+        arquivoUrl = await uploadDocumentoAssinado(file)
+        if (!arquivoUrl) { setSalvandoAcao(false); return }
+      }
+      const res = await fetch(`/api/contratos/${contratoAcao.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ statusContrato: 'ASSINADO', arquivoUrl }),
+      })
+      if (!res.ok) { toast.error('Erro ao atualizar'); return }
+      toast.success('Contrato marcado como assinado!')
+      setContratoAcao(null)
+      load()
+    } finally { setSalvandoAcao(false) }
+  }
+
+  async function marcarDesistencia() {
+    if (!contratoAcao) return
+    setSalvandoAcao(true)
+    try {
+      const res = await fetch(`/api/contratos/${contratoAcao.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ statusContrato: 'DESISTENCIA' }),
+      })
+      if (!res.ok) { toast.error('Erro ao registrar desistência'); return }
+      toast.success('Desistência registrada. Projeto movido para base de dados.')
+      setContratoAcao(null)
+      setConfirmDesistencia(false)
+      load()
+    } finally { setSalvandoAcao(false) }
   }
 
   // Totais
@@ -188,7 +252,7 @@ export default function ContratosPage() {
               </thead>
               <tbody className="divide-y divide-gray-50">
                 {contratos.map((c) => (
-                  <tr key={c.id} className="hover:bg-gray-50 transition-colors">
+                  <tr key={c.id} className="hover:bg-gray-50 transition-colors cursor-pointer" onClick={() => { setContratoAcao(c); setConfirmDesistencia(false) }}>
                     <td className="px-4 py-3">
                       <span className="font-mono text-sm text-gray-900">{c.codigo}</span>
                     </td>
@@ -236,6 +300,111 @@ export default function ContratosPage() {
         modoAcao="contrato_info"
         onSalvo={() => { setModalProjetoOpen(false); setProjetoSelecionado(null); load() }}
       />
+
+      {/* ── Popup de ações do contrato ─────────────────────── */}
+      {contratoAcao && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => { setContratoAcao(null); setConfirmDesistencia(false) }}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md" onClick={e => e.stopPropagation()}>
+            {/* Header */}
+            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+              <div>
+                <p className="font-bold text-gray-900">{contratoAcao.codigo}</p>
+                <p className="text-xs text-gray-400">{contratoAcao.cliente?.nome} · {contratoAcao.projeto?.codigo}</p>
+              </div>
+              <button onClick={() => { setContratoAcao(null); setConfirmDesistencia(false) }} className="text-gray-400 hover:text-gray-600">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-5 space-y-4">
+              {/* Info resumida */}
+              <div className="bg-gray-50 rounded-xl p-3 text-sm space-y-1">
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Status</span>
+                  <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${STATUS_CONTRATO_COLORS[contratoAcao.statusContrato]}`}>
+                    {STATUS_CONTRATO_LABELS[contratoAcao.statusContrato]}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Valor Total</span>
+                  <span className="font-semibold text-gray-900">{formatCurrency(contratoAcao.valorTotal)}</span>
+                </div>
+                {contratoAcao.dataAssinatura && (
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Assinado em</span>
+                    <span className="text-gray-900">{formatDate(contratoAcao.dataAssinatura)}</span>
+                  </div>
+                )}
+                {contratoAcao.arquivoUrl && (
+                  <a href={contratoAcao.arquivoUrl} target="_blank" rel="noreferrer"
+                     className="flex items-center gap-1.5 text-green-600 hover:text-green-700 text-xs font-medium pt-1">
+                    <FileText className="w-3.5 h-3.5" /> Ver documento assinado
+                  </a>
+                )}
+              </div>
+
+              {/* Validar assinatura (AGUARDANDO_ASSINATURA) */}
+              {contratoAcao.statusContrato === 'AGUARDANDO_ASSINATURA' && (
+                <div className="border border-green-200 rounded-xl p-4 space-y-3">
+                  <p className="text-sm font-semibold text-green-800 flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4" /> Validar Assinatura
+                  </p>
+                  <p className="text-xs text-gray-500">Faça upload do contrato assinado pelo cliente para registrar como assinado.</p>
+                  <label className="flex items-center gap-2 cursor-pointer border border-dashed border-green-300 rounded-lg px-3 py-2.5 text-xs text-green-600 hover:bg-green-50 transition-colors">
+                    <Upload className="w-4 h-4" />
+                    {fileRef.current?.files?.[0]?.name || 'Selecionar documento assinado (PDF)'}
+                    <input ref={fileRef} type="file" accept=".pdf,.doc,.docx" className="hidden" onChange={() => {}} />
+                  </label>
+                  <button
+                    onClick={marcarAssinado}
+                    disabled={salvandoAcao || uploading}
+                    className="w-full flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white font-semibold py-2.5 rounded-xl text-sm transition-colors"
+                  >
+                    {(salvandoAcao || uploading) ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
+                    Marcar como Assinado
+                  </button>
+                </div>
+              )}
+
+              {/* Desistência */}
+              {!['DESISTENCIA', 'CANCELADO', 'FINALIZADO'].includes(contratoAcao.statusContrato) && (
+                <div className="border border-red-200 rounded-xl p-4 space-y-2">
+                  <p className="text-sm font-semibold text-red-800 flex items-center gap-2">
+                    <XCircle className="w-4 h-4" /> Desistência do Proprietário
+                  </p>
+                  {!confirmDesistencia ? (
+                    <button
+                      onClick={() => setConfirmDesistencia(true)}
+                      className="w-full border border-red-300 text-red-600 hover:bg-red-50 font-medium py-2 rounded-xl text-sm transition-colors"
+                    >
+                      Registrar Desistência
+                    </button>
+                  ) : (
+                    <div className="space-y-2">
+                      <p className="text-xs text-red-600">Tem certeza? O projeto será movido para a base de dados e não poderá avançar.</p>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => setConfirmDesistencia(false)}
+                          className="flex-1 border border-gray-200 text-gray-600 hover:bg-gray-50 font-medium py-2 rounded-xl text-sm transition-colors"
+                        >
+                          Cancelar
+                        </button>
+                        <button
+                          onClick={marcarDesistencia}
+                          disabled={salvandoAcao}
+                          className="flex-1 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white font-semibold py-2 rounded-xl text-sm transition-colors"
+                        >
+                          {salvandoAcao ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : 'Confirmar'}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

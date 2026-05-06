@@ -2,8 +2,12 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { toast } from 'sonner'
-import { Plus, MapPin, Calendar, Clock, AlertCircle, CheckCircle2, Loader2 } from 'lucide-react'
-import { formatDate } from '@/lib/utils'
+import {
+  Plus, MapPin, Calendar, AlertCircle, CheckCircle2, Loader2,
+  Users, Truck, DollarSign, ChevronLeft, ChevronRight,
+  Trash2, Edit2, Save, Car
+} from 'lucide-react'
+import { formatDate, formatCurrency } from '@/lib/utils'
 import { ModalVistoria } from '@/components/modals/ModalVistoria'
 
 const STATUS_VISTORIA_LABELS: Record<string, string> = {
@@ -15,33 +19,64 @@ const STATUS_VISTORIA_COLORS: Record<string, string> = {
   REALIZADA: 'bg-green-100 text-green-800', CANCELADA: 'bg-red-100 text-red-800',
   ADIADA: 'bg-orange-100 text-orange-800'
 }
+const TIPO_DIARIA_LABELS: Record<string, string> = {
+  ALIMENTACAO: '🍽️ Alimentação', HOSPEDAGEM: '🏨 Hospedagem',
+  COMBUSTIVEL: '⛽ Combustível', PEDAGIO: '🚧 Pedágio', OUTRO: '📎 Outro'
+}
+const TIPO_FROTA = ['CARRO', 'CAMINHONETE', 'VAN', 'MOTO', 'OUTRO']
+const EQUIPE_CORES = [
+  '#3b82f6','#10b981','#f59e0b','#ef4444','#8b5cf6',
+  '#ec4899','#06b6d4','#84cc16','#f97316','#6366f1'
+]
+const DIAS_SEMANA = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb']
 
 export default function CampoPage() {
+  const [aba, setAba] = useState<'vistorias'|'calendario'|'equipes'|'frota'|'diarias'>('vistorias')
   const [vistorias, setVistorias]       = useState<any[]>([])
+  const [solicitacoes, setSolicitacoes] = useState<any[]>([])
+  const [equipes, setEquipes]           = useState<any[]>([])
+  const [frota, setFrota]               = useState<any[]>([])
+  const [diarias, setDiarias]           = useState<any[]>([])
   const [loading, setLoading]           = useState(true)
   const [modalOpen, setModalOpen]       = useState(false)
   const [filtro, setFiltro]             = useState('')
-  const [visualizacao, setVisualizacao] = useState<'lista' | 'calendario'>('lista')
+  const [datasSol, setDatasSol]         = useState<Record<string, string>>({})
+  const [salvandoSol, setSalvandoSol]   = useState<string | null>(null)
 
-  // Solicitações de vistoria vindas do operacional
-  const [solicitacoes, setSolicitacoes]   = useState<any[]>([])
-  const [datasSol, setDatasSol]           = useState<Record<string, string>>({})  // tarefaId → data
-  const [salvandoSol, setSalvandoSol]     = useState<string | null>(null)
+  // Calendário
+  const hoje = new Date()
+  const [mesAtual, setMesAtual] = useState(new Date(hoje.getFullYear(), hoje.getMonth(), 1))
+
+  // Equipes
+  const [formEquipe, setFormEquipe]       = useState({ nome: '', cor: EQUIPE_CORES[0] })
+  const [salvandoEquipe, setSalvandoEquipe] = useState(false)
+
+  // Frota
+  const [formFrota, setFormFrota]         = useState({ placa: '', tipo: 'CARRO', marca: '', modelo: '', ano: '', cor: '', kmAtual: '' })
+  const [salvandoFrota, setSalvandoFrota] = useState(false)
+  const [frotaEditando, setFrotaEditando] = useState<any | null>(null)
+
+  // Diárias
+  const [formDiaria, setFormDiaria]         = useState({ vistoriaId: '', tipo: 'ALIMENTACAO', descricao: '', valor: '' })
+  const [salvandoDiaria, setSalvandoDiaria] = useState(false)
 
   const load = useCallback(async () => {
     setLoading(true)
     try {
       const params = new URLSearchParams()
       if (filtro) params.set('status', filtro)
-      const [resV, resS] = await Promise.all([
+      const [resV, resS, resE, resF, resD] = await Promise.all([
         fetch(`/api/vistorias?${params}`),
         fetch('/api/tarefas?solicitadasCampo=true'),
+        fetch('/api/campo/equipes'),
+        fetch('/api/campo/frota'),
+        fetch('/api/campo/diarias'),
       ])
       if (resV.ok) setVistorias((await resV.json()).vistorias)
-      if (resS.ok) {
-        const d = await resS.json()
-        setSolicitacoes(d.tarefas || [])
-      }
+      if (resS.ok) setSolicitacoes((await resS.json()).tarefas || [])
+      if (resE.ok) setEquipes((await resE.json()).equipes || [])
+      if (resF.ok) setFrota((await resF.json()).frota || [])
+      if (resD.ok) setDiarias((await resD.json()).diarias || [])
     } catch { toast.error('Erro ao carregar dados') }
     finally { setLoading(false) }
   }, [filtro])
@@ -59,7 +94,7 @@ export default function CampoPage() {
         body: JSON.stringify({ id: tarefaId, dataCampo: data }),
       })
       if (!res.ok) { const d = await res.json(); toast.error(d.error); return }
-      toast.success('Data confirmada! Operacional foi notificado.')
+      toast.success('Data confirmada! Operacional notificado.')
       load()
     } catch { toast.error('Erro ao confirmar data') }
     finally { setSalvandoSol(null) }
@@ -78,40 +113,108 @@ export default function CampoPage() {
     } catch { toast.error('Erro') }
   }
 
-  // Próximas 30 dias
-  const hoje = new Date()
-  const proximas30 = new Date(hoje.getTime() + 30 * 24 * 60 * 60 * 1000)
-  const proximasVistorias = vistorias.filter(v =>
-    new Date(v.dataAgendada) >= hoje && new Date(v.dataAgendada) <= proximas30 && v.status === 'AGENDADA'
-  )
+  async function criarEquipe() {
+    if (!formEquipe.nome) { toast.error('Nome obrigatório'); return }
+    setSalvandoEquipe(true)
+    try {
+      const res = await fetch('/api/campo/equipes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formEquipe),
+      })
+      if (!res.ok) { toast.error('Erro ao criar equipe'); return }
+      toast.success('Equipe criada!')
+      setFormEquipe({ nome: '', cor: EQUIPE_CORES[0] })
+      load()
+    } finally { setSalvandoEquipe(false) }
+  }
+
+  async function excluirEquipe(id: string) {
+    if (!confirm('Excluir esta equipe?')) return
+    await fetch(`/api/campo/equipes?id=${id}`, { method: 'DELETE' })
+    toast.success('Excluída'); load()
+  }
+
+  async function salvarFrota() {
+    if (!formFrota.placa) { toast.error('Placa obrigatória'); return }
+    setSalvandoFrota(true)
+    try {
+      const method = frotaEditando ? 'PATCH' : 'POST'
+      const body   = frotaEditando ? { id: frotaEditando.id, ...formFrota } : formFrota
+      const res = await fetch('/api/campo/frota', {
+        method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+      })
+      if (!res.ok) { const d = await res.json(); toast.error(d.error); return }
+      toast.success(frotaEditando ? 'Atualizado!' : 'Veículo cadastrado!')
+      setFormFrota({ placa: '', tipo: 'CARRO', marca: '', modelo: '', ano: '', cor: '', kmAtual: '' })
+      setFrotaEditando(null); load()
+    } finally { setSalvandoFrota(false) }
+  }
+
+  async function excluirFrota(id: string) {
+    if (!confirm('Excluir este veículo?')) return
+    await fetch(`/api/campo/frota?id=${id}`, { method: 'DELETE' })
+    toast.success('Veículo excluído'); load()
+  }
+
+  async function apontarDiaria() {
+    if (!formDiaria.vistoriaId || !formDiaria.valor) { toast.error('Vistoria e valor obrigatórios'); return }
+    setSalvandoDiaria(true)
+    try {
+      const res = await fetch('/api/campo/diarias', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formDiaria),
+      })
+      if (!res.ok) { toast.error('Erro ao registrar'); return }
+      toast.success('Gasto registrado!')
+      setFormDiaria({ vistoriaId: '', tipo: 'ALIMENTACAO', descricao: '', valor: '' }); load()
+    } finally { setSalvandoDiaria(false) }
+  }
+
+  // Calendário
+  function diasDoMes() {
+    const ano = mesAtual.getFullYear(), mes = mesAtual.getMonth()
+    const primeiroDia = new Date(ano, mes, 1).getDay()
+    const totalDias   = new Date(ano, mes + 1, 0).getDate()
+    const dias: (number | null)[] = Array(primeiroDia).fill(null)
+    for (let d = 1; d <= totalDias; d++) dias.push(d)
+    return dias
+  }
+  function vistoriasNoDia(dia: number) {
+    const ano = mesAtual.getFullYear(), mes = mesAtual.getMonth()
+    return vistorias.filter(v => {
+      const d = new Date(v.dataAgendada)
+      return d.getFullYear() === ano && d.getMonth() === mes && d.getDate() === dia
+    })
+  }
+
+  const proximasVistorias = vistorias.filter(v => {
+    const d = new Date(v.dataAgendada)
+    return d >= hoje && d <= new Date(hoje.getTime() + 30 * 24 * 60 * 60 * 1000) && v.status === 'AGENDADA'
+  })
 
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Gestão de Campo</h1>
-          <p className="text-gray-500 text-sm mt-1">{vistorias.length} vistoria(s) registrada(s)</p>
+          <p className="text-gray-500 text-sm mt-1">{vistorias.length} vistoria(s)</p>
         </div>
-        <button
-          onClick={() => setModalOpen(true)}
-          className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white font-semibold px-4 py-2.5 rounded-xl transition-colors"
-        >
-          <Plus className="w-4 h-4" />
-          Agendar Vistoria
+        <button onClick={() => setModalOpen(true)}
+          className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white font-semibold px-4 py-2.5 rounded-xl transition-colors">
+          <Plus className="w-4 h-4" /> Agendar Vistoria
         </button>
       </div>
 
-      {/* ── Solicitações de vistoria do Operacional ──────────────── */}
+      {/* Solicitações do Operacional */}
       {solicitacoes.length > 0 && (
         <div className="bg-blue-50 border border-blue-200 rounded-2xl overflow-hidden">
           <div className="flex items-center gap-2 px-5 py-3 bg-blue-100/60 border-b border-blue-200">
             <AlertCircle className="w-4 h-4 text-blue-600 flex-shrink-0" />
-            <h3 className="font-semibold text-blue-900 text-sm">
-              Solicitações de Vistoria do Operacional
-            </h3>
-            <span className="ml-auto bg-blue-600 text-white text-xs font-bold px-2 py-0.5 rounded-full">
-              {solicitacoes.length}
-            </span>
+            <h3 className="font-semibold text-blue-900 text-sm">Solicitações de Vistoria do Operacional</h3>
+            <span className="ml-auto bg-blue-600 text-white text-xs font-bold px-2 py-0.5 rounded-full">{solicitacoes.length}</span>
           </div>
           <div className="divide-y divide-blue-100">
             {solicitacoes.map(tarefa => (
@@ -119,34 +222,25 @@ export default function CampoPage() {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-0.5">
                     <span className="font-mono text-xs text-gray-400">{tarefa.projeto?.codigo}</span>
-                    <span className="text-xs text-gray-400">•</span>
                     <span className="text-xs text-gray-500">{tarefa.projeto?.imovelNome}</span>
                   </div>
                   <p className="text-sm font-semibold text-gray-900">{tarefa.titulo}</p>
                   <p className="text-xs text-gray-400 mt-0.5">
-                    {tarefa.etapa && <span className="mr-2">{tarefa.etapa}</span>}
                     {tarefa.projeto?.municipio && `📍 ${tarefa.projeto.municipio}${tarefa.projeto.estado ? `/${tarefa.projeto.estado}` : ''}`}
                   </p>
                 </div>
-                {/* Campo define a data */}
                 <div className="flex items-center gap-2 flex-shrink-0">
-                  <input
-                    type="date"
+                  <input type="date"
                     value={datasSol[tarefa.id] || ''}
                     onChange={e => setDatasSol(prev => ({ ...prev, [tarefa.id]: e.target.value }))}
                     min={new Date().toISOString().split('T')[0]}
                     className="border border-blue-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
                   />
-                  <button
-                    onClick={() => definirDataCampo(tarefa.id)}
+                  <button onClick={() => definirDataCampo(tarefa.id)}
                     disabled={salvandoSol === tarefa.id || !datasSol[tarefa.id]}
-                    className="flex items-center gap-1.5 px-4 py-1.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-sm font-semibold rounded-lg transition-colors"
-                  >
-                    {salvandoSol === tarefa.id
-                      ? <Loader2 className="w-4 h-4 animate-spin" />
-                      : <CheckCircle2 className="w-4 h-4" />
-                    }
-                    Confirmar data
+                    className="flex items-center gap-1.5 px-4 py-1.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-sm font-semibold rounded-lg transition-colors">
+                    {salvandoSol === tarefa.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
+                    Confirmar
                   </button>
                 </div>
               </div>
@@ -155,113 +249,374 @@ export default function CampoPage() {
         </div>
       )}
 
-      {/* Cards resumo */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        {Object.entries(STATUS_VISTORIA_LABELS).map(([status, label]) => (
-          <div key={status} className="bg-white rounded-xl border border-gray-100 p-4 text-center">
-            <p className="text-2xl font-bold text-gray-900">
-              {vistorias.filter(v => v.status === status).length}
-            </p>
-            <p className="text-xs text-gray-400 mt-1">{label}</p>
-          </div>
-        ))}
+      {/* Abas */}
+      <div className="border-b border-gray-100 overflow-x-auto">
+        <div className="flex gap-0 min-w-max">
+          {[
+            { id: 'vistorias', label: 'Vistorias', Icon: MapPin },
+            { id: 'calendario', label: 'Calendário', Icon: Calendar },
+            { id: 'equipes', label: 'Equipes', Icon: Users },
+            { id: 'frota', label: 'Frota', Icon: Truck },
+            { id: 'diarias', label: 'Diárias', Icon: DollarSign },
+          ].map(a => (
+            <button key={a.id} onClick={() => setAba(a.id as any)}
+              className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
+                aba === a.id ? 'border-green-600 text-green-700' : 'border-transparent text-gray-500 hover:text-gray-700'
+              }`}>
+              <a.Icon className="w-4 h-4" />{a.label}
+            </button>
+          ))}
+        </div>
       </div>
 
-      {/* Próximas vistorias destaque */}
-      {proximasVistorias.length > 0 && (
-        <div className="bg-blue-50 rounded-2xl border border-blue-100 p-4">
-          <h3 className="text-sm font-semibold text-blue-900 mb-3 flex items-center gap-2">
-            <Calendar className="w-4 h-4" />
-            Próximas vistorias (30 dias)
-          </h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {proximasVistorias.slice(0, 6).map(v => (
-              <div key={v.id} className="bg-white rounded-xl p-3 border border-blue-100">
-                <div className="flex items-center justify-between mb-1">
-                  <span className="font-mono text-xs text-gray-400">{v.projeto?.codigo}</span>
-                  <span className="text-xs text-blue-600 font-medium">{formatDate(v.dataAgendada)}</span>
-                </div>
-                <p className="text-sm font-medium text-gray-900">{v.titulo}</p>
-                <p className="text-xs text-gray-400">{v.municipio || v.projeto?.municipio}</p>
-                {v.responsavel && (
-                  <p className="text-xs text-gray-400 mt-1">👤 {v.responsavel.nome}</p>
-                )}
+      {/* ══ ABA VISTORIAS ══════════════════════════════════════ */}
+      {aba === 'vistorias' && (
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+            {Object.entries(STATUS_VISTORIA_LABELS).map(([status, label]) => (
+              <div key={status} className="bg-white rounded-xl border border-gray-100 p-4 text-center">
+                <p className="text-2xl font-bold text-gray-900">{vistorias.filter(v => v.status === status).length}</p>
+                <p className="text-xs text-gray-400 mt-1">{label}</p>
               </div>
             ))}
+          </div>
+
+          {proximasVistorias.length > 0 && (
+            <div className="bg-blue-50 rounded-2xl border border-blue-100 p-4">
+              <h3 className="text-sm font-semibold text-blue-900 mb-3 flex items-center gap-2">
+                <Calendar className="w-4 h-4" /> Próximas vistorias (30 dias)
+              </h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                {proximasVistorias.slice(0, 6).map(v => (
+                  <div key={v.id} className="bg-white rounded-xl p-3 border border-blue-100">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="font-mono text-xs text-gray-400">{v.projeto?.codigo}</span>
+                      <span className="text-xs text-blue-600 font-medium">{formatDate(v.dataAgendada)}</span>
+                    </div>
+                    <p className="text-sm font-medium text-gray-900">{v.titulo}</p>
+                    <p className="text-xs text-gray-400">{v.municipio || v.projeto?.municipio}</p>
+                    {v.responsavel && <p className="text-xs text-gray-400 mt-1">👤 {v.responsavel.nome}</p>}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div className="flex gap-2 flex-wrap">
+            <button onClick={() => setFiltro('')} className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${!filtro ? 'bg-green-600 text-white' : 'bg-white border border-gray-200 text-gray-600'}`}>Todas</button>
+            {Object.entries(STATUS_VISTORIA_LABELS).map(([k, v]) => (
+              <button key={k} onClick={() => setFiltro(k)} className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${filtro === k ? 'bg-green-600 text-white' : 'bg-white border border-gray-200 text-gray-600'}`}>{v}</button>
+            ))}
+          </div>
+
+          {loading ? (
+            <div className="flex items-center justify-center h-40">
+              <div className="w-8 h-8 border-4 border-green-600 border-t-transparent rounded-full animate-spin" />
+            </div>
+          ) : vistorias.length === 0 ? (
+            <div className="text-center py-12 text-gray-400">
+              <MapPin className="w-12 h-12 mx-auto mb-3 opacity-40" />
+              <p>Nenhuma vistoria encontrada</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {vistorias.map(v => (
+                <div key={v.id} className="bg-white rounded-2xl border border-gray-100 p-4 hover:shadow-sm transition-shadow">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="font-mono text-xs text-gray-400">{v.projeto?.codigo}</span>
+                        <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${STATUS_VISTORIA_COLORS[v.status]}`}>
+                          {STATUS_VISTORIA_LABELS[v.status]}
+                        </span>
+                      </div>
+                      <p className="font-semibold text-gray-900">{v.titulo}</p>
+                      <p className="text-sm text-gray-500">{v.projeto?.imovelNome}</p>
+                      <div className="flex flex-wrap gap-4 mt-2 text-xs text-gray-400">
+                        <span className="flex items-center gap-1"><Calendar className="w-3 h-3" />{formatDate(v.dataAgendada)}</span>
+                        {v.dataSaida && <span>🚀 Saída: {new Date(v.dataSaida).toLocaleDateString('pt-BR')}</span>}
+                        {v.dataVolta && <span>🏁 Volta: {new Date(v.dataVolta).toLocaleDateString('pt-BR')}</span>}
+                        {v.diasCampo && <span>⏱ {v.diasCampo}d</span>}
+                        {v.municipio && <span className="flex items-center gap-1"><MapPin className="w-3 h-3" />{v.municipio}</span>}
+                        {v.responsavel && <span>👤 {v.responsavel.nome}</span>}
+                      </div>
+                    </div>
+                    <select value={v.status} onChange={e => atualizarStatus(v.id, e.target.value)}
+                      className="text-xs px-3 py-1.5 border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-1 focus:ring-green-500 flex-shrink-0">
+                      {Object.entries(STATUS_VISTORIA_LABELS).map(([k, label]) => <option key={k} value={k}>{label}</option>)}
+                    </select>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ══ ABA CALENDÁRIO ════════════════════════════════════ */}
+      {aba === 'calendario' && (
+        <div className="bg-white rounded-2xl border border-gray-100 p-4 sm:p-6">
+          <div className="flex items-center justify-between mb-4">
+            <button onClick={() => setMesAtual(m => new Date(m.getFullYear(), m.getMonth() - 1, 1))}
+              className="p-2 rounded-lg hover:bg-gray-100 transition-colors">
+              <ChevronLeft className="w-5 h-5" />
+            </button>
+            <h3 className="font-bold text-lg text-gray-900 capitalize">
+              {mesAtual.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}
+            </h3>
+            <button onClick={() => setMesAtual(m => new Date(m.getFullYear(), m.getMonth() + 1, 1))}
+              className="p-2 rounded-lg hover:bg-gray-100 transition-colors">
+              <ChevronRight className="w-5 h-5" />
+            </button>
+          </div>
+          {equipes.length > 0 && (
+            <div className="flex flex-wrap gap-2 mb-4">
+              {equipes.map(e => (
+                <span key={e.id} className="flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full text-white"
+                  style={{ backgroundColor: e.cor }}>
+                  {e.nome}
+                </span>
+              ))}
+            </div>
+          )}
+          <div className="grid grid-cols-7 gap-1">
+            {DIAS_SEMANA.map(d => (
+              <div key={d} className="text-center text-xs font-semibold text-gray-400 py-2">{d}</div>
+            ))}
+            {diasDoMes().map((dia, idx) => {
+              const vsDia = dia ? vistoriasNoDia(dia) : []
+              const isHoje = dia &&
+                new Date().getDate() === dia &&
+                new Date().getMonth() === mesAtual.getMonth() &&
+                new Date().getFullYear() === mesAtual.getFullYear()
+              return (
+                <div key={idx} className={`min-h-[72px] p-1 rounded-lg border text-xs ${
+                  !dia ? 'border-transparent' :
+                  isHoje ? 'border-green-400 bg-green-50' : 'border-gray-100 hover:bg-gray-50'
+                }`}>
+                  {dia && (
+                    <>
+                      <p className={`font-semibold mb-0.5 ${isHoje ? 'text-green-700' : 'text-gray-600'}`}>{dia}</p>
+                      {vsDia.map(v => {
+                        const eq = equipes.find(e => e.id === v.equipeId)
+                        return (
+                          <div key={v.id}
+                            className="text-white text-xs px-1 py-0.5 rounded mb-0.5 truncate leading-tight"
+                            style={{ backgroundColor: eq?.cor || '#6b7280' }}
+                            title={`${v.titulo} — ${v.responsavel?.nome || ''}`}>
+                            {v.titulo}
+                          </div>
+                        )
+                      })}
+                    </>
+                  )}
+                </div>
+              )
+            })}
           </div>
         </div>
       )}
 
-      {/* Filtros */}
-      <div className="flex gap-2 flex-wrap">
-        <button onClick={() => setFiltro('')} className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${!filtro ? 'bg-green-600 text-white' : 'bg-white border border-gray-200 text-gray-600'}`}>
-          Todas
-        </button>
-        {Object.entries(STATUS_VISTORIA_LABELS).map(([k, v]) => (
-          <button key={k} onClick={() => setFiltro(k)} className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${filtro === k ? 'bg-green-600 text-white' : 'bg-white border border-gray-200 text-gray-600'}`}>
-            {v}
-          </button>
-        ))}
-      </div>
-
-      {/* Lista de vistorias */}
-      {loading ? (
-        <div className="flex items-center justify-center h-40">
-          <div className="w-8 h-8 border-4 border-green-600 border-t-transparent rounded-full animate-spin" />
-        </div>
-      ) : vistorias.length === 0 ? (
-        <div className="text-center py-12 text-gray-400">
-          <MapPin className="w-12 h-12 mx-auto mb-3 opacity-40" />
-          <p>Nenhuma vistoria encontrada</p>
-        </div>
-      ) : (
-        <div className="space-y-3">
-          {vistorias.map((v) => (
-            <div key={v.id} className="bg-white rounded-2xl border border-gray-100 p-4 hover:shadow-sm transition-shadow">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="font-mono text-xs text-gray-400">{v.projeto?.codigo}</span>
-                    <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${STATUS_VISTORIA_COLORS[v.status]}`}>
-                      {STATUS_VISTORIA_LABELS[v.status]}
-                    </span>
-                  </div>
-                  <p className="font-semibold text-gray-900">{v.titulo}</p>
-                  <p className="text-sm text-gray-500">{v.projeto?.imovelNome}</p>
-                  <div className="flex flex-wrap gap-4 mt-2 text-xs text-gray-400">
-                    <span className="flex items-center gap-1">
-                      <Calendar className="w-3 h-3" />
-                      {formatDate(v.dataAgendada)}
-                    </span>
-                    {v.municipio && (
-                      <span className="flex items-center gap-1">
-                        <MapPin className="w-3 h-3" />
-                        {v.municipio}
-                      </span>
-                    )}
-                    {v.responsavel && (
-                      <span>👤 {v.responsavel.nome}</span>
-                    )}
-                    {v.gastos?.length > 0 && (
-                      <span>💰 {v.gastos.length} gasto(s)</span>
-                    )}
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2 flex-shrink-0">
-                  <select
-                    value={v.status}
-                    onChange={(e) => atualizarStatus(v.id, e.target.value)}
-                    className="text-xs px-3 py-1.5 border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-1 focus:ring-green-500"
-                  >
-                    {Object.entries(STATUS_VISTORIA_LABELS).map(([k, label]) => (
-                      <option key={k} value={k}>{label}</option>
-                    ))}
-                  </select>
+      {/* ══ ABA EQUIPES ═══════════════════════════════════════ */}
+      {aba === 'equipes' && (
+        <div className="space-y-4">
+          <div className="bg-white rounded-2xl border border-gray-100 p-5">
+            <h3 className="font-semibold text-gray-900 mb-4">Nova Equipe</h3>
+            <div className="flex flex-wrap gap-3 items-end">
+              <div className="flex-1 min-w-48">
+                <label className="block text-xs font-medium text-gray-500 mb-1">Nome da Equipe *</label>
+                <input value={formEquipe.nome} onChange={e => setFormEquipe(p => ({ ...p, nome: e.target.value }))}
+                  placeholder="ex: Equipe Norte"
+                  className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-green-500" />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-500 mb-1">Cor no calendário</label>
+                <div className="flex gap-1.5">
+                  {EQUIPE_CORES.map(c => (
+                    <button key={c} onClick={() => setFormEquipe(p => ({ ...p, cor: c }))}
+                      className={`w-7 h-7 rounded-full transition-all ${formEquipe.cor === c ? 'scale-125 ring-2 ring-offset-1 ring-gray-400' : ''}`}
+                      style={{ backgroundColor: c }} />
+                  ))}
                 </div>
               </div>
+              <button onClick={criarEquipe} disabled={salvandoEquipe || !formEquipe.nome}
+                className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white font-semibold rounded-xl text-sm transition-colors">
+                {salvandoEquipe ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+                Criar
+              </button>
             </div>
-          ))}
+          </div>
+          <div className="space-y-2">
+            {equipes.map(e => (
+              <div key={e.id} className="bg-white rounded-xl border border-gray-100 p-4 flex items-center gap-3">
+                <div className="w-8 h-8 rounded-full flex-shrink-0" style={{ backgroundColor: e.cor }} />
+                <div className="flex-1">
+                  <p className="font-semibold text-gray-900 text-sm">{e.nome}</p>
+                  <p className="text-xs text-gray-400">{e.ativa ? '✅ Ativa' : '❌ Inativa'}</p>
+                </div>
+                <button onClick={() => excluirEquipe(e.id)}
+                  className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
+            ))}
+            {equipes.length === 0 && (
+              <div className="text-center py-10 text-gray-400">
+                <Users className="w-10 h-10 mx-auto mb-2 opacity-30" />
+                <p className="text-sm">Nenhuma equipe cadastrada</p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ══ ABA FROTA ════════════════════════════════════════ */}
+      {aba === 'frota' && (
+        <div className="space-y-4">
+          <div className="bg-white rounded-2xl border border-gray-100 p-5">
+            <h3 className="font-semibold text-gray-900 mb-4">{frotaEditando ? 'Editar Veículo' : 'Cadastrar Veículo'}</h3>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              {[
+                { k: 'placa', label: 'Placa *', ph: 'ABC1234' },
+                { k: 'marca', label: 'Marca', ph: 'Toyota' },
+                { k: 'modelo', label: 'Modelo', ph: 'Hilux' },
+                { k: 'ano', label: 'Ano', ph: '2023', type: 'number' },
+                { k: 'cor', label: 'Cor', ph: 'Branco' },
+                { k: 'kmAtual', label: 'KM Atual', ph: '45000', type: 'number' },
+              ].map(field => (
+                <div key={field.k}>
+                  <label className="block text-xs font-medium text-gray-500 mb-1">{field.label}</label>
+                  <input type={field.type || 'text'} placeholder={field.ph}
+                    value={(formFrota as any)[field.k]}
+                    onChange={e => setFormFrota(p => ({ ...p, [field.k]: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-green-500" />
+                </div>
+              ))}
+              <div>
+                <label className="block text-xs font-medium text-gray-500 mb-1">Tipo</label>
+                <select value={formFrota.tipo} onChange={e => setFormFrota(p => ({ ...p, tipo: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
+                  {TIPO_FROTA.map(t => <option key={t} value={t}>{t}</option>)}
+                </select>
+              </div>
+            </div>
+            <div className="flex gap-2 mt-4">
+              <button onClick={salvarFrota} disabled={salvandoFrota}
+                className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white font-semibold rounded-xl text-sm">
+                {salvandoFrota ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                {frotaEditando ? 'Salvar' : 'Cadastrar'}
+              </button>
+              {frotaEditando && (
+                <button onClick={() => { setFrotaEditando(null); setFormFrota({ placa: '', tipo: 'CARRO', marca: '', modelo: '', ano: '', cor: '', kmAtual: '' }) }}
+                  className="px-4 py-2 border border-gray-200 text-gray-600 rounded-xl text-sm hover:bg-gray-50">
+                  Cancelar
+                </button>
+              )}
+            </div>
+          </div>
+          <div className="space-y-2">
+            {frota.map(v => (
+              <div key={v.id} className="bg-white rounded-xl border border-gray-100 p-4 flex items-center gap-4">
+                <div className="w-10 h-10 bg-gray-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                  <Car className="w-5 h-5 text-gray-500" />
+                </div>
+                <div className="flex-1">
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono font-bold text-gray-900 text-sm">{v.placa}</span>
+                    <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">{v.tipo}</span>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    {[v.marca, v.modelo, v.ano].filter(Boolean).join(' · ')}
+                    {v.kmAtual != null && ` · ${v.kmAtual.toLocaleString('pt-BR')} km`}
+                  </p>
+                </div>
+                <div className="flex gap-1 flex-shrink-0">
+                  <button onClick={() => {
+                    setFrotaEditando(v)
+                    setFormFrota({ placa: v.placa, tipo: v.tipo, marca: v.marca||'', modelo: v.modelo||'', ano: v.ano?.toString()||'', cor: v.cor||'', kmAtual: v.kmAtual?.toString()||'' })
+                  }} className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg">
+                    <Edit2 className="w-4 h-4" />
+                  </button>
+                  <button onClick={() => excluirFrota(v.id)} className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg">
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            ))}
+            {frota.length === 0 && (
+              <div className="text-center py-10 text-gray-400">
+                <Truck className="w-10 h-10 mx-auto mb-2 opacity-30" />
+                <p className="text-sm">Nenhum veículo cadastrado</p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ══ ABA DIÁRIAS ════════════════════════════════════════ */}
+      {aba === 'diarias' && (
+        <div className="space-y-4">
+          <div className="bg-white rounded-2xl border border-gray-100 p-5">
+            <h3 className="font-semibold text-gray-900 mb-4">Apontar Gasto / Diária</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-medium text-gray-500 mb-1">Vistoria *</label>
+                <select value={formDiaria.vistoriaId} onChange={e => setFormDiaria(p => ({ ...p, vistoriaId: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
+                  <option value="">Selecionar...</option>
+                  {vistorias.filter(v => ['AGENDADA','EM_ANDAMENTO'].includes(v.status)).map(v => (
+                    <option key={v.id} value={v.id}>{v.projeto?.codigo} — {v.titulo}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-500 mb-1">Tipo</label>
+                <select value={formDiaria.tipo} onChange={e => setFormDiaria(p => ({ ...p, tipo: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
+                  {Object.entries(TIPO_DIARIA_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-500 mb-1">Valor (R$) *</label>
+                <input type="number" step="0.01" placeholder="0,00"
+                  value={formDiaria.valor} onChange={e => setFormDiaria(p => ({ ...p, valor: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-green-500" />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-500 mb-1">Descrição</label>
+                <input placeholder="Observação" value={formDiaria.descricao}
+                  onChange={e => setFormDiaria(p => ({ ...p, descricao: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-green-500" />
+              </div>
+            </div>
+            <button onClick={apontarDiaria} disabled={salvandoDiaria || !formDiaria.vistoriaId || !formDiaria.valor}
+              className="mt-4 flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white font-semibold rounded-xl text-sm">
+              {salvandoDiaria ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+              Registrar
+            </button>
+          </div>
+          <div className="space-y-2">
+            {diarias.map(d => (
+              <div key={d.id} className="bg-white rounded-xl border border-gray-100 p-4 flex items-center gap-4">
+                <div className="text-2xl">{TIPO_DIARIA_LABELS[d.tipo]?.split(' ')[0] || '📎'}</div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-0.5">
+                    <span className="font-mono text-xs text-gray-400">{d.vistoria?.projeto?.codigo}</span>
+                    <span className="text-xs text-gray-500 truncate">{d.vistoria?.titulo}</span>
+                  </div>
+                  <p className="text-sm text-gray-700">{TIPO_DIARIA_LABELS[d.tipo]} {d.descricao && `· ${d.descricao}`}</p>
+                  <p className="text-xs text-gray-400">{d.usuario?.nome} · {new Date(d.data).toLocaleDateString('pt-BR')}</p>
+                </div>
+                <p className="font-bold text-gray-900 text-sm flex-shrink-0">{formatCurrency(d.valor)}</p>
+              </div>
+            ))}
+            {diarias.length === 0 && (
+              <div className="text-center py-10 text-gray-400">
+                <DollarSign className="w-10 h-10 mx-auto mb-2 opacity-30" />
+                <p className="text-sm">Nenhum apontamento registrado</p>
+              </div>
+            )}
+          </div>
         </div>
       )}
 

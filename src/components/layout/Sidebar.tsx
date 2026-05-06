@@ -42,6 +42,12 @@ const navItems = [
     modulo: 'campo',
   },
   {
+    href: '/tecnico',
+    label: 'Minhas Vistorias',
+    icon: MapPin,
+    modulo: 'tecnico',
+  },
+  {
     href: '/financeiro',
     label: 'Financeiro',
     icon: DollarSign,
