@@ -9,11 +9,11 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url)
     const contratoId = searchParams.get('contratoId')
-    const status = searchParams.get('status')
+    const status     = searchParams.get('status')
 
     const where: any = {}
     if (contratoId) where.contratoId = contratoId
-    if (status) where.status = status
+    if (status)     where.status = status
 
     const pagamentos = await prisma.pagamento.findMany({
       where,
@@ -21,22 +21,21 @@ export async function GET(request: NextRequest) {
         contrato: {
           include: {
             cliente: { select: { id: true, nome: true } },
-            projeto: { select: { id: true, codigo: true, tipoServico: true } },
-          }
-        }
+            projeto: { select: { id: true, codigo: true, tipoServico: true, etapaPipeline: true } },
+          },
+        },
       },
-      orderBy: { dataVencimento: 'asc' }
+      orderBy: { dataVencimento: 'asc' },
     })
 
-    // Totais
     const totais = {
       totalPendente: pagamentos.filter(p => p.status === 'PENDENTE').reduce((s, p) => s + p.valor, 0),
-      totalPago: pagamentos.filter(p => p.status === 'PAGO').reduce((s, p) => s + p.valor, 0),
-      totalVencido: pagamentos.filter(p => p.status === 'VENCIDO').reduce((s, p) => s + p.valor, 0),
+      totalPago:     pagamentos.filter(p => p.status === 'PAGO').reduce((s, p) => s + p.valor, 0),
+      totalVencido:  pagamentos.filter(p => p.status === 'VENCIDO').reduce((s, p) => s + p.valor, 0),
     }
 
     return NextResponse.json({ pagamentos, totais })
-  } catch (error) {
+  } catch {
     return NextResponse.json({ error: 'Erro interno' }, { status: 500 })
   }
 }
@@ -55,20 +54,83 @@ export async function PATCH(request: NextRequest) {
       where: { id },
       data: {
         ...(status && { status }),
-        ...(dataPagamento && { dataPagamento: new Date(dataPagamento) }),
+        ...(dataPagamento  && { dataPagamento: new Date(dataPagamento) }),
         ...(formaPagamento !== undefined && { formaPagamento }),
-        ...(comprovante !== undefined && { comprovante }),
-        ...(observacoes !== undefined && { observacoes }),
+        ...(comprovante    !== undefined && { comprovante }),
+        ...(observacoes    !== undefined && { observacoes }),
         ...(status === 'PAGO' && !dataPagamento && { dataPagamento: new Date() }),
-      }
+      },
+      include: {
+        contrato: {
+          include: {
+            projeto: true,
+          },
+        },
+      },
     })
 
     await prisma.log.create({
-      data: { usuarioId: user.id, acao: 'ATUALIZAR_PAGAMENTO', entidade: 'Pagamento', entidadeId: id }
+      data: {
+        usuarioId: user.id,
+        acao: 'ATUALIZAR_PAGAMENTO',
+        entidade: 'Pagamento',
+        entidadeId: id,
+      },
     })
 
-    return NextResponse.json({ pagamento })
+    // ── Avanço automático de pipeline ─────────────────────────
+    // Se este pagamento foi marcado como PAGO e o projeto ainda
+    // está em AGUARDANDO_SINAL, verificamos se é o 1º pagamento pago.
+    // Se sim, avançamos para OPERACIONAL e notificamos a equipe técnica.
+    if (status === 'PAGO' && pagamento.contrato?.projeto?.etapaPipeline === 'AGUARDANDO_SINAL') {
+      const contratoId   = pagamento.contratoId
+      const projetoId    = pagamento.contrato.projetoId
+
+      // Conta pagamentos PAGO deste contrato (já inclui o que acabou de mudar)
+      const pagosCount = await prisma.pagamento.count({
+        where: { contratoId, status: 'PAGO' },
+      })
+
+      if (pagosCount === 1) {
+        // Primeiro pagamento — avança pipeline
+        await prisma.projeto.update({
+          where: { id: projetoId },
+          data: {
+            etapaPipeline: 'OPERACIONAL',
+            dataAprovacao: new Date(),
+          },
+        })
+
+        // Notifica gestores operacionais e de campo
+        const gestores = await prisma.usuario.findMany({
+          where: {
+            ativo: true,
+            role: { in: ['GESTOR_OPERACIONAL', 'GESTOR_CAMPO', 'GESTOR_GERAL', 'ADMIN'] },
+          },
+          select: { id: true },
+        })
+
+        await prisma.notificacao.createMany({
+          data: gestores.map(g => ({
+            usuarioId: g.id,
+            titulo: '🚀 Projeto liberado para execução',
+            mensagem: `O projeto ${pagamento.contrato.projeto?.codigo} teve o sinal confirmado e está aguardando planejamento operacional.`,
+            tipo: 'sucesso',
+            link: `/operacional/${projetoId}`,
+          })),
+        })
+
+        return NextResponse.json({
+          pagamento,
+          avancouPipeline: true,
+          novaEtapa: 'OPERACIONAL',
+        })
+      }
+    }
+
+    return NextResponse.json({ pagamento, avancouPipeline: false })
   } catch (error) {
+    console.error(error)
     return NextResponse.json({ error: 'Erro interno' }, { status: 500 })
   }
 }

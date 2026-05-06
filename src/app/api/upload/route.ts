@@ -4,64 +4,84 @@ import { prisma } from '@/lib/prisma'
 import { writeFile, mkdir } from 'fs/promises'
 import { join } from 'path'
 
+// ── Organização padrão de pastas ─────────────────────────────
+// tipo=pagamento  → /uploads/pagamentos/{projetoId}/
+// tipo=documento  → /uploads/projetos/{projetoId}/documentos/
+// tipo=vistoria   → /uploads/vistorias/{entidadeId}/
+// tipo=tarefa     → /uploads/tarefas/{entidadeId}/
+// (default)       → /uploads/geral/
+function resolverPasta(
+  tipo: string,
+  projetoId: string | null,
+  entidadeId: string | null,
+): string {
+  switch (tipo) {
+    case 'pagamento':
+      return projetoId ? `pagamentos/${projetoId}` : 'pagamentos/geral'
+    case 'vistoria':
+      return entidadeId ? `vistorias/${entidadeId}` : 'vistorias/geral'
+    case 'tarefa':
+      return entidadeId ? `tarefas/${entidadeId}` : 'tarefas/geral'
+    case 'documento':
+    case 'projeto':
+    default:
+      return projetoId ? `projetos/${projetoId}/documentos` : 'geral'
+  }
+}
+
 export async function POST(request: NextRequest) {
   try {
     const user = await getCurrentUser()
     if (!user) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
 
-    const formData = await request.formData()
-    const arquivo = formData.get('arquivo') as File | null
-    const projetoId = formData.get('projetoId') as string | null
-    const categoria = (formData.get('categoria') as string) || 'GERAL'
+    const formData   = await request.formData()
+    const arquivo    = formData.get('arquivo')   as File   | null
+    const projetoId  = formData.get('projetoId') as string | null
+    const entidadeId = formData.get('entidadeId') as string | null  // tarefaId ou vistoriaId
+    const tipo       = (formData.get('tipo')      as string) || 'documento'
+    const categoria  = (formData.get('categoria') as string) || 'GERAL'
 
     if (!arquivo) {
       return NextResponse.json({ error: 'Nenhum arquivo enviado' }, { status: 400 })
     }
 
-    // Valida tipo de arquivo
-    const tiposPermitidos = [
-      'application/pdf', 'application/vnd.google-earth.kml+xml',
-      'application/octet-stream', 'image/jpeg', 'image/png',
-      'image/tiff', 'application/zip', 'text/xml',
-      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-      'application/vnd.ms-excel',
-    ]
-    // KML e outros formatos geoespaciais têm MIME variável — aceita por extensão também
+    // Valida extensão
     const extensoesPermitidas = ['.pdf', '.kml', '.kmz', '.jpg', '.jpeg', '.png', '.tif', '.tiff', '.zip', '.xlsx', '.xls', '.xml']
-    const nomeArquivo = arquivo.name.toLowerCase()
-    const extensaoValida = extensoesPermitidas.some(ext => nomeArquivo.endsWith(ext))
-
-    if (!extensaoValida) {
+    const nomeArquivo         = arquivo.name.toLowerCase()
+    if (!extensoesPermitidas.some(ext => nomeArquivo.endsWith(ext))) {
       return NextResponse.json({
-        error: 'Tipo de arquivo não permitido. Use: PDF, KML, KMZ, imagens, ZIP ou Excel'
+        error: 'Tipo de arquivo não permitido. Use: PDF, KML, KMZ, imagens, ZIP ou Excel',
       }, { status: 400 })
     }
 
-    // Limita tamanho: 50MB
+    // Limita a 50 MB
     if (arquivo.size > 50 * 1024 * 1024) {
       return NextResponse.json({ error: 'Arquivo muito grande. Máximo 50MB.' }, { status: 400 })
     }
 
-    // Cria diretório
-    const pasta = projetoId ? `projeto-${projetoId}` : 'geral'
-    const dir = join(process.cwd(), 'public', 'uploads', pasta)
+    // Resolve pasta e cria diretório
+    const subpasta        = resolverPasta(tipo, projetoId, entidadeId)
+    const dir             = join(process.cwd(), 'public', 'uploads', subpasta)
     await mkdir(dir, { recursive: true })
 
-    // Nome único para evitar colisão
-    const timestamp = Date.now()
-    const nomeSeguro = arquivo.name.replace(/[^a-zA-Z0-9._-]/g, '_')
+    // Nome único
+    const timestamp       = Date.now()
+    const nomeSeguro      = arquivo.name.replace(/[^a-zA-Z0-9._-]/g, '_')
     const nomeArquivoFinal = `${timestamp}_${nomeSeguro}`
-    const caminho = join(dir, nomeArquivoFinal)
+    const caminho         = join(dir, nomeArquivoFinal)
 
     // Salva arquivo
     const bytes = await arquivo.arrayBuffer()
     await writeFile(caminho, Buffer.from(bytes))
 
-    const url = `/uploads/${pasta}/${nomeArquivoFinal}`
+    const url = `/uploads/${subpasta}/${nomeArquivoFinal}`
 
-    // Registra documento no banco (se houver projetoId)
+    // Registra documento no banco (quando vinculado a projeto)
     let documento = null
-    if (projetoId) {
+    if (projetoId || entidadeId) {
+      const tarefaId   = tipo === 'tarefa'   ? (entidadeId ?? undefined) : undefined
+      const vistoriaId = tipo === 'vistoria' ? (entidadeId ?? undefined) : undefined
+
       documento = await prisma.documento.create({
         data: {
           nome: arquivo.name,
@@ -69,7 +89,9 @@ export async function POST(request: NextRequest) {
           categoria,
           url,
           tamanho: arquivo.size,
-          projetoId,
+          ...(projetoId  && { projetoId }),
+          ...(tarefaId   && { tarefaId }),
+          ...(vistoriaId && { vistoriaId }),
           uploadadoPor: user.id,
         },
       })
