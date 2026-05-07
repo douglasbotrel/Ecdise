@@ -1,9 +1,9 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import React, { useState, useEffect } from 'react'
 import { toast } from 'sonner'
 import { Plus, X, Loader2, Check, ChevronDown, ChevronUp, Trash2, Edit2, ToggleLeft, ToggleRight } from 'lucide-react'
-import { ROLE_LABELS, DEPARTAMENTO_LABELS } from '@/lib/utils'
+import { ROLE_LABELS, DEPARTAMENTO_LABELS, MODULOS_POR_ROLE } from '@/lib/utils'
 
 const MODULOS = [
   { id: 'dashboard',    label: '📊 Dashboard' },
@@ -11,9 +11,44 @@ const MODULOS = [
   { id: 'contratos',   label: '📄 Contratos' },
   { id: 'operacional', label: '⚙️ Operacional' },
   { id: 'campo',       label: '🌿 Campo' },
+  { id: 'tecnico',     label: '🔭 Minhas Vistorias' },
   { id: 'financeiro',  label: '💰 Financeiro' },
+  { id: 'encerramento',label: '✅ Encerramento' },
   { id: 'bi',          label: '📈 BI / Relatórios' },
   { id: 'configuracoes', label: '🔧 Configurações' },
+]
+
+// Hierarquia visual para o org chart
+const ORG_HIERARQUIA = [
+  {
+    role: 'ADMIN', cor: 'bg-purple-100 text-purple-800 border-purple-200',
+    sub: [
+      {
+        role: 'GESTOR_GERAL', cor: 'bg-blue-100 text-blue-800 border-blue-200',
+        sub: [
+          { role: 'GESTOR_ADMINISTRATIVO', cor: 'bg-indigo-100 text-indigo-800 border-indigo-200', sub: [] },
+          {
+            role: 'GESTOR_OPERACIONAL', cor: 'bg-cyan-100 text-cyan-800 border-cyan-200',
+            sub: [
+              {
+                role: 'SUPERVISOR', cor: 'bg-teal-100 text-teal-800 border-teal-200',
+                sub: [
+                  { role: 'ANALISTA', cor: 'bg-green-100 text-green-800 border-green-200', sub: [] },
+                  { role: 'ANALISTA_RAPIDO', cor: 'bg-lime-100 text-lime-800 border-lime-200', sub: [] },
+                ],
+              },
+            ],
+          },
+          {
+            role: 'GESTOR_CAMPO', cor: 'bg-orange-100 text-orange-800 border-orange-200',
+            sub: [
+              { role: 'TECNICO_CAMPO', cor: 'bg-amber-100 text-amber-800 border-amber-200', sub: [] },
+            ],
+          },
+        ],
+      },
+    ],
+  },
 ]
 
 const TIPOS_USUARIO_DESC: Record<string, string> = {
@@ -28,7 +63,7 @@ const TIPOS_USUARIO_DESC: Record<string, string> = {
   TECNICO_CAMPO:        'Realização de vistorias e coleta de dados técnicos em campo.',
 }
 
-type Aba = 'usuarios' | 'tipos_usuario' | 'servicos' | 'custos'
+type Aba = 'usuarios' | 'hierarquia' | 'servicos' | 'custos'
 
 export default function ConfiguracoesPage() {
   const [aba, setAba] = useState<Aba>('usuarios')
@@ -61,6 +96,17 @@ export default function ConfiguracoesPage() {
     modulosAcesso: ['dashboard', 'operacional'] as string[],
   })
 
+  // Matriz de permissões por perfil (hierarquia)
+  const [matrizEdit, setMatrizEdit] = useState<Record<string, string[]>>(() => {
+    const base: Record<string, string[]> = {}
+    Object.keys(ROLE_LABELS).forEach(role => {
+      const mods = MODULOS_POR_ROLE[role]
+      base[role] = mods === null ? MODULOS.map(m => m.id) : [...(mods ?? [])]
+    })
+    return base
+  })
+  const [aplicandoPerfil, setAplicandoPerfil] = useState<string | null>(null)
+
   // Edição de usuário existente
   const [usuarioEditando, setUsuarioEditando] = useState<any | null>(null)
   const [formEdit, setFormEdit] = useState({
@@ -83,6 +129,38 @@ export default function ConfiguracoesPage() {
       novaSenha: '',
     })
     setUsuarioEditando(u)
+  }
+
+  function toggleMatrizModulo(role: string, moduloId: string) {
+    setMatrizEdit(prev => ({
+      ...prev,
+      [role]: prev[role]?.includes(moduloId)
+        ? prev[role].filter(m => m !== moduloId)
+        : [...(prev[role] ?? []), moduloId],
+    }))
+  }
+
+  async function aplicarAoPerfil(role: string) {
+    if (['ADMIN', 'GESTOR_GERAL'].includes(role)) return
+    setAplicandoPerfil(role)
+    try {
+      const res = await fetch('/api/usuarios')
+      if (!res.ok) throw new Error()
+      const { usuarios: lista } = await res.json()
+      const doPerfil = lista.filter((u: any) => u.role === role)
+      await Promise.all(doPerfil.map((u: any) =>
+        fetch(`/api/usuarios/${u.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ modulosAcesso: JSON.stringify(matrizEdit[role] ?? []) }),
+        })
+      ))
+      toast.success(`Módulos aplicados a ${doPerfil.length} usuário(s) do perfil "${ROLE_LABELS[role]}"`)
+    } catch {
+      toast.error('Erro ao aplicar permissões')
+    } finally {
+      setAplicandoPerfil(null)
+    }
   }
 
   function toggleModuloEdit(id: string) {
@@ -271,6 +349,24 @@ export default function ConfiguracoesPage() {
     finally { setSalvandoTarefas(false) }
   }
 
+  function renderOrgNode(nodes: any[], depth = 0): React.ReactNode {
+    return (
+      <div className={depth > 0 ? 'ml-8 mt-2 border-l-2 border-gray-100 pl-4' : ''}>
+        {nodes.map((node: any) => (
+          <div key={node.role} className="mb-2">
+            <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-xl border text-sm font-medium ${node.cor}`}>
+              <span>{ROLE_LABELS[node.role]}</span>
+              {MODULOS_POR_ROLE[node.role] === null && (
+                <span className="text-xs bg-white/60 px-1.5 py-0.5 rounded-full">Acesso Total</span>
+              )}
+            </div>
+            {node.sub?.length > 0 && renderOrgNode(node.sub, depth + 1)}
+          </div>
+        ))}
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-6">
       <div>
@@ -282,10 +378,10 @@ export default function ConfiguracoesPage() {
       <div className="border-b border-gray-100">
         <div className="flex gap-0 overflow-x-auto">
           {([
-            { id: 'usuarios',      label: '👥 Usuários' },
-            { id: 'tipos_usuario', label: '🎭 Tipos de Usuário' },
-            { id: 'servicos',      label: '🌿 Tipos de Serviço' },
-            { id: 'custos',        label: '💰 Tipos de Custo' },
+            { id: 'usuarios',   label: '👥 Usuários' },
+            { id: 'hierarquia', label: '🏢 Hierarquia' },
+            { id: 'servicos',   label: '🌿 Tipos de Serviço' },
+            { id: 'custos',     label: '💰 Tipos de Custo' },
           ] as { id: Aba; label: string }[]).map(a => (
             <button key={a.id} onClick={() => setAba(a.id)}
               className={`px-4 py-2.5 text-sm font-medium border-b-2 whitespace-nowrap transition-colors ${
@@ -384,10 +480,94 @@ export default function ConfiguracoesPage() {
         </div>
       )}
 
-      {/* ── TIPOS DE USUÁRIO ── */}
-      {aba === 'tipos_usuario' && (
-        <div className="space-y-4">
-          <p className="text-sm text-gray-500">Perfis de acesso disponíveis no sistema e suas responsabilidades</p>
+      {/* ── HIERARQUIA ── */}
+      {aba === 'hierarquia' && (
+        <div className="space-y-6">
+          <div>
+            <h2 className="text-base font-semibold text-gray-900">Organograma da Empresa</h2>
+            <p className="text-sm text-gray-500 mt-0.5">Estrutura hierárquica e módulos de acesso por perfil</p>
+          </div>
+
+          {/* Org chart */}
+          <div className="bg-white rounded-2xl border border-gray-100 p-6 overflow-x-auto">
+            {renderOrgNode(ORG_HIERARQUIA)}
+          </div>
+
+          {/* Matriz de permissões */}
+          <div>
+            <h2 className="text-base font-semibold text-gray-900">Matriz de Permissões por Perfil</h2>
+            <p className="text-sm text-gray-500 mt-0.5">
+              Defina quais módulos cada perfil pode acessar. Clique em <strong>Aplicar</strong> para atualizar todos os usuários do perfil.
+            </p>
+          </div>
+
+          <div className="bg-white rounded-2xl border border-gray-100 overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-gray-50 border-b border-gray-100">
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 w-48">Perfil</th>
+                  {MODULOS.map(m => (
+                    <th key={m.id} className="text-center px-2 py-3 text-xs font-semibold text-gray-500 min-w-[80px]">
+                      <div className="writing-mode-vertical">{m.label.replace(/^[^\s]+\s/, '')}</div>
+                    </th>
+                  ))}
+                  <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 w-32">Ação</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-50">
+                {Object.entries(ROLE_LABELS).map(([role, label]) => {
+                  const isUnlimited = ['ADMIN', 'GESTOR_GERAL'].includes(role)
+                  return (
+                    <tr key={role} className="hover:bg-gray-50/50 transition-colors">
+                      <td className="px-4 py-3">
+                        <p className="font-medium text-gray-900 text-sm">{label}</p>
+                        {isUnlimited && (
+                          <span className="text-xs text-purple-600 font-medium">Acesso irrestrito</span>
+                        )}
+                      </td>
+                      {MODULOS.map(m => (
+                        <td key={m.id} className="text-center px-2 py-3">
+                          {isUnlimited ? (
+                            <span className="text-green-500 text-base">✓</span>
+                          ) : (
+                            <input
+                              type="checkbox"
+                              checked={matrizEdit[role]?.includes(m.id) ?? false}
+                              onChange={() => toggleMatrizModulo(role, m.id)}
+                              className="accent-green-600 w-4 h-4 cursor-pointer"
+                            />
+                          )}
+                        </td>
+                      ))}
+                      <td className="px-4 py-3 text-right">
+                        {!isUnlimited && (
+                          <button
+                            onClick={() => aplicarAoPerfil(role)}
+                            disabled={aplicandoPerfil === role}
+                            className="text-xs bg-green-600 hover:bg-green-700 text-white px-3 py-1.5 rounded-lg font-medium transition-colors flex items-center gap-1.5 ml-auto disabled:opacity-50"
+                          >
+                            {aplicandoPerfil === role
+                              ? <><Loader2 className="w-3 h-3 animate-spin" /> Aplicando...</>
+                              : 'Aplicar'}
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+            <div className="px-4 py-3 bg-amber-50 border-t border-amber-100 rounded-b-2xl">
+              <p className="text-xs text-amber-700">
+                <strong>Atenção:</strong> "Aplicar" atualiza os módulos de <em>todos</em> os usuários daquele perfil. Usuários com acesso personalizado serão sobrescritos. Para personalizar individualmente, use a aba <strong>Usuários</strong>.
+              </p>
+            </div>
+          </div>
+
+          {/* Cards descritivos por perfil */}
+          <div>
+            <h2 className="text-base font-semibold text-gray-900">Descrição dos Perfis</h2>
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {Object.entries(ROLE_LABELS).map(([role, label]) => (
               <div key={role} className="bg-white rounded-xl border border-gray-100 p-4 hover:shadow-sm transition-shadow">
@@ -694,7 +874,15 @@ export default function ConfiguracoesPage() {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Perfil de Acesso</label>
-                  <select value={formEdit.role} onChange={e => setFormEdit(p => ({ ...p, role: e.target.value }))}
+                  <select value={formEdit.role} onChange={e => {
+                    const novoRole = e.target.value
+                    const mods = MODULOS_POR_ROLE[novoRole]
+                    setFormEdit(p => ({
+                      ...p,
+                      role: novoRole,
+                      modulosAcesso: mods === null ? MODULOS.map(m => m.id) : [...(mods ?? ['dashboard'])],
+                    }))
+                  }}
                     className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-green-500 bg-white">
                     {Object.entries(ROLE_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
                   </select>
@@ -793,7 +981,15 @@ export default function ConfiguracoesPage() {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Perfil de Acesso</label>
-                  <select value={formUser.role} onChange={e => setFormUser(p => ({ ...p, role: e.target.value }))}
+                  <select value={formUser.role} onChange={e => {
+                    const novoRole = e.target.value
+                    const mods = MODULOS_POR_ROLE[novoRole]
+                    setFormUser(p => ({
+                      ...p,
+                      role: novoRole,
+                      modulosAcesso: mods === null ? MODULOS.map(m => m.id) : [...(mods ?? ['dashboard'])],
+                    }))
+                  }}
                     className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-green-500 bg-white">
                     {Object.entries(ROLE_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
                   </select>

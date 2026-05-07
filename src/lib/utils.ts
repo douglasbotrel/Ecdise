@@ -140,6 +140,20 @@ export const ETAPA_LABELS: Record<string, string> = {
   CANCELADO:           'Cancelado',
 }
 
+// Módulos padrão por perfil — usados quando o usuário não tem modulosAcesso definido individualmente
+// null = acesso irrestrito; array = lista exata de módulos permitidos
+export const MODULOS_POR_ROLE: Record<string, string[] | null> = {
+  ADMIN:                  null,
+  GESTOR_GERAL:           null,
+  GESTOR_ADMINISTRATIVO:  ['dashboard', 'comercial', 'contratos', 'financeiro', 'encerramento', 'configuracoes'],
+  GESTOR_OPERACIONAL:     ['dashboard', 'comercial', 'operacional', 'campo', 'encerramento'],
+  GESTOR_CAMPO:           ['dashboard', 'campo', 'tecnico'],
+  SUPERVISOR:             ['dashboard', 'comercial', 'operacional'],
+  ANALISTA:               ['dashboard', 'operacional'],
+  ANALISTA_RAPIDO:        ['dashboard', 'comercial'],
+  TECNICO_CAMPO:          ['dashboard', 'tecnico'],
+}
+
 export const DEPARTAMENTO_LABELS: Record<string, string> = {
   GESTAO_GERAL: 'Gestão Geral',
   COMERCIAL: 'Comercial',

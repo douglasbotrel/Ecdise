@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { Sidebar } from '@/components/layout/Sidebar'
 import { Header } from '@/components/layout/Header'
-import { cn } from '@/lib/utils'
+import { cn, MODULOS_POR_ROLE } from '@/lib/utils'
 
 interface Usuario {
   id: string
@@ -22,13 +22,14 @@ export function DashboardShell({
   usuario: Usuario
   children: React.ReactNode
 }) {
-  // Parse módulos: ADMIN/GESTOR_GERAL veem tudo; demais filtram pelo campo
+  // Parse módulos: ADMIN/GESTOR_GERAL veem tudo; demais usam modulosAcesso individual
+  // ou os padrões definidos em MODULOS_POR_ROLE; fallback = só dashboard
   const modulosPermitidos: string[] | null =
     ['ADMIN', 'GESTOR_GERAL'].includes(usuario.role)
       ? null  // null = sem restrição
       : usuario.modulosAcesso
         ? JSON.parse(usuario.modulosAcesso)
-        : null
+        : MODULOS_POR_ROLE[usuario.role] ?? ['dashboard']
   const [collapsed, setCollapsed] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
 
