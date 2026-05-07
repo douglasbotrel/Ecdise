@@ -53,8 +53,8 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json()
     const {
-      projetoId, titulo, tipo, dataAgendada, local, municipio,
-      responsavelId, equipe, frota, observacoes
+      projetoId, titulo, tipo, dataAgendada, dataSaida, dataVolta,
+      local, municipio, responsavelId, equipeId, frotaId, equipe, frota, observacoes
     } = body
 
     if (!projetoId || !dataAgendada) {
@@ -67,9 +67,13 @@ export async function POST(request: NextRequest) {
         titulo: titulo || 'Vistoria de Campo',
         tipo: tipo || 'VISTORIA_CAMPO',
         dataAgendada: new Date(dataAgendada),
+        dataSaida:    dataSaida ? new Date(dataSaida) : null,
+        dataVolta:    dataVolta ? new Date(dataVolta) : null,
         local,
         municipio,
         responsavelId: responsavelId || null,
+        equipeId:     equipeId  || null,
+        frotaId:      frotaId   || null,
         equipe: equipe ? JSON.stringify(equipe) : null,
         frota,
         observacoes,

@@ -40,8 +40,11 @@ export default function CampoPage() {
   const [loading, setLoading]           = useState(true)
   const [modalOpen, setModalOpen]       = useState(false)
   const [filtro, setFiltro]             = useState('')
-  const [datasSol, setDatasSol]         = useState<Record<string, string>>({})
+  const [formSol, setFormSol] = useState<Record<string, {
+    dataSaida: string; dataVolta: string; equipeId: string; frotaId: string; responsavelId: string
+  }>>({})
   const [salvandoSol, setSalvandoSol]   = useState<string | null>(null)
+  const [usuarios, setUsuarios]         = useState<any[]>([])
 
   // Calendário
   const hoje = new Date()
@@ -65,38 +68,70 @@ export default function CampoPage() {
     try {
       const params = new URLSearchParams()
       if (filtro) params.set('status', filtro)
-      const [resV, resS, resE, resF, resD] = await Promise.all([
+      const [resV, resS, resE, resF, resD, resU] = await Promise.all([
         fetch(`/api/vistorias?${params}`),
         fetch('/api/tarefas?solicitadasCampo=true'),
         fetch('/api/campo/equipes'),
         fetch('/api/campo/frota'),
         fetch('/api/campo/diarias'),
+        fetch('/api/usuarios?ativo=true'),
       ])
       if (resV.ok) setVistorias((await resV.json()).vistorias)
       if (resS.ok) setSolicitacoes((await resS.json()).tarefas || [])
       if (resE.ok) setEquipes((await resE.json()).equipes || [])
       if (resF.ok) setFrota((await resF.json()).frota || [])
       if (resD.ok) setDiarias((await resD.json()).diarias || [])
+      if (resU.ok) setUsuarios((await resU.json()).usuarios || [])
     } catch { toast.error('Erro ao carregar dados') }
     finally { setLoading(false) }
   }, [filtro])
 
   useEffect(() => { load() }, [load])
 
-  async function definirDataCampo(tarefaId: string) {
-    const data = datasSol[tarefaId]
-    if (!data) { toast.error('Informe a data antes de confirmar'); return }
-    setSalvandoSol(tarefaId)
+  function setSolField(tarefaId: string, field: string, value: string) {
+    setFormSol(prev => ({
+      ...prev,
+      [tarefaId]: { dataSaida: '', dataVolta: '', equipeId: '', frotaId: '', responsavelId: '', ...prev[tarefaId], [field]: value }
+    }))
+  }
+
+  async function confirmarAgendamento(tarefa: any) {
+    const f = formSol[tarefa.id]
+    if (!f?.dataSaida) { toast.error('Informe pelo menos a data de saída'); return }
+    if (f.dataVolta && f.dataVolta < f.dataSaida) { toast.error('Data de volta anterior à de saída'); return }
+    setSalvandoSol(tarefa.id)
     try {
-      const res = await fetch('/api/tarefas', {
+      // 1. Cria a Vistoria
+      const resV = await fetch('/api/vistorias', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          projetoId:    tarefa.projetoId || tarefa.projeto?.id,
+          titulo:       tarefa.titulo,
+          tipo:         'VISTORIA_CAMPO',
+          dataAgendada: f.dataSaida,
+          dataSaida:    f.dataSaida,
+          dataVolta:    f.dataVolta || null,
+          municipio:    tarefa.projeto?.municipio || '',
+          responsavelId: f.responsavelId || null,
+          equipeId:     f.equipeId  || null,
+          frotaId:      f.frotaId   || null,
+        }),
+      })
+      if (!resV.ok) { const d = await resV.json(); toast.error(d.error || 'Erro ao criar vistoria'); return }
+
+      // 2. Atualiza a tarefa com a data de campo confirmada
+      const resT = await fetch('/api/tarefas', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: tarefaId, dataCampo: data }),
+        body: JSON.stringify({ id: tarefa.id, dataCampo: f.dataSaida, status: 'EM_ANDAMENTO' }),
       })
-      if (!res.ok) { const d = await res.json(); toast.error(d.error); return }
-      toast.success('Data confirmada! Operacional notificado.')
+      if (!resT.ok) { const d = await resT.json(); toast.error(d.error); return }
+
+      toast.success('Vistoria agendada! Operacional notificado.')
+      setFormSol(prev => { const n = { ...prev }; delete n[tarefa.id]; return n })
       load()
-    } catch { toast.error('Erro ao confirmar data') }
+    } catch { toast.error('Erro ao confirmar agendamento') }
     finally { setSalvandoSol(null) }
   }
 
@@ -217,34 +252,97 @@ export default function CampoPage() {
             <span className="ml-auto bg-blue-600 text-white text-xs font-bold px-2 py-0.5 rounded-full">{solicitacoes.length}</span>
           </div>
           <div className="divide-y divide-blue-100">
-            {solicitacoes.map(tarefa => (
-              <div key={tarefa.id} className="px-5 py-4 flex flex-col sm:flex-row sm:items-center gap-3">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-0.5">
-                    <span className="font-mono text-xs text-gray-400">{tarefa.projeto?.codigo}</span>
-                    <span className="text-xs text-gray-500">{tarefa.projeto?.imovelNome}</span>
+            {solicitacoes.map(tarefa => {
+              const f = formSol[tarefa.id] || { dataSaida: '', dataVolta: '', equipeId: '', frotaId: '', responsavelId: '' }
+              return (
+                <div key={tarefa.id} className="px-5 py-4 space-y-3">
+                  {/* Cabeçalho da solicitação */}
+                  <div className="flex items-start gap-2">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-0.5">
+                        <span className="font-mono text-xs text-gray-400">{tarefa.projeto?.codigo}</span>
+                        <span className="text-xs text-gray-500">{tarefa.projeto?.imovelNome}</span>
+                      </div>
+                      <p className="text-sm font-semibold text-gray-900">{tarefa.titulo}</p>
+                      <p className="text-xs text-gray-400 mt-0.5">
+                        {tarefa.projeto?.municipio && `📍 ${tarefa.projeto.municipio}`}
+                      </p>
+                    </div>
                   </div>
-                  <p className="text-sm font-semibold text-gray-900">{tarefa.titulo}</p>
-                  <p className="text-xs text-gray-400 mt-0.5">
-                    {tarefa.projeto?.municipio && `📍 ${tarefa.projeto.municipio}${tarefa.projeto.estado ? `/${tarefa.projeto.estado}` : ''}`}
-                  </p>
+
+                  {/* Formulário de agendamento */}
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
+                    <div>
+                      <label className="block text-xs font-medium text-blue-700 mb-1">📅 Saída *</label>
+                      <input type="datetime-local"
+                        value={f.dataSaida}
+                        onChange={e => setSolField(tarefa.id, 'dataSaida', e.target.value)}
+                        min={new Date().toISOString().slice(0, 16)}
+                        className="w-full border border-blue-300 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-blue-700 mb-1">🔙 Volta</label>
+                      <input type="datetime-local"
+                        value={f.dataVolta}
+                        onChange={e => setSolField(tarefa.id, 'dataVolta', e.target.value)}
+                        min={f.dataSaida || new Date().toISOString().slice(0, 16)}
+                        className="w-full border border-blue-300 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-blue-700 mb-1">👥 Equipe</label>
+                      <select
+                        value={f.equipeId}
+                        onChange={e => setSolField(tarefa.id, 'equipeId', e.target.value)}
+                        className="w-full border border-blue-300 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                      >
+                        <option value="">Sem equipe</option>
+                        {equipes.map((eq: any) => (
+                          <option key={eq.id} value={eq.id}>{eq.nome}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-blue-700 mb-1">🚗 Frota</label>
+                      <select
+                        value={f.frotaId}
+                        onChange={e => setSolField(tarefa.id, 'frotaId', e.target.value)}
+                        className="w-full border border-blue-300 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                      >
+                        <option value="">Sem veículo</option>
+                        {frota.filter((v: any) => v.ativa !== false).map((v: any) => (
+                          <option key={v.id} value={v.id}>{v.placa} {v.modelo}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-blue-700 mb-1">👤 Técnico</label>
+                      <select
+                        value={f.responsavelId}
+                        onChange={e => setSolField(tarefa.id, 'responsavelId', e.target.value)}
+                        className="w-full border border-blue-300 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                      >
+                        <option value="">Selecione</option>
+                        {usuarios.map((u: any) => (
+                          <option key={u.id} value={u.id}>{u.nome}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Botão confirmar */}
+                  <div className="flex justify-end">
+                    <button onClick={() => confirmarAgendamento(tarefa)}
+                      disabled={salvandoSol === tarefa.id || !f.dataSaida}
+                      className="flex items-center gap-1.5 px-4 py-1.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-sm font-semibold rounded-lg transition-colors">
+                      {salvandoSol === tarefa.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
+                      Confirmar Agendamento
+                    </button>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2 flex-shrink-0">
-                  <input type="date"
-                    value={datasSol[tarefa.id] || ''}
-                    onChange={e => setDatasSol(prev => ({ ...prev, [tarefa.id]: e.target.value }))}
-                    min={new Date().toISOString().split('T')[0]}
-                    className="border border-blue-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
-                  />
-                  <button onClick={() => definirDataCampo(tarefa.id)}
-                    disabled={salvandoSol === tarefa.id || !datasSol[tarefa.id]}
-                    className="flex items-center gap-1.5 px-4 py-1.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-sm font-semibold rounded-lg transition-colors">
-                    {salvandoSol === tarefa.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
-                    Confirmar
-                  </button>
-                </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
         </div>
       )}
