@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
     const where: any = {}
     if (role) where.role = role
     if (departamento) where.departamento = departamento
-    if (ativo !== null) where.ativo = ativo === 'true'
+    if (ativo !== null && ativo !== undefined) where.ativo = ativo === 'true'
 
     const usuarios = await prisma.usuario.findMany({
       where,

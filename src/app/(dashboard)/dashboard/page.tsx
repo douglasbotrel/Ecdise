@@ -118,12 +118,12 @@ function ViewAnalistaRapido({ dados }: { dados: any }) {
 }
 
 function ViewAnalista({ dados }: { dados: any }) {
-  const { estatisticas, projetos, proximasVistorias } = dados
+  const { estatisticas, projetos, proximasVistorias, minhasTarefas } = dados
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Minha Área — Operacional</h1>
-        <p className="text-gray-500 text-sm mt-1">Projetos e tarefas sob sua responsabilidade</p>
+        <p className="text-gray-500 text-sm mt-1">Projetos e atividades sob sua responsabilidade</p>
       </div>
       <div className="grid grid-cols-3 gap-4">
         {[
@@ -145,6 +145,37 @@ function ViewAnalista({ dados }: { dados: any }) {
           )
         })}
       </div>
+
+      {/* Minhas tarefas atribuídas */}
+      {minhasTarefas?.length > 0 && (
+        <div className="bg-white rounded-2xl border border-gray-100">
+          <div className="px-6 py-4 border-b border-gray-100">
+            <h3 className="font-semibold text-gray-900">Minhas Atividades</h3>
+            <p className="text-xs text-gray-400 mt-0.5">Tarefas que foram atribuídas a você</p>
+          </div>
+          <div className="divide-y divide-gray-50">
+            {minhasTarefas.map((t: any) => {
+              const atrasada = t.prazo && new Date(t.prazo) < new Date()
+              return (
+                <Link key={t.id} href={`/operacional/${t.projeto?.id}`}
+                  className="flex items-center gap-3 px-6 py-3 hover:bg-gray-50 transition-colors">
+                  <div className={`w-2 h-2 rounded-full flex-shrink-0 ${atrasada ? 'bg-red-500' : 'bg-yellow-400'}`} />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-gray-900 truncate">{t.titulo}</p>
+                    <p className="text-xs text-gray-400">{t.projeto?.codigo} • {t.projeto?.imovelNome}</p>
+                  </div>
+                  {t.prazo && (
+                    <span className={`text-xs font-medium flex-shrink-0 ${atrasada ? 'text-red-600' : 'text-gray-500'}`}>
+                      {atrasada ? '⚠️ ' : ''}{formatDate(t.prazo)}
+                    </span>
+                  )}
+                </Link>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="bg-white rounded-2xl border border-gray-100">
           <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center">

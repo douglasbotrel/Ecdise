@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { toast } from 'sonner'
-import { Plus, FileText, Clock, AlertCircle, X, Upload, CheckCircle2, XCircle, Loader2 } from 'lucide-react'
+import { Plus, FileText, Clock, AlertCircle, X, Upload, CheckCircle2, XCircle, Loader2, Edit2, Save } from 'lucide-react'
 import { formatDate, formatCurrency } from '@/lib/utils'
 import { ModalContrato } from '@/components/modals/ModalContrato'
 import { ModalProjeto } from '@/components/modals/ModalProjeto'
@@ -19,20 +19,49 @@ const STATUS_CONTRATO_COLORS: Record<string, string> = {
   SUSPENSO: 'bg-orange-100 text-orange-800', DESISTENCIA: 'bg-red-100 text-red-800',
 }
 
+// Form de edição de dados do contrato
+interface FormEdicao {
+  tipoContrato: string
+  valorTotal: string
+  valorSinal: string
+  numeroParcelas: string
+  valorParcela: string
+  dataVencimento: string
+  dataAssinatura: string
+  observacoes: string
+}
+
+function formFromContrato(c: any): FormEdicao {
+  return {
+    tipoContrato:  c.tipoContrato    || '',
+    valorTotal:    c.valorTotal      != null ? String(c.valorTotal)    : '',
+    valorSinal:    c.valorSinal      != null ? String(c.valorSinal)    : '',
+    numeroParcelas:c.numeroParcelas  != null ? String(c.numeroParcelas): '',
+    valorParcela:  c.valorParcela    != null ? String(c.valorParcela)  : '',
+    dataVencimento:c.dataVencimento  ? c.dataVencimento.split('T')[0]  : '',
+    dataAssinatura:c.dataAssinatura  ? c.dataAssinatura.split('T')[0]  : '',
+    observacoes:   c.observacoes     || '',
+  }
+}
+
 export default function ContratosPage() {
-  const [contratos, setContratos]                 = useState<any[]>([])
+  const [contratos, setContratos]                   = useState<any[]>([])
   const [projetosAguardando, setProjetosAguardando] = useState<any[]>([])
-  const [loading, setLoading]                     = useState(true)
-  const [modalOpen, setModalOpen]                 = useState(false)
-  const [filtroStatus, setFiltroStatus]           = useState('')
+  const [loading, setLoading]                       = useState(true)
+  const [modalOpen, setModalOpen]                   = useState(false)
+  const [filtroStatus, setFiltroStatus]             = useState('')
   // Modal de elaboração de contrato
   const [projetoSelecionado, setProjetoSelecionado] = useState<any | null>(null)
   const [modalProjetoOpen, setModalProjetoOpen]     = useState(false)
   // Popup de ações no contrato
-  const [contratoAcao, setContratoAcao]           = useState<any | null>(null)
-  const [uploading, setUploading]                 = useState(false)
+  const [contratoAcao, setContratoAcao]             = useState<any | null>(null)
+  const [uploading, setUploading]                   = useState(false)
   const [confirmDesistencia, setConfirmDesistencia] = useState(false)
-  const [salvandoAcao, setSalvandoAcao]           = useState(false)
+  const [salvandoAcao, setSalvandoAcao]             = useState(false)
+  // Modo edição de dados no popup
+  const [editandoDados, setEditandoDados]           = useState(false)
+  const [formEdicao, setFormEdicao]                 = useState<FormEdicao | null>(null)
+  const [salvandoEdicao, setSalvandoEdicao]         = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
 
   const load = useCallback(async () => {
@@ -49,6 +78,20 @@ export default function ContratosPage() {
   }, [filtroStatus])
 
   useEffect(() => { load() }, [load])
+
+  function abrirPopup(c: any) {
+    setContratoAcao(c)
+    setConfirmDesistencia(false)
+    setEditandoDados(false)
+    setFormEdicao(formFromContrato(c))
+  }
+
+  function fecharPopup() {
+    setContratoAcao(null)
+    setConfirmDesistencia(false)
+    setEditandoDados(false)
+    setFormEdicao(null)
+  }
 
   function abrirElaboracao(projeto: any) {
     setProjetoSelecionado(projeto)
@@ -90,7 +133,7 @@ export default function ContratosPage() {
       })
       if (!res.ok) { toast.error('Erro ao atualizar'); return }
       toast.success('Contrato marcado como assinado!')
-      setContratoAcao(null)
+      fecharPopup()
       load()
     } finally { setSalvandoAcao(false) }
   }
@@ -106,15 +149,42 @@ export default function ContratosPage() {
       })
       if (!res.ok) { toast.error('Erro ao registrar desistência'); return }
       toast.success('Desistência registrada. Projeto movido para base de dados.')
-      setContratoAcao(null)
-      setConfirmDesistencia(false)
+      fecharPopup()
       load()
     } finally { setSalvandoAcao(false) }
   }
 
+  async function salvarEdicao() {
+    if (!contratoAcao || !formEdicao) return
+    setSalvandoEdicao(true)
+    try {
+      const body: any = {
+        tipoContrato:   formEdicao.tipoContrato   || undefined,
+        observacoes:    formEdicao.observacoes,
+        dataVencimento: formEdicao.dataVencimento || null,
+        dataAssinatura: formEdicao.dataAssinatura || null,
+      }
+      if (formEdicao.valorTotal)     body.valorTotal     = parseFloat(formEdicao.valorTotal.replace(',', '.'))
+      if (formEdicao.valorSinal)     body.valorSinal     = parseFloat(formEdicao.valorSinal.replace(',', '.'))
+      if (formEdicao.numeroParcelas) body.numeroParcelas = parseInt(formEdicao.numeroParcelas)
+      if (formEdicao.valorParcela)   body.valorParcela   = parseFloat(formEdicao.valorParcela.replace(',', '.'))
+
+      const res = await fetch(`/api/contratos/${contratoAcao.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      })
+      if (!res.ok) { toast.error('Erro ao salvar'); return }
+      toast.success('Dados do contrato atualizados!')
+      setEditandoDados(false)
+      fecharPopup()
+      load()
+    } finally { setSalvandoEdicao(false) }
+  }
+
   // Totais
   const valorTotal = contratos.reduce((s, c) => s + (c.valorTotal || 0), 0)
-  const ativos = contratos.filter(c => ['ATIVO', 'ASSINADO'].includes(c.statusContrato)).length
+  const ativos     = contratos.filter(c => ['ATIVO', 'ASSINADO'].includes(c.statusContrato)).length
 
   return (
     <div className="space-y-6">
@@ -143,7 +213,9 @@ export default function ContratosPage() {
           </div>
           <div className="divide-y divide-pink-100">
             {projetosAguardando.map(p => {
-              const servicos = p.servicosContratados ? (() => { try { return JSON.parse(p.servicosContratados) } catch { return [] } })() : []
+              const servicos = p.servicosContratados
+                ? (() => { try { return JSON.parse(p.servicosContratados) } catch { return [] } })()
+                : []
               return (
                 <div key={p.id} className="flex items-center justify-between px-5 py-3 hover:bg-pink-100/50 transition-colors">
                   <div className="flex items-center gap-4 min-w-0">
@@ -252,7 +324,11 @@ export default function ContratosPage() {
               </thead>
               <tbody className="divide-y divide-gray-50">
                 {contratos.map((c) => (
-                  <tr key={c.id} className="hover:bg-gray-50 transition-colors cursor-pointer" onClick={() => { setContratoAcao(c); setConfirmDesistencia(false) }}>
+                  <tr
+                    key={c.id}
+                    className="hover:bg-gray-50 transition-colors cursor-pointer"
+                    onClick={() => abrirPopup(c)}
+                  >
                     <td className="px-4 py-3">
                       <span className="font-mono text-sm text-gray-900">{c.codigo}</span>
                     </td>
@@ -292,7 +368,6 @@ export default function ContratosPage() {
         onSalvo={() => { setModalOpen(false); load() }}
       />
 
-      {/* Modal de elaboração de contrato para projetos aguardando */}
       <ModalProjeto
         open={modalProjetoOpen}
         onClose={() => { setModalProjetoOpen(false); setProjetoSelecionado(null) }}
@@ -303,31 +378,49 @@ export default function ContratosPage() {
 
       {/* ── Popup de ações do contrato ─────────────────────── */}
       {contratoAcao && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => { setContratoAcao(null); setConfirmDesistencia(false) }}>
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md" onClick={e => e.stopPropagation()}>
+        <div
+          className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+          onClick={fecharPopup}
+        >
+          <div
+            className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto"
+            onClick={e => e.stopPropagation()}
+          >
             {/* Header */}
-            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 sticky top-0 bg-white z-10">
               <div>
                 <p className="font-bold text-gray-900">{contratoAcao.codigo}</p>
                 <p className="text-xs text-gray-400">{contratoAcao.cliente?.nome} · {contratoAcao.projeto?.codigo}</p>
               </div>
-              <button onClick={() => { setContratoAcao(null); setConfirmDesistencia(false) }} className="text-gray-400 hover:text-gray-600">
+              <button onClick={fecharPopup} className="text-gray-400 hover:text-gray-600">
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             <div className="p-5 space-y-4">
               {/* Info resumida */}
-              <div className="bg-gray-50 rounded-xl p-3 text-sm space-y-1">
-                <div className="flex justify-between">
+              <div className="bg-gray-50 rounded-xl p-3 text-sm space-y-1.5">
+                <div className="flex justify-between items-center">
                   <span className="text-gray-500">Status</span>
                   <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${STATUS_CONTRATO_COLORS[contratoAcao.statusContrato]}`}>
                     {STATUS_CONTRATO_LABELS[contratoAcao.statusContrato]}
                   </span>
                 </div>
                 <div className="flex justify-between">
+                  <span className="text-gray-500">Tipo</span>
+                  <span className="text-gray-800 font-medium">{contratoAcao.tipoContrato || '—'}</span>
+                </div>
+                <div className="flex justify-between">
                   <span className="text-gray-500">Valor Total</span>
                   <span className="font-semibold text-gray-900">{formatCurrency(contratoAcao.valorTotal)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Sinal</span>
+                  <span className="text-gray-700">{formatCurrency(contratoAcao.valorSinal)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Parcelas</span>
+                  <span className="text-gray-700">{contratoAcao.numeroParcelas || '—'} × {formatCurrency(contratoAcao.valorParcela)}</span>
                 </div>
                 {contratoAcao.dataAssinatura && (
                   <div className="flex justify-between">
@@ -335,21 +428,153 @@ export default function ContratosPage() {
                     <span className="text-gray-900">{formatDate(contratoAcao.dataAssinatura)}</span>
                   </div>
                 )}
+                {contratoAcao.dataVencimento && (
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Vencimento</span>
+                    <span className="text-gray-900">{formatDate(contratoAcao.dataVencimento)}</span>
+                  </div>
+                )}
                 {contratoAcao.arquivoUrl && (
-                  <a href={contratoAcao.arquivoUrl} target="_blank" rel="noreferrer"
-                     className="flex items-center gap-1.5 text-green-600 hover:text-green-700 text-xs font-medium pt-1">
+                  <a
+                    href={contratoAcao.arquivoUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="flex items-center gap-1.5 text-green-600 hover:text-green-700 text-xs font-medium pt-1"
+                  >
                     <FileText className="w-3.5 h-3.5" /> Ver documento assinado
                   </a>
                 )}
               </div>
 
-              {/* Validar assinatura (AGUARDANDO_ASSINATURA) */}
+              {/* ── EDITAR / COMPLEMENTAR DADOS ───────────────────── */}
+              {!['DESISTENCIA', 'CANCELADO', 'FINALIZADO'].includes(contratoAcao.statusContrato) && (
+                <div className="border border-blue-200 rounded-xl overflow-hidden">
+                  <button
+                    onClick={() => setEditandoDados(v => !v)}
+                    className="w-full flex items-center justify-between px-4 py-3 text-sm font-semibold text-blue-800 bg-blue-50 hover:bg-blue-100 transition-colors"
+                  >
+                    <span className="flex items-center gap-2">
+                      <Edit2 className="w-4 h-4" />
+                      Editar / Complementar dados
+                    </span>
+                    <span className="text-blue-500 text-xs">{editandoDados ? '▲ Fechar' : '▼ Expandir'}</span>
+                  </button>
+
+                  {editandoDados && formEdicao && (
+                    <div className="p-4 space-y-3 bg-white">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-xs font-medium text-gray-600 mb-1">Tipo de Contrato</label>
+                          <input
+                            type="text"
+                            value={formEdicao.tipoContrato}
+                            onChange={e => setFormEdicao(f => f ? { ...f, tipoContrato: e.target.value } : f)}
+                            placeholder="Ex: Prestação de Serviços"
+                            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-gray-600 mb-1">Valor Total (R$)</label>
+                          <input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            value={formEdicao.valorTotal}
+                            onChange={e => setFormEdicao(f => f ? { ...f, valorTotal: e.target.value } : f)}
+                            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-gray-600 mb-1">Valor do Sinal (R$)</label>
+                          <input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            value={formEdicao.valorSinal}
+                            onChange={e => setFormEdicao(f => f ? { ...f, valorSinal: e.target.value } : f)}
+                            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-gray-600 mb-1">Nº de Parcelas</label>
+                          <input
+                            type="number"
+                            min="1"
+                            value={formEdicao.numeroParcelas}
+                            onChange={e => setFormEdicao(f => f ? { ...f, numeroParcelas: e.target.value } : f)}
+                            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-gray-600 mb-1">Valor por Parcela (R$)</label>
+                          <input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            value={formEdicao.valorParcela}
+                            onChange={e => setFormEdicao(f => f ? { ...f, valorParcela: e.target.value } : f)}
+                            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-gray-600 mb-1">Data de Assinatura</label>
+                          <input
+                            type="date"
+                            value={formEdicao.dataAssinatura}
+                            onChange={e => setFormEdicao(f => f ? { ...f, dataAssinatura: e.target.value } : f)}
+                            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+                          />
+                        </div>
+                        <div className="sm:col-span-2">
+                          <label className="block text-xs font-medium text-gray-600 mb-1">Data de Vencimento</label>
+                          <input
+                            type="date"
+                            value={formEdicao.dataVencimento}
+                            onChange={e => setFormEdicao(f => f ? { ...f, dataVencimento: e.target.value } : f)}
+                            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+                          />
+                        </div>
+                        <div className="sm:col-span-2">
+                          <label className="block text-xs font-medium text-gray-600 mb-1">Observações</label>
+                          <textarea
+                            rows={3}
+                            value={formEdicao.observacoes}
+                            onChange={e => setFormEdicao(f => f ? { ...f, observacoes: e.target.value } : f)}
+                            placeholder="Observações sobre o contrato..."
+                            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 resize-none"
+                          />
+                        </div>
+                      </div>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={salvarEdicao}
+                          disabled={salvandoEdicao}
+                          className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-semibold rounded-xl text-sm transition-colors"
+                        >
+                          {salvandoEdicao ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                          Salvar alterações
+                        </button>
+                        <button
+                          onClick={() => setEditandoDados(false)}
+                          className="px-4 py-2 border border-gray-200 rounded-xl text-sm text-gray-600 hover:bg-gray-50"
+                        >
+                          Cancelar
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* ── VALIDAR ASSINATURA (AGUARDANDO_ASSINATURA) ─────── */}
               {contratoAcao.statusContrato === 'AGUARDANDO_ASSINATURA' && (
                 <div className="border border-green-200 rounded-xl p-4 space-y-3">
                   <p className="text-sm font-semibold text-green-800 flex items-center gap-2">
                     <CheckCircle2 className="w-4 h-4" /> Validar Assinatura
                   </p>
-                  <p className="text-xs text-gray-500">Faça upload do contrato assinado pelo cliente para registrar como assinado.</p>
+                  <p className="text-xs text-gray-500">
+                    Faça upload do contrato assinado pelo cliente para registrar como assinado.
+                  </p>
                   <label className="flex items-center gap-2 cursor-pointer border border-dashed border-green-300 rounded-lg px-3 py-2.5 text-xs text-green-600 hover:bg-green-50 transition-colors">
                     <Upload className="w-4 h-4" />
                     {fileRef.current?.files?.[0]?.name || 'Selecionar documento assinado (PDF)'}
@@ -366,7 +591,7 @@ export default function ContratosPage() {
                 </div>
               )}
 
-              {/* Desistência */}
+              {/* ── DESISTÊNCIA ───────────────────────────────────── */}
               {!['DESISTENCIA', 'CANCELADO', 'FINALIZADO'].includes(contratoAcao.statusContrato) && (
                 <div className="border border-red-200 rounded-xl p-4 space-y-2">
                   <p className="text-sm font-semibold text-red-800 flex items-center gap-2">
@@ -381,7 +606,9 @@ export default function ContratosPage() {
                     </button>
                   ) : (
                     <div className="space-y-2">
-                      <p className="text-xs text-red-600">Tem certeza? O projeto será movido para a base de dados e não poderá avançar.</p>
+                      <p className="text-xs text-red-600">
+                        Tem certeza? O projeto será movido para a base de dados e não poderá avançar.
+                      </p>
                       <div className="flex gap-2">
                         <button
                           onClick={() => setConfirmDesistencia(false)}

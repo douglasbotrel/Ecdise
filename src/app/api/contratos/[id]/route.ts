@@ -8,7 +8,11 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
     if (!user) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
 
     const body = await request.json()
-    const { statusContrato, arquivoUrl, dataAssinatura, observacoes } = body
+    const {
+      statusContrato, arquivoUrl, dataAssinatura, observacoes,
+      // Campos editáveis pós-assinatura (complementação de dados)
+      tipoContrato, valorTotal, valorSinal, numeroParcelas, valorParcela, dataVencimento,
+    } = body
 
     const contrato = await prisma.contrato.findUnique({ where: { id: params.id } })
     if (!contrato) return NextResponse.json({ error: 'Contrato não encontrado' }, { status: 404 })
@@ -18,11 +22,45 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
     if (arquivoUrl !== undefined) updateData.arquivoUrl = arquivoUrl
     if (dataAssinatura !== undefined) updateData.dataAssinatura = dataAssinatura ? new Date(dataAssinatura) : null
     if (observacoes !== undefined) updateData.observacoes = observacoes
+    // Campos complementares editáveis
+    if (tipoContrato !== undefined) updateData.tipoContrato = tipoContrato
+    if (valorTotal !== undefined) updateData.valorTotal = parseFloat(String(valorTotal)) || contrato.valorTotal
+    if (valorSinal !== undefined) updateData.valorSinal = parseFloat(String(valorSinal)) || contrato.valorSinal
+    if (numeroParcelas !== undefined) updateData.numeroParcelas = parseInt(String(numeroParcelas)) || contrato.numeroParcelas
+    if (valorParcela !== undefined) updateData.valorParcela = parseFloat(String(valorParcela)) || contrato.valorParcela
+    if (dataVencimento !== undefined) updateData.dataVencimento = dataVencimento ? new Date(dataVencimento) : null
+    // Recalcula valorRestante se valores financeiros mudaram
+    if (valorTotal !== undefined || valorSinal !== undefined) {
+      const vTotal = updateData.valorTotal ?? contrato.valorTotal ?? 0
+      const vSinal = updateData.valorSinal ?? contrato.valorSinal ?? 0
+      updateData.valorRestante = vTotal - vSinal
+    }
 
-    // Se validando assinatura, avança para ASSINADO
-    if (statusContrato === 'ASSINADO' && arquivoUrl) {
+    // Se validando assinatura, avança para ASSINADO e notifica analistas
+    if (statusContrato === 'ASSINADO') {
       updateData.statusContrato = 'ASSINADO'
       updateData.dataAssinatura = updateData.dataAssinatura || new Date()
+
+      // Notifica gestores administrativos para complementar dados do contrato
+      const gestoresAdmin = await prisma.usuario.findMany({
+        where: { ativo: true, role: { in: ['GESTOR_ADMINISTRATIVO', 'ADMIN', 'GESTOR_GERAL'] } },
+        select: { id: true },
+      })
+      if (gestoresAdmin.length > 0) {
+        const projetoInfo = await prisma.projeto.findUnique({
+          where: { id: contrato.projetoId },
+          select: { codigo: true, imovelNome: true },
+        })
+        await prisma.notificacao.createMany({
+          data: gestoresAdmin.map(g => ({
+            usuarioId: g.id,
+            titulo: '✅ Contrato assinado — complementar dados',
+            mensagem: `O contrato do projeto ${projetoInfo?.codigo} (${projetoInfo?.imovelNome || ''}) foi marcado como assinado e está aguardando complementação de dados.`,
+            tipo: 'sucesso',
+            link: `/contratos`,
+          })),
+        })
+      }
     }
 
     // Se desistência, atualiza pipeline do projeto para base de dados

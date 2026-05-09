@@ -215,6 +215,23 @@ export async function PATCH(request: NextRequest) {
       include: { responsavel: { select: { id: true, nome: true } } }
     })
 
+    // ── Notificar quando responsável é designado ─────────────────────────
+    if (
+      responsavelId &&
+      responsavelId !== tarefaAtual.responsavelId &&
+      responsavelId !== user.id
+    ) {
+      await prisma.notificacao.create({
+        data: {
+          usuarioId: responsavelId,
+          titulo: '📋 Você foi designado para uma atividade',
+          mensagem: `Você foi indicado como responsável pela atividade "${tarefaAtual.titulo}" do projeto ${tarefaAtual.projeto?.codigo} (${tarefaAtual.projeto?.imovelNome || ''}).`,
+          tipo: 'info',
+          link: `/operacional/${tarefaAtual.projetoId}`,
+        },
+      }).catch(() => {}) // não bloqueia se falhar
+    }
+
     // ── Auto-avanço de pipeline ao concluir tarefas ──────────────────────
     if (updateData.status) {
       const todasTarefas = await prisma.tarefa.findMany({

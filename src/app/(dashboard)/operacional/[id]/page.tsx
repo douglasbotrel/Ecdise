@@ -32,13 +32,22 @@ export default function ProjetoDetalhe() {
   // Edição inline de prazo/responsável (modo atribuição)
   const [editando, setEditando]     = useState<Record<string, TarefaEdit>>({})
   const [salvandoId, setSalvandoId] = useState<string | null>(null)
-  // Nova tarefa avulsa (pós-OPERACIONAL)
+  // Nova tarefa avulsa
   const [novaT, setNovaT]           = useState(false)
   const [formTarefa, setFormTarefa] = useState({ titulo: '', etapa: '', prazo: '', responsavelId: '' })
   const [salvandoT, setSalvandoT]   = useState(false)
 
+  // Usuário logado (para controle de permissões)
+  const [currentUser, setCurrentUser]       = useState<any>(null)
+  // Responsável em lote
+  const [bulkResponsavelId, setBulkResponsavelId] = useState('')
+  const [salvandoBulk, setSalvandoBulk]           = useState(false)
+
   // Etapas que têm acesso ao módulo Operacional (após primeiro pagamento)
-  const ETAPAS_VALIDAS = ['OPERACIONAL', 'EM_EXECUCAO', 'CONCLUIDO']
+  const ETAPAS_VALIDAS    = ['OPERACIONAL', 'EM_EXECUCAO', 'CONCLUIDO']
+  const ROLES_GESTOR      = ['ADMIN', 'GESTOR_GERAL', 'GESTOR_OPERACIONAL', 'SUPERVISOR']
+  const HOJE_STR          = new Date().toISOString().split('T')[0]
+  const MAX_DATE_STR      = `${new Date().getFullYear() + 5}-12-31`
 
   const loadProjeto = useCallback(async () => {
     setLoading(true)
@@ -65,19 +74,27 @@ export default function ProjetoDetalhe() {
     fetch('/api/usuarios?ativo=true')
       .then(r => r.json())
       .then(d => setUsuarios(d.usuarios || []))
+    fetch('/api/auth/me')
+      .then(r => r.json())
+      .then(d => setCurrentUser(d.usuario || null))
   }, [loadProjeto])
 
-  // Inicializa estado de edição quando projeto carrega e está em OPERACIONAL
+  // Inicializa estado de edição quando projeto carrega (qualquer etapa)
   useEffect(() => {
-    if (!projeto || projeto.etapaPipeline !== 'OPERACIONAL') return
-    const init: Record<string, TarefaEdit> = {}
-    ;(projeto.tarefas || []).forEach((t: any) => {
-      init[t.id] = {
-        prazo: t.prazo ? t.prazo.split('T')[0] : '',
-        responsavelId: t.responsavelId || '',
-      }
+    if (!projeto) return
+    setEditando(prev => {
+      const next = { ...prev }
+      ;(projeto.tarefas || []).forEach((t: any) => {
+        // só inicializa se ainda não tem estado local (evita sobrescrever edições em curso)
+        if (!next[t.id]) {
+          next[t.id] = {
+            prazo: t.prazo ? t.prazo.split('T')[0] : '',
+            responsavelId: t.responsavelId || '',
+          }
+        }
+      })
+      return next
     })
-    setEditando(init)
   }, [projeto])
 
   // ── Salvar atribuição de uma tarefa ───────────────────────
@@ -101,6 +118,33 @@ export default function ProjetoDetalhe() {
       loadProjeto()
     } catch { toast.error('Erro ao salvar') }
     finally { setSalvandoId(null) }
+  }
+
+  // ── Aplicar responsável a todas as tarefas sem responsável ───
+  async function aplicarBulkResponsavel() {
+    if (!bulkResponsavelId) { toast.error('Selecione um responsável'); return }
+    const semResponsavel = (projeto?.tarefas || []).filter((t: any) => !t.responsavelId)
+    if (semResponsavel.length === 0) { toast.info('Todas as tarefas já têm responsável'); return }
+    setSalvandoBulk(true)
+    try {
+      await Promise.all(semResponsavel.map((t: any) =>
+        fetch('/api/tarefas', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: t.id, responsavelId: bulkResponsavelId }),
+        })
+      ))
+      setEditando(prev => {
+        const next = { ...prev }
+        semResponsavel.forEach((t: any) => {
+          next[t.id] = { ...next[t.id], responsavelId: bulkResponsavelId }
+        })
+        return next
+      })
+      toast.success(`Responsável definido para ${semResponsavel.length} tarefa(s)!`)
+      loadProjeto()
+    } catch { toast.error('Erro ao aplicar em massa') }
+    finally { setSalvandoBulk(false) }
   }
 
   // ── Solicitar vistoria de campo para uma tarefa ────────────
@@ -190,7 +234,17 @@ export default function ProjetoDetalhe() {
   if (!projeto) return null
 
   const emOperacional = projeto.etapaPipeline === 'OPERACIONAL'
+  const modoGestor   = ROLES_GESTOR.includes(currentUser?.role)
+  // Gestores podem editar em qualquer etapa válida
+  const modoEdicao   = emOperacional || (modoGestor && ETAPAS_VALIDAS.includes(projeto.etapaPipeline))
   const tarefas       = projeto.tarefas || []
+
+  // Helper para exibir nome completo no select de usuário
+  function labelUsuario(u: any) {
+    const partes = [u.nome]
+    if (u.cargo) partes.push(u.cargo)
+    return partes.join(' — ')
+  }
 
   const tarefasPorEtapa = tarefas.reduce((acc: any, t: any) => {
     const etapa = t.etapa || 'GERAL'
@@ -272,7 +326,7 @@ export default function ProjetoDetalhe() {
       {/* ══════════════════════════════════════════════════════
           BANNER OPERACIONAL — só aparece quando etapa=OPERACIONAL
           ══════════════════════════════════════════════════════ */}
-      {emOperacional && (
+      {modoEdicao && (
         <div className="bg-amber-50 border border-amber-200 rounded-2xl overflow-hidden">
           {/* Header do banner */}
           <div className="flex flex-col sm:flex-row sm:items-center gap-3 px-4 sm:px-6 py-4 border-b border-amber-200">
@@ -280,12 +334,13 @@ export default function ProjetoDetalhe() {
               <div className="flex items-center gap-2 mb-0.5">
                 <AlertCircle className="w-4 h-4 text-amber-600" />
                 <h2 className="font-bold text-amber-900 text-sm sm:text-base">
-                  Defina prazos e responsáveis
+                  {emOperacional ? 'Defina prazos e responsáveis' : 'Gerenciar Atividades'}
                 </h2>
               </div>
               <p className="text-xs text-amber-700">
-                As tarefas foram criadas automaticamente com base nos serviços contratados.
-                Atribua prazos e responsáveis antes de iniciar a execução.
+                {emOperacional
+                  ? 'Atribua prazos e responsáveis. Execução inicia ao 1º check.'
+                  : 'Gestores podem editar responsáveis e prazos a qualquer momento.'}
               </p>
             </div>
             <div className="text-center flex-shrink-0">
@@ -293,6 +348,29 @@ export default function ProjetoDetalhe() {
               <div className="text-xs text-amber-600">atribuído</div>
               <div className="text-xs text-amber-500 mt-0.5">execução inicia ao 1º check</div>
             </div>
+          </div>
+
+          {/* Linha de responsável em lote */}
+          <div className="px-4 sm:px-6 py-3 bg-amber-100/40 border-b border-amber-200 flex flex-col sm:flex-row items-start sm:items-center gap-2">
+            <span className="text-xs font-semibold text-amber-800 whitespace-nowrap">Definir para todas:</span>
+            <select
+              value={bulkResponsavelId}
+              onChange={e => setBulkResponsavelId(e.target.value)}
+              className="flex-1 border border-amber-300 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-amber-400 bg-white min-w-0"
+            >
+              <option value="">Selecione um responsável...</option>
+              {usuarios.map(u => (
+                <option key={u.id} value={u.id}>{labelUsuario(u)}</option>
+              ))}
+            </select>
+            <button
+              onClick={aplicarBulkResponsavel}
+              disabled={salvandoBulk || !bulkResponsavelId}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white rounded-lg text-xs font-semibold transition-colors flex-shrink-0"
+            >
+              {salvandoBulk ? <Loader2 className="w-3 h-3 animate-spin" /> : <User className="w-3 h-3" />}
+              Aplicar às sem responsável
+            </button>
           </div>
 
           {/* Tarefas para atribuição — agrupadas por serviço */}
@@ -381,10 +459,12 @@ export default function ProjetoDetalhe() {
                                 onChange={e => setEditando(prev => ({
                                   ...prev, [tarefa.id]: { ...prev[tarefa.id], responsavelId: e.target.value },
                                 }))}
-                                className="border border-gray-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-amber-400 bg-white w-36"
+                                className="border border-gray-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-amber-400 bg-white min-w-36 sm:w-52"
                               >
                                 <option value="">Responsável...</option>
-                                {usuarios.map(u => <option key={u.id} value={u.id}>{u.nome}</option>)}
+                                {usuarios.map(u => (
+                                  <option key={u.id} value={u.id}>{labelUsuario(u)}</option>
+                                ))}
                               </select>
                               <button
                                 onClick={() => salvarAtribuicao(tarefa.id)}
@@ -396,13 +476,20 @@ export default function ProjetoDetalhe() {
                               </button>
                             </div>
                           ) : (
-                            <div className="ml-4 flex flex-col xs:flex-row gap-2 sm:flex-row sm:items-center">
+                            <div className="ml-4 flex flex-col xs:flex-row gap-2 sm:flex-row sm:items-center flex-wrap">
                               <input
                                 type="date"
                                 value={edit.prazo}
-                                onChange={e => setEditando(prev => ({
-                                  ...prev, [tarefa.id]: { ...prev[tarefa.id], prazo: e.target.value },
-                                }))}
+                                min={HOJE_STR}
+                                max={MAX_DATE_STR}
+                                onChange={e => {
+                                  const val = e.target.value
+                                  const ano = parseInt(val.split('-')[0] || '0', 10)
+                                  if (val && (ano < new Date().getFullYear() || ano > new Date().getFullYear() + 5)) return
+                                  setEditando(prev => ({
+                                    ...prev, [tarefa.id]: { ...prev[tarefa.id], prazo: val },
+                                  }))
+                                }}
                                 className="border border-gray-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-amber-400"
                               />
                               <select
@@ -410,10 +497,12 @@ export default function ProjetoDetalhe() {
                                 onChange={e => setEditando(prev => ({
                                   ...prev, [tarefa.id]: { ...prev[tarefa.id], responsavelId: e.target.value },
                                 }))}
-                                className="border border-gray-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-amber-400 bg-white w-36 sm:w-40"
+                                className="border border-gray-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-amber-400 bg-white min-w-36 sm:w-52"
                               >
                                 <option value="">Responsável...</option>
-                                {usuarios.map(u => <option key={u.id} value={u.id}>{u.nome}</option>)}
+                                {usuarios.map(u => (
+                                  <option key={u.id} value={u.id}>{labelUsuario(u)}</option>
+                                ))}
                               </select>
                               <button
                                 onClick={() => salvarAtribuicao(tarefa.id)}
@@ -465,7 +554,7 @@ export default function ProjetoDetalhe() {
         <div className="bg-white rounded-2xl border border-gray-100 p-4 sm:p-6">
           <div className="flex items-center justify-between mb-5">
             <h3 className="font-semibold text-gray-900">Linha do Tempo</h3>
-            {!emOperacional && (
+            {modoGestor && (
               <button
                 onClick={() => setNovaT(true)}
                 className="flex items-center gap-1.5 text-sm text-green-600 hover:text-green-700 font-medium"
@@ -568,8 +657,8 @@ export default function ProjetoDetalhe() {
             )}
           </div>
 
-          {/* Form nova tarefa (só após iniciar execução) */}
-          {novaT && !emOperacional && (
+          {/* Form nova tarefa (gestores podem adicionar a qualquer momento) */}
+          {novaT && modoGestor && (
             <div className="mt-4 p-4 border-2 border-dashed border-green-200 rounded-xl bg-green-50/50">
               <h4 className="text-sm font-semibold text-gray-700 mb-3">Nova Tarefa</h4>
               <div className="space-y-3">
@@ -592,6 +681,8 @@ export default function ProjetoDetalhe() {
                   <input
                     type="date"
                     value={formTarefa.prazo}
+                    min={HOJE_STR}
+                    max={MAX_DATE_STR}
                     onChange={e => setFormTarefa(p => ({ ...p, prazo: e.target.value }))}
                     className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
                   />
@@ -601,7 +692,9 @@ export default function ProjetoDetalhe() {
                     className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500 bg-white"
                   >
                     <option value="">Responsável</option>
-                    {usuarios.map(u => <option key={u.id} value={u.id}>{u.nome}</option>)}
+                    {usuarios.map(u => (
+                      <option key={u.id} value={u.id}>{labelUsuario(u)}</option>
+                    ))}
                   </select>
                 </div>
                 <div className="flex gap-2">
@@ -625,7 +718,7 @@ export default function ProjetoDetalhe() {
         <div className="bg-white rounded-2xl border border-gray-100 p-4 sm:p-6">
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-semibold text-gray-900">Todas as Tarefas</h3>
-            {!emOperacional && (
+            {modoGestor && (
               <button onClick={() => setNovaT(true)} className="flex items-center gap-1.5 text-sm text-green-600 font-medium">
                 <Plus className="w-4 h-4" /> Nova
               </button>

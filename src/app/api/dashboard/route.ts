@@ -35,27 +35,48 @@ export async function GET(request: NextRequest) {
 
     // ── ANALISTA OPERACIONAL ────────────────────────────────────
     if (user.role === 'ANALISTA') {
-      const [ativos, concluidos, tarefasPendentes, proximasVistorias, projetos] = await Promise.all([
-        prisma.projeto.count({ where: { responsavelId: user.id, etapaPipeline: 'EM_EXECUCAO' } }),
+      // Tarefas atribuídas a este usuário
+      const minhasTarefas = await prisma.tarefa.findMany({
+        where: { responsavelId: user.id, status: { not: 'CONCLUIDA' } },
+        select: { projetoId: true, status: true },
+      })
+      const projetoIdsComTarefas = [...new Set(minhasTarefas.map(t => t.projetoId))]
+
+      const [ativos, concluidos, proximasVistorias, projetos, tarefasList] = await Promise.all([
+        prisma.projeto.count({ where: { etapaPipeline: 'EM_EXECUCAO', id: { in: projetoIdsComTarefas } } }),
         prisma.projeto.count({ where: { responsavelId: user.id, etapaPipeline: 'CONCLUIDO' } }),
-        prisma.tarefa.count({ where: { responsavelId: user.id, status: 'PENDENTE' } }),
         prisma.vistoria.findMany({
           where: { responsavelId: user.id, status: 'AGENDADA', dataAgendada: { gte: hoje, lte: proximos30 } },
           include: { projeto: { select: { codigo: true, imovelNome: true } } },
           orderBy: { dataAgendada: 'asc' },
           take: 5,
         }),
+        // Projetos onde é responsável do projeto OU tem tarefas atribuídas
         prisma.projeto.findMany({
-          where: { responsavelId: user.id, etapaPipeline: { in: ['OPERACIONAL', 'EM_EXECUCAO'] } },
+          where: {
+            etapaPipeline: { in: ['OPERACIONAL', 'EM_EXECUCAO'] },
+            OR: [
+              { responsavelId: user.id },
+              { id: { in: projetoIdsComTarefas } },
+            ],
+          },
           include: { cliente: { select: { nome: true } } },
           orderBy: { criadoEm: 'desc' },
           take: 20,
         }),
+        // Minhas tarefas pendentes com contexto
+        prisma.tarefa.findMany({
+          where: { responsavelId: user.id, status: { not: 'CONCLUIDA' } },
+          include: { projeto: { select: { id: true, codigo: true, imovelNome: true } } },
+          orderBy: [{ prazo: 'asc' }, { criadoEm: 'asc' }],
+          take: 15,
+        }),
       ])
       return NextResponse.json({
         tipoView: 'analista',
-        estatisticas: { ativos, concluidos, tarefasPendentes },
+        estatisticas: { ativos, concluidos, tarefasPendentes: minhasTarefas.length },
         projetos,
+        minhasTarefas: tarefasList,
         proximasVistorias,
       })
     }
