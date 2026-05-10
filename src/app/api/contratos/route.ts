@@ -59,7 +59,7 @@ export async function POST(request: NextRequest) {
     } = body
 
     if (!projetoId) {
-      return NextResponse.json({ error: 'projetoId obrigatório' }, { status: 400 })
+      return NextResponse.json({ error: 'Projeto é obrigatório' }, { status: 400 })
     }
 
     // ── Validação de datas ────────────────────────────────────
@@ -71,26 +71,43 @@ export async function POST(request: NextRequest) {
         )
       }
     }
-    if (dataVencimento && !dataAssinatura) {
-      // Se só tem vencimento, valida contra hoje
-      if (new Date(dataVencimento) < new Date()) {
-        return NextResponse.json(
-          { error: 'A data de vencimento não pode ser anterior à data atual.' },
-          { status: 400 }
-        )
-      }
-    }
 
     // Load project to get financial values and clienteId
     const projeto = await prisma.projeto.findUnique({ where: { id: projetoId } })
     if (!projeto) return NextResponse.json({ error: 'Projeto não encontrado' }, { status: 404 })
 
     const clienteId = clienteIdBody || projeto.clienteId
-    const vSinal = parseFloat(valorSinalBody ?? projeto.valorSinal ?? 0)
-    const vParcela = projeto.valorPrestacao || 0
-    const nParcelas = parseInt(numParcelasBody ?? projeto.numeroPrestacoes ?? 1)
-    const vTotal = parseFloat(valorTotalBody ?? '') || (vSinal + vParcela * Math.max(nParcelas - 1, 0))
+    const vSinal    = Math.max(0, parseFloat(valorSinalBody ?? projeto.valorSinal ?? 0))
+    const vParcela  = projeto.valorPrestacao || 0
+    const nParcelas = Math.max(1, parseInt(numParcelasBody ?? projeto.numeroPrestacoes ?? 1))
+    const vTotal    = parseFloat(valorTotalBody ?? '') || (vSinal + vParcela * Math.max(nParcelas - 1, 0))
     const vRestante = vTotal - vSinal
+
+    // ── Validações de negócio obrigatórias ────────────────────
+    if (!vTotal || vTotal <= 0) {
+      return NextResponse.json(
+        { error: 'O valor total do contrato é obrigatório e deve ser maior que zero.' },
+        { status: 400 }
+      )
+    }
+    if (vSinal < 0 || vSinal > vTotal) {
+      return NextResponse.json(
+        { error: 'O valor do sinal não pode ser negativo nem superior ao valor total.' },
+        { status: 400 }
+      )
+    }
+    if (nParcelas < 1) {
+      return NextResponse.json(
+        { error: 'O número de parcelas deve ser pelo menos 1.' },
+        { status: 400 }
+      )
+    }
+    if (!clienteId) {
+      return NextResponse.json(
+        { error: 'Não foi possível identificar o cliente do projeto.' },
+        { status: 400 }
+      )
+    }
 
     // Check if contrato already exists for this project
     const existente = await prisma.contrato.findUnique({ where: { projetoId } })

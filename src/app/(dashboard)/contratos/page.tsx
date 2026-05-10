@@ -460,9 +460,31 @@ export default function ContratosPage() {
                     <span className="text-blue-500 text-xs">{editandoDados ? '▲ Fechar' : '▼ Expandir'}</span>
                   </button>
 
-                  {editandoDados && formEdicao && (
-                    <div className="p-4 space-y-3 bg-white">
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {editandoDados && formEdicao && (() => {
+                    // Cálculo automático em tempo real
+                    const vTotal    = parseFloat(formEdicao.valorTotal    || '0') || 0
+                    const vSinal    = parseFloat(formEdicao.valorSinal    || '0') || 0
+                    const nParcelas = parseInt(formEdicao.numeroParcelas  || '1') || 1
+                    const vRestante = Math.max(0, vTotal - vSinal)
+                    const vParcAuto = nParcelas > 0 ? vRestante / nParcelas : 0
+
+                    function updateCalc(field: string, value: string) {
+                      setFormEdicao(f => {
+                        if (!f) return f
+                        const next = { ...f, [field]: value }
+                        // Recalcula parcela automaticamente
+                        const t = parseFloat(field === 'valorTotal'    ? value : next.valorTotal    || '0') || 0
+                        const s = parseFloat(field === 'valorSinal'    ? value : next.valorSinal    || '0') || 0
+                        const n = parseInt (field === 'numeroParcelas' ? value : next.numeroParcelas || '1') || 1
+                        const restante = Math.max(0, t - s)
+                        next.valorParcela = n > 0 ? (restante / n).toFixed(2) : '0'
+                        return next
+                      })
+                    }
+
+                    return (
+                      <div className="p-4 space-y-3 bg-white">
+                        {/* Tipo */}
                         <div>
                           <label className="block text-xs font-medium text-gray-600 mb-1">Tipo de Contrato</label>
                           <input
@@ -473,96 +495,123 @@ export default function ContratosPage() {
                             className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
                           />
                         </div>
+
+                        {/* Bloco financeiro com cálculo automático */}
+                        <div className="border border-blue-100 rounded-xl p-3 space-y-3 bg-blue-50/30">
+                          <p className="text-xs font-semibold text-blue-700">Valores financeiros</p>
+                          <div className="grid grid-cols-2 gap-3">
+                            <div>
+                              <label className="block text-xs font-medium text-gray-600 mb-1">Valor Total (R$) *</label>
+                              <input
+                                type="number" step="0.01" min="0.01"
+                                value={formEdicao.valorTotal}
+                                onChange={e => updateCalc('valorTotal', e.target.value)}
+                                placeholder="0,00"
+                                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-xs font-medium text-gray-600 mb-1">Valor do Sinal (R$)</label>
+                              <input
+                                type="number" step="0.01" min="0"
+                                value={formEdicao.valorSinal}
+                                onChange={e => updateCalc('valorSinal', e.target.value)}
+                                placeholder="0,00"
+                                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-xs font-medium text-gray-600 mb-1">Nº de Parcelas</label>
+                              <input
+                                type="number" min="1"
+                                value={formEdicao.numeroParcelas}
+                                onChange={e => updateCalc('numeroParcelas', e.target.value)}
+                                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-xs font-medium text-gray-600 mb-1">Valor por Parcela</label>
+                              <div className="w-full px-3 py-2 border border-gray-100 rounded-lg text-sm bg-white text-gray-500 font-medium">
+                                {vTotal > 0 ? formatCurrency(vParcAuto) : '—'}
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Preview automático */}
+                          {vTotal > 0 && (
+                            <div className="grid grid-cols-3 gap-2 text-xs mt-1">
+                              <div className="text-center bg-white rounded-lg py-1.5 px-2 border border-blue-100">
+                                <p className="text-gray-400">Sinal</p>
+                                <p className="font-bold text-gray-900">{formatCurrency(vSinal)}</p>
+                              </div>
+                              <div className="text-center bg-white rounded-lg py-1.5 px-2 border border-blue-100">
+                                <p className="text-gray-400">Restante</p>
+                                <p className="font-bold text-gray-900">{formatCurrency(vRestante)}</p>
+                              </div>
+                              <div className="text-center bg-white rounded-lg py-1.5 px-2 border border-blue-100">
+                                <p className="text-gray-400">{nParcelas}x de</p>
+                                <p className="font-bold text-blue-700">{formatCurrency(vParcAuto)}</p>
+                              </div>
+                            </div>
+                          )}
+                          {vSinal > vTotal && vTotal > 0 && (
+                            <p className="text-xs text-red-600">⚠️ Sinal não pode ser maior que o valor total</p>
+                          )}
+                        </div>
+
+                        {/* Datas */}
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <label className="block text-xs font-medium text-gray-600 mb-1">Data de Assinatura</label>
+                            <input
+                              type="date"
+                              value={formEdicao.dataAssinatura}
+                              onChange={e => setFormEdicao(f => f ? { ...f, dataAssinatura: e.target.value } : f)}
+                              className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs font-medium text-gray-600 mb-1">Data de Vencimento</label>
+                            <input
+                              type="date"
+                              value={formEdicao.dataVencimento}
+                              onChange={e => setFormEdicao(f => f ? { ...f, dataVencimento: e.target.value } : f)}
+                              className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+                            />
+                          </div>
+                        </div>
+
+                        {/* Observações */}
                         <div>
-                          <label className="block text-xs font-medium text-gray-600 mb-1">Valor Total (R$)</label>
-                          <input
-                            type="number"
-                            step="0.01"
-                            min="0"
-                            value={formEdicao.valorTotal}
-                            onChange={e => setFormEdicao(f => f ? { ...f, valorTotal: e.target.value } : f)}
-                            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-xs font-medium text-gray-600 mb-1">Valor do Sinal (R$)</label>
-                          <input
-                            type="number"
-                            step="0.01"
-                            min="0"
-                            value={formEdicao.valorSinal}
-                            onChange={e => setFormEdicao(f => f ? { ...f, valorSinal: e.target.value } : f)}
-                            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-xs font-medium text-gray-600 mb-1">Nº de Parcelas</label>
-                          <input
-                            type="number"
-                            min="1"
-                            value={formEdicao.numeroParcelas}
-                            onChange={e => setFormEdicao(f => f ? { ...f, numeroParcelas: e.target.value } : f)}
-                            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-xs font-medium text-gray-600 mb-1">Valor por Parcela (R$)</label>
-                          <input
-                            type="number"
-                            step="0.01"
-                            min="0"
-                            value={formEdicao.valorParcela}
-                            onChange={e => setFormEdicao(f => f ? { ...f, valorParcela: e.target.value } : f)}
-                            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-xs font-medium text-gray-600 mb-1">Data de Assinatura</label>
-                          <input
-                            type="date"
-                            value={formEdicao.dataAssinatura}
-                            onChange={e => setFormEdicao(f => f ? { ...f, dataAssinatura: e.target.value } : f)}
-                            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
-                          />
-                        </div>
-                        <div className="sm:col-span-2">
-                          <label className="block text-xs font-medium text-gray-600 mb-1">Data de Vencimento</label>
-                          <input
-                            type="date"
-                            value={formEdicao.dataVencimento}
-                            onChange={e => setFormEdicao(f => f ? { ...f, dataVencimento: e.target.value } : f)}
-                            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
-                          />
-                        </div>
-                        <div className="sm:col-span-2">
                           <label className="block text-xs font-medium text-gray-600 mb-1">Observações</label>
                           <textarea
-                            rows={3}
+                            rows={2}
                             value={formEdicao.observacoes}
                             onChange={e => setFormEdicao(f => f ? { ...f, observacoes: e.target.value } : f)}
                             placeholder="Observações sobre o contrato..."
                             className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 resize-none"
                           />
                         </div>
+
+                        <div className="flex gap-2 pt-1">
+                          <button
+                            onClick={salvarEdicao}
+                            disabled={salvandoEdicao || vTotal <= 0 || vSinal > vTotal}
+                            className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold rounded-xl text-sm transition-colors"
+                          >
+                            {salvandoEdicao ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                            Salvar alterações
+                          </button>
+                          <button
+                            onClick={() => setEditandoDados(false)}
+                            className="px-4 py-2 border border-gray-200 rounded-xl text-sm text-gray-600 hover:bg-gray-50"
+                          >
+                            Cancelar
+                          </button>
+                        </div>
                       </div>
-                      <div className="flex gap-2">
-                        <button
-                          onClick={salvarEdicao}
-                          disabled={salvandoEdicao}
-                          className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-semibold rounded-xl text-sm transition-colors"
-                        >
-                          {salvandoEdicao ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                          Salvar alterações
-                        </button>
-                        <button
-                          onClick={() => setEditandoDados(false)}
-                          className="px-4 py-2 border border-gray-200 rounded-xl text-sm text-gray-600 hover:bg-gray-50"
-                        >
-                          Cancelar
-                        </button>
-                      </div>
-                    </div>
-                  )}
+                    )
+                  })()}
                 </div>
               )}
 

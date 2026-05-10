@@ -41,21 +41,30 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
       updateData.statusContrato = 'ASSINADO'
       updateData.dataAssinatura = updateData.dataAssinatura || new Date()
 
-      // Notifica gestores administrativos para complementar dados do contrato
-      const gestoresAdmin = await prisma.usuario.findMany({
-        where: { ativo: true, role: { in: ['GESTOR_ADMINISTRATIVO', 'ADMIN', 'GESTOR_GERAL'] } },
+      // Notifica todo o departamento de Contratos (analistas + gestores de contratos)
+      // São eles quem complementam os dados e dão continuidade ao processo
+      const equipeContratos = await prisma.usuario.findMany({
+        where: {
+          ativo: true,
+          OR: [
+            { departamento: 'CONTRATOS' },
+            { role: { in: ['ADMIN', 'GESTOR_GERAL'] } }, // gestores gerais também acompanham
+          ],
+        },
         select: { id: true },
       })
-      if (gestoresAdmin.length > 0) {
+      if (equipeContratos.length > 0) {
         const projetoInfo = await prisma.projeto.findUnique({
           where: { id: contrato.projetoId },
           select: { codigo: true, imovelNome: true },
         })
+        // Remove duplicatas
+        const idsUnicos = [...new Set(equipeContratos.map(u => u.id))]
         await prisma.notificacao.createMany({
-          data: gestoresAdmin.map(g => ({
-            usuarioId: g.id,
+          data: idsUnicos.map(uid => ({
+            usuarioId: uid,
             titulo: '✅ Contrato assinado — complementar dados',
-            mensagem: `O contrato do projeto ${projetoInfo?.codigo} (${projetoInfo?.imovelNome || ''}) foi marcado como assinado e está aguardando complementação de dados.`,
+            mensagem: `O contrato do projeto ${projetoInfo?.codigo} (${projetoInfo?.imovelNome || ''}) foi marcado como assinado e está aguardando complementação de dados pelo setor de contratos.`,
             tipo: 'sucesso',
             link: `/contratos`,
           })),
