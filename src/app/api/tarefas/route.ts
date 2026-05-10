@@ -138,9 +138,10 @@ export async function PATCH(request: NextRequest) {
       // Remove prazo editado pelo operacional — campo que vai definir
       updateData.prazo = null
 
-      // Notifica gestores de campo
+      // Notifica APENAS gestores de campo — são eles quem agendam vistorias
+      // Não inclui ADMIN/GESTOR_GERAL pois não é responsabilidade deles agendar
       const gestoresCampo = await prisma.usuario.findMany({
-        where: { ativo: true, role: { in: ['GESTOR_CAMPO', 'ADMIN', 'GESTOR_GERAL'] } },
+        where: { ativo: true, role: 'GESTOR_CAMPO' },
         select: { id: true },
       })
       if (gestoresCampo.length > 0) {
@@ -183,16 +184,26 @@ export async function PATCH(request: NextRequest) {
             projetoCompleto?.gestorResponsavelId,
           ].filter(Boolean) as string[]
 
-          // Notifica também gestores operacionais
-          const gestoresOp = await prisma.usuario.findMany({
-            where: { ativo: true, role: { in: ['GESTOR_OPERACIONAL', 'ADMIN', 'GESTOR_GERAL'] } },
-            select: { id: true },
-          })
-          const todos = [...new Set([...notificar, ...gestoresOp.map(g => g.id)])]
+          // Notifica apenas responsável da tarefa + pessoas do projeto (sem notificar role inteiro)
+          const idsEnvolvidos = [
+            ...notificar,
+            tarefaAtual.responsavelId,  // responsável da tarefa
+          ].filter(Boolean) as string[]
 
-          if (todos.length > 0) {
+          let destinatarios = [...new Set(idsEnvolvidos)]
+
+          // Fallback: se ninguém específico atribuído, notifica ADMIN/GESTOR_GERAL
+          if (destinatarios.length === 0) {
+            const admins = await prisma.usuario.findMany({
+              where: { ativo: true, role: { in: ['ADMIN', 'GESTOR_GERAL'] } },
+              select: { id: true },
+            })
+            destinatarios = admins.map(a => a.id)
+          }
+
+          if (destinatarios.length > 0) {
             await prisma.notificacao.createMany({
-              data: todos.map(uid => ({
+              data: destinatarios.map(uid => ({
                 usuarioId: uid,
                 titulo: '✅ Vistoria agendada pelo setor de campo',
                 mensagem: `A tarefa "${tarefaAtual.titulo}" do projeto ${projeto.codigo} foi agendada para ${new Date(dataCampo).toLocaleDateString('pt-BR')}.`,

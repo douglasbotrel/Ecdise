@@ -153,19 +153,35 @@ export async function PATCH(request: NextRequest) {
           }
         }
 
-        // 4. Notifica gestores operacionais e de campo
-        const gestores = await prisma.usuario.findMany({
-          where: {
-            ativo: true,
-            role: { in: ['GESTOR_OPERACIONAL', 'GESTOR_CAMPO', 'GESTOR_GERAL', 'ADMIN'] },
-          },
-          select: { id: true },
+        // 4. Notifica apenas o(s) gestor(es) responsável(eis) pelo projeto
+        // Prioridade: gestorResponsavelId → supervisorId → ADMIN/GESTOR_GERAL (fallback)
+        const projetoCompleto = await prisma.projeto.findUnique({
+          where: { id: projetoId },
+          select: { gestorResponsavelId: true, supervisorId: true },
         })
 
-        if (gestores.length > 0) {
+        const idsResponsaveis = [
+          projetoCompleto?.gestorResponsavelId,
+          projetoCompleto?.supervisorId,
+        ].filter(Boolean) as string[]
+
+        // Se não há nenhum gestor específico atribuído, notifica ADMIN e GESTOR_GERAL
+        let destinatariosIds: string[] = idsResponsaveis
+        if (destinatariosIds.length === 0) {
+          const fallback = await prisma.usuario.findMany({
+            where: { ativo: true, role: { in: ['ADMIN', 'GESTOR_GERAL'] } },
+            select: { id: true },
+          })
+          destinatariosIds = fallback.map(u => u.id)
+        }
+
+        // Remove duplicatas
+        destinatariosIds = [...new Set(destinatariosIds)]
+
+        if (destinatariosIds.length > 0) {
           await prisma.notificacao.createMany({
-            data: gestores.map(g => ({
-              usuarioId: g.id,
+            data: destinatariosIds.map(uid => ({
+              usuarioId: uid,
               titulo: '🚀 Projeto liberado para execução',
               mensagem: `Projeto ${projeto.codigo} teve sinal confirmado. Acesse Operacional para definir prazos e responsáveis.`,
               tipo: 'sucesso',
