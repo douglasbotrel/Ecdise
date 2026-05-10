@@ -83,33 +83,57 @@ export async function GET(request: NextRequest) {
 
     // ── GESTOR OPERACIONAL / SUPERVISOR ─────────────────────────
     if (['GESTOR_OPERACIONAL', 'GESTOR_CAMPO', 'SUPERVISOR'].includes(user.role)) {
-      const [novos, andamento, concluidos, projetos, proximasVistorias] = await Promise.all([
-        prisma.projeto.count({ where: { supervisorId: user.id, etapaPipeline: 'OPERACIONAL' } }),
-        prisma.projeto.count({ where: { supervisorId: user.id, etapaPipeline: 'EM_EXECUCAO' } }),
-        prisma.projeto.count({ where: { supervisorId: user.id, etapaPipeline: 'CONCLUIDO' } }),
+      // Gestor vê TODOS os projetos em estágio operacional (não só os que ele é supervisor)
+      // Inclui projetos onde é gestorResponsavelId OU supervisorId OU todos os operacionais
+      const etapasOperacionais = ['OPERACIONAL', 'EM_EXECUCAO'] as const
+
+      const [novos, andamento, concluidos, projetos, proximasVistorias, tarefasAtrasadas, tarefasConcluidas, tarefasTotais] = await Promise.all([
+        prisma.projeto.count({ where: { etapaPipeline: 'OPERACIONAL' } }),
+        prisma.projeto.count({ where: { etapaPipeline: 'EM_EXECUCAO' } }),
+        prisma.projeto.count({ where: { etapaPipeline: 'CONCLUIDO' } }),
         prisma.projeto.findMany({
-          where: { supervisorId: user.id, etapaPipeline: { in: ['OPERACIONAL', 'EM_EXECUCAO'] } },
+          where: { etapaPipeline: { in: etapasOperacionais } },
           include: {
             cliente: { select: { nome: true } },
             responsavel: { select: { nome: true } },
+            _count: { select: { tarefas: true } },
           },
           orderBy: { criadoEm: 'desc' },
-          take: 20,
+          take: 30,
         }),
         prisma.vistoria.findMany({
           where: {
             status: 'AGENDADA',
             dataAgendada: { gte: hoje, lte: proximos30 },
-            projeto: { supervisorId: user.id }
           },
           include: { projeto: { select: { codigo: true, imovelNome: true } }, responsavel: { select: { nome: true } } },
           orderBy: { dataAgendada: 'asc' },
-          take: 5,
+          take: 10,
         }),
+        // Eficiência: tarefas atrasadas
+        prisma.tarefa.count({
+          where: { status: 'PENDENTE', prazo: { lt: hoje }, projeto: { etapaPipeline: { in: etapasOperacionais } } }
+        }),
+        // Tarefas concluídas no mês atual
+        prisma.tarefa.count({
+          where: {
+            status: 'CONCLUIDA',
+            dataConclusao: { gte: new Date(hoje.getFullYear(), hoje.getMonth(), 1) },
+          }
+        }),
+        // Total de tarefas em aberto
+        prisma.tarefa.count({ where: { status: 'PENDENTE', projeto: { etapaPipeline: { in: etapasOperacionais } } } }),
       ])
+
+      // Taxa de eficiência: tarefas concluídas / (concluídas + pendentes)
+      const totalParaEficiencia = tarefasConcluidas + tarefasTotais
+      const taxaEficiencia = totalParaEficiencia > 0
+        ? Math.round((tarefasConcluidas / totalParaEficiencia) * 100)
+        : 0
+
       return NextResponse.json({
         tipoView: 'gestor_operacional',
-        estatisticas: { novos, andamento, concluidos },
+        estatisticas: { novos, andamento, concluidos, tarefasAtrasadas, tarefasConcluidas, tarefasTotais, taxaEficiencia },
         projetos,
         proximasVistorias,
       })

@@ -227,23 +227,32 @@ function ViewAnalista({ dados }: { dados: any }) {
 
 function ViewGestorOperacional({ dados }: { dados: any }) {
   const { estatisticas, projetos, proximasVistorias } = dados
+  const { novos, andamento, concluidos, tarefasAtrasadas, tarefasConcluidas, tarefasTotais, taxaEficiencia } = estatisticas
+
+  // Cor da taxa de eficiência
+  const eficienciaCor = taxaEficiencia >= 70 ? 'text-green-600' : taxaEficiencia >= 40 ? 'text-yellow-600' : 'text-red-600'
+  const eficienciaBar = taxaEficiencia >= 70 ? 'bg-green-500' : taxaEficiencia >= 40 ? 'bg-yellow-500' : 'bg-red-500'
+
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Minha Área — Gestão Operacional</h1>
-        <p className="text-gray-500 text-sm mt-1">Projetos sob sua supervisão</p>
+        <p className="text-gray-500 text-sm mt-1">Visão geral dos projetos em execução e análise de eficiência</p>
       </div>
-      <div className="grid grid-cols-3 gap-4">
+
+      {/* KPIs de pipeline */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         {[
-          { label: 'Novos para atribuir', value: estatisticas.novos, cor: 'bg-orange-100 text-orange-700', icon: AlertTriangle },
-          { label: 'Em andamento', value: estatisticas.andamento, cor: 'bg-blue-100 text-blue-700', icon: TrendingUp },
-          { label: 'Concluídos', value: estatisticas.concluidos, cor: 'bg-green-100 text-green-700', icon: CheckCircle },
+          { label: 'Para atribuir', value: novos, cor: 'bg-orange-100 text-orange-700', icon: AlertTriangle },
+          { label: 'Em execução', value: andamento, cor: 'bg-blue-100 text-blue-700', icon: TrendingUp },
+          { label: 'Concluídos', value: concluidos, cor: 'bg-green-100 text-green-700', icon: CheckCircle },
+          { label: 'Tarefas atrasadas', value: tarefasAtrasadas ?? 0, cor: 'bg-red-100 text-red-700', icon: AlertTriangle },
         ].map((card) => {
           const Icon = card.icon
           return (
-            <div key={card.label} className="bg-white rounded-2xl border border-gray-100 p-5 flex items-center gap-4">
-              <div className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 ${card.cor}`}>
-                <Icon className="w-6 h-6" />
+            <div key={card.label} className="bg-white rounded-2xl border border-gray-100 p-4 flex items-center gap-3">
+              <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${card.cor}`}>
+                <Icon className="w-5 h-5" />
               </div>
               <div>
                 <p className="text-2xl font-bold text-gray-900">{card.value}</p>
@@ -253,35 +262,111 @@ function ViewGestorOperacional({ dados }: { dados: any }) {
           )
         })}
       </div>
-      {estatisticas.novos > 0 && (
+
+      {/* Painel de eficiência */}
+      <div className="bg-white rounded-2xl border border-gray-100 p-5">
+        <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
+          <TrendingUp className="w-4 h-4 text-green-600" />
+          Análise de Eficiência Operacional
+        </h3>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+          {/* Taxa de conclusão */}
+          <div className="space-y-2">
+            <div className="flex justify-between items-center">
+              <p className="text-sm text-gray-500">Taxa de conclusão de atividades</p>
+              <p className={`text-lg font-bold ${eficienciaCor}`}>{taxaEficiencia ?? 0}%</p>
+            </div>
+            <div className="w-full bg-gray-100 rounded-full h-2">
+              <div
+                className={`h-2 rounded-full transition-all ${eficienciaBar}`}
+                style={{ width: `${taxaEficiencia ?? 0}%` }}
+              />
+            </div>
+            <p className="text-xs text-gray-400">{tarefasConcluidas ?? 0} concluídas de {(tarefasConcluidas ?? 0) + (tarefasTotais ?? 0)} no mês</p>
+          </div>
+
+          {/* Tarefas pendentes */}
+          <div className="flex flex-col justify-center border-l border-gray-100 pl-6">
+            <p className="text-xs text-gray-400 mb-1">Tarefas pendentes (projetos ativos)</p>
+            <p className="text-2xl font-bold text-gray-900">{tarefasTotais ?? 0}</p>
+            {(tarefasAtrasadas ?? 0) > 0 && (
+              <p className="text-xs text-red-600 mt-1">⚠️ {tarefasAtrasadas} atrasada(s)</p>
+            )}
+          </div>
+
+          {/* Projetos ativos vs concluídos */}
+          <div className="flex flex-col justify-center border-l border-gray-100 pl-6">
+            <p className="text-xs text-gray-400 mb-1">Projetos em execução</p>
+            <p className="text-2xl font-bold text-blue-600">{andamento}</p>
+            <p className="text-xs text-gray-400 mt-1">+ {novos} aguardando início</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Alerta projetos sem responsável */}
+      {novos > 0 && (
         <div className="bg-orange-50 border border-orange-200 rounded-2xl p-4 flex items-start gap-3">
           <AlertTriangle className="w-5 h-5 text-orange-500 flex-shrink-0 mt-0.5" />
           <div>
-            <p className="text-sm font-semibold text-orange-800">Atenção: {estatisticas.novos} projeto(s) aguardando atribuição</p>
-            <p className="text-xs text-orange-600 mt-0.5">Acesse o módulo Operacional para designar analistas e definir prazos.</p>
+            <p className="text-sm font-semibold text-orange-800">Atenção: {novos} projeto(s) aguardando atribuição de analista</p>
+            <p className="text-xs text-orange-600 mt-0.5">Acesse o módulo Operacional para designar responsáveis e definir prazos.</p>
           </div>
           <Link href="/operacional" className="ml-auto text-xs font-medium text-orange-700 bg-orange-100 hover:bg-orange-200 px-3 py-1.5 rounded-lg transition-colors whitespace-nowrap">
             Ir para Operacional
           </Link>
         </div>
       )}
+
+      {/* Próximas vistorias */}
+      {proximasVistorias?.length > 0 && (
+        <div className="bg-white rounded-2xl border border-gray-100">
+          <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center">
+            <h3 className="font-semibold text-gray-900">Próximas Vistorias (30 dias)</h3>
+            <Link href="/campo" className="text-xs text-green-600 font-medium">Ver todas →</Link>
+          </div>
+          <div className="divide-y divide-gray-50">
+            {proximasVistorias.map((v: any) => (
+              <div key={v.id} className="flex items-center gap-3 px-6 py-3">
+                <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <MapPin className="w-4 h-4 text-blue-600" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-gray-900 truncate">{v.titulo}</p>
+                  <p className="text-xs text-gray-400">{v.projeto?.codigo} {v.responsavel?.nome ? `• ${v.responsavel.nome}` : ''}</p>
+                </div>
+                <span className="text-xs font-medium text-blue-600 flex-shrink-0">{formatDate(v.dataAgendada)}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Lista de projetos */}
       <div className="bg-white rounded-2xl border border-gray-100">
         <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center">
-          <h3 className="font-semibold text-gray-900">Projetos sob supervisão</h3>
+          <h3 className="font-semibold text-gray-900">Projetos em Operação</h3>
           <Link href="/operacional" className="text-xs text-green-600 font-medium">Ver todos →</Link>
         </div>
         <div className="divide-y divide-gray-50">
           {projetos.length === 0 ? (
-            <div className="py-8 text-center text-gray-400 text-sm">Nenhum projeto ativo</div>
+            <div className="py-8 text-center text-gray-400 text-sm">Nenhum projeto em operação</div>
           ) : projetos.map((p: any) => (
             <Link key={p.id} href={`/operacional/${p.id}`} className="flex items-center gap-4 px-6 py-3 hover:bg-gray-50">
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-gray-900">{p.imovelNome || p.tipoServico}</p>
-                <p className="text-xs text-gray-400">{p.codigo} • Responsável: {p.responsavel?.nome || 'Não atribuído'}</p>
+                <p className="text-sm font-medium text-gray-900 truncate">{p.imovelNome || p.tipoServico}</p>
+                <p className="text-xs text-gray-400">
+                  {p.codigo} • {p.cliente?.nome}
+                  {p.responsavel?.nome ? ` • Resp: ${p.responsavel.nome}` : ' • Sem responsável'}
+                </p>
               </div>
-              <span className={`text-xs px-2 py-0.5 rounded-full ${ETAPA_BADGES[p.etapaPipeline] || 'bg-gray-100 text-gray-700'}`}>
-                {ETAPA_LABELS[p.etapaPipeline]}
-              </span>
+              <div className="flex items-center gap-2 flex-shrink-0">
+                {p._count?.tarefas > 0 && (
+                  <span className="text-xs text-gray-400">{p._count.tarefas} tarefa(s)</span>
+                )}
+                <span className={`text-xs px-2 py-0.5 rounded-full ${ETAPA_BADGES[p.etapaPipeline] || 'bg-gray-100 text-gray-700'}`}>
+                  {ETAPA_LABELS[p.etapaPipeline]}
+                </span>
+              </div>
             </Link>
           ))}
         </div>
