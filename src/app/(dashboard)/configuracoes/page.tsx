@@ -601,9 +601,12 @@ export default function ConfiguracoesPage() {
               <input type="text" value={novaServNome} onChange={e => setNovaServNome(e.target.value)}
                 placeholder="Nome do serviço" autoFocus
                 className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500" />
-              <input type="text" value={novaServCateg} onChange={e => setNovaServCateg(e.target.value)}
-                placeholder="Categoria"
-                className="w-48 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500" />
+              <select value={novaServCateg} onChange={e => setNovaServCateg(e.target.value)}
+                className="w-52 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500 bg-white">
+                <option value="">Tipo *</option>
+                <option value="ambiental">Licenciamento Ambiental</option>
+                <option value="regularizacao">Regularização</option>
+              </select>
               <button onClick={criarServico} disabled={salvando}
                 className="px-3 py-2 bg-green-600 text-white rounded-lg">
                 {salvando ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
@@ -627,7 +630,11 @@ export default function ConfiguracoesPage() {
                   <div className="flex items-center gap-3">
                     <div>
                       <p className="text-sm font-medium text-gray-900">{s.nome}</p>
-                      <p className="text-xs text-gray-400 capitalize">{s.categoria}</p>
+                      <p className="text-xs text-gray-400">
+                        {s.categoria === 'ambiental' ? '🌿 Licenciamento Ambiental' :
+                         s.categoria === 'regularizacao' ? '📋 Regularização' :
+                         s.categoria || '—'}
+                      </p>
                     </div>
                     <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${s.ativo ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-500'}`}>
                       {s.ativo ? 'Ativo' : 'Inativo'}
@@ -789,14 +796,16 @@ export default function ConfiguracoesPage() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Categoria</label>
-                <input
-                  type="text"
+                <label className="block text-sm font-medium text-gray-700 mb-1">Tipo / Categoria</label>
+                <select
                   value={formServico.categoria}
                   onChange={e => setFormServico(p => ({ ...p, categoria: e.target.value }))}
-                  placeholder="Ex: Ambiental, Regularização..."
-                  className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
-                />
+                  className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-green-500 bg-white"
+                >
+                  <option value="">Selecione...</option>
+                  <option value="ambiental">Licenciamento Ambiental</option>
+                  <option value="regularizacao">Regularização</option>
+                </select>
               </div>
               <div className="flex justify-end gap-3 pt-2 border-t border-gray-100">
                 <button onClick={() => setServicoEditando(null)}

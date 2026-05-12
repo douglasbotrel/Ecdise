@@ -434,9 +434,11 @@ export function ModalProjeto({ open, onClose, projeto, onSalvo, modoAcao = 'edit
   const gestores = usuarios.filter(u => ['ADMIN','GESTOR_GERAL','GESTOR_OPERACIONAL','GESTOR_CAMPO','SUPERVISOR'].includes(u.role))
   const analistasOp = usuarios.filter(u => ['ANALISTA','TECNICO_CAMPO'].includes(u.role))
 
-  // Group services by category
-  const servicosAmbiental    = servicos.filter(s => s.categoria === 'ambiental')
-  const servicosRegularizacao = servicos.filter(s => s.categoria === 'regularizacao')
+  // Group services by category (case-insensitive, sem acentos)
+  const normalizeCateg = (c: string) => (c || '').toLowerCase()
+    .normalize('NFD').replace(/[̀-ͯ]/g, '')
+  const servicosAmbiental    = servicos.filter(s => normalizeCateg(s.categoria) === 'ambiental')
+  const servicosRegularizacao = servicos.filter(s => ['regularizacao', 'regularização'].includes(normalizeCateg(s.categoria)))
 
   function ServiceCheckList({ lista }: { lista: 'servicosRecomendados' | 'servicosContratados' }) {
     return (
