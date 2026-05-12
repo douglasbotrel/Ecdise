@@ -91,6 +91,38 @@ export async function PATCH(request: NextRequest) {
     if (!id) return NextResponse.json({ error: 'ID obrigatório' }, { status: 400 })
 
     if (tipo === 'servico') {
+      // Se está renomeando, propaga o novo nome para todos os projetos existentes
+      if (data.nome) {
+        const servicoAtual = await prisma.tipoServico.findUnique({ where: { id }, select: { nome: true } })
+        if (servicoAtual && servicoAtual.nome !== data.nome) {
+          const nomeAntigo = servicoAtual.nome
+          const nomeNovo   = data.nome
+          // Atualiza servicosRecomendados e servicosContratados em todos os projetos
+          const projetos = await prisma.projeto.findMany({
+            where: {
+              OR: [
+                { servicosRecomendados: { contains: `"${nomeAntigo}"` } },
+                { servicosContratados:  { contains: `"${nomeAntigo}"` } },
+              ]
+            },
+            select: { id: true, servicosRecomendados: true, servicosContratados: true }
+          })
+          for (const p of projetos) {
+            const updateP: any = {}
+            if (p.servicosRecomendados?.includes(`"${nomeAntigo}"`)) {
+              const lista: string[] = JSON.parse(p.servicosRecomendados)
+              updateP.servicosRecomendados = JSON.stringify(lista.map(s => s === nomeAntigo ? nomeNovo : s))
+            }
+            if (p.servicosContratados?.includes(`"${nomeAntigo}"`)) {
+              const lista: string[] = JSON.parse(p.servicosContratados)
+              updateP.servicosContratados = JSON.stringify(lista.map(s => s === nomeAntigo ? nomeNovo : s))
+            }
+            if (Object.keys(updateP).length > 0) {
+              await prisma.projeto.update({ where: { id: p.id }, data: updateP })
+            }
+          }
+        }
+      }
       const servico = await prisma.tipoServico.update({ where: { id }, data })
       return NextResponse.json({ servico })
     }
@@ -121,9 +153,25 @@ export async function DELETE(request: NextRequest) {
     if (!tipo || !id) return NextResponse.json({ error: 'tipo e id obrigatórios' }, { status: 400 })
 
     if (tipo === 'servico') {
-      // Verifica se há tarefas vinculadas ao serviço
-      const tarefasCount = await prisma.tarefa.count({ where: { etapa: { not: undefined } } })
-      // Exclusão segura — só remove o TipoServico (tarefas já criadas não são afetadas)
+      // Busca o nome do serviço antes de excluir
+      const servico = await prisma.tipoServico.findUnique({ where: { id }, select: { nome: true } })
+      if (!servico) return NextResponse.json({ error: 'Serviço não encontrado' }, { status: 404 })
+
+      // Verifica se o serviço está em uso em algum projeto (como recomendado ou contratado)
+      const emUso = await prisma.projeto.count({
+        where: {
+          OR: [
+            { servicosContratados:  { contains: `"${servico.nome}"` } },
+            { servicosRecomendados: { contains: `"${servico.nome}"` } },
+          ]
+        }
+      })
+      if (emUso > 0) {
+        return NextResponse.json({
+          error: `Este serviço está vinculado a ${emUso} projeto(s) existente(s) e não pode ser excluído. Use "Desativar" para ocultá-lo de novas análises sem perder o histórico.`
+        }, { status: 409 })
+      }
+
       await prisma.tipoServico.delete({ where: { id } })
       return NextResponse.json({ ok: true })
     }

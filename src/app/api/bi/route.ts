@@ -74,6 +74,37 @@ export async function GET(request: NextRequest) {
       }),
     ])
 
+    // ── Distribuição de serviços contratados ────────────────────────────────
+    // Parseia o JSON de cada projeto para contar serviços individualmente
+    const projetosComServicos = await prisma.projeto.findMany({
+      where: {
+        servicosContratados: { not: null },
+        etapaPipeline: { not: 'CANCELADO' },
+      },
+      select: {
+        servicosContratados: true,
+        etapaPipeline: true,
+        contrato: { select: { valorTotal: true } },
+      },
+    })
+
+    // Agrupa por nome do serviço: quantidade de projetos e valor total de contratos
+    const servicoMap: Record<string, { qtd: number; valor: number }> = {}
+    for (const p of projetosComServicos) {
+      if (!p.servicosContratados) continue
+      let lista: string[] = []
+      try { lista = JSON.parse(p.servicosContratados) } catch { continue }
+      for (const nome of lista) {
+        if (!nome) continue
+        if (!servicoMap[nome]) servicoMap[nome] = { qtd: 0, valor: 0 }
+        servicoMap[nome].qtd += 1
+        servicoMap[nome].valor += p.contrato?.valorTotal ?? 0
+      }
+    }
+    const servicosContratados = Object.entries(servicoMap)
+      .map(([nome, { qtd, valor }]) => ({ nome, qtd, valor }))
+      .sort((a, b) => b.qtd - a.qtd)
+
     return NextResponse.json({
       evolucaoFinanceira,
       totais: {
@@ -89,6 +120,7 @@ export async function GET(request: NextRequest) {
         valor:  p._sum.valor ?? 0,
         qtd:    p._count,
       })),
+      servicosContratados,
     })
   } catch (error) {
     console.error('Erro na API BI:', error)

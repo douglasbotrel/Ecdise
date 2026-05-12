@@ -70,6 +70,7 @@ export default function BIPage() {
   const evolucaoFinanceira  = dadosBi?.evolucaoFinanceira  ?? []
   const totaisFinanceiros   = dadosBi?.totais              ?? {}
   const pagamentosPorForma  = dadosBi?.pagamentosPorForma  ?? []
+  const servicosContratados = dadosBi?.servicosContratados ?? []
 
   return (
     <div className="space-y-6">
@@ -239,6 +240,39 @@ export default function BIPage() {
           )}
         </div>
       </div>
+
+      {/* Serviços mais contratados */}
+      {servicosContratados.length > 0 && (
+        <div className="bg-white rounded-2xl border border-gray-100 p-6">
+          <h3 className="font-semibold text-gray-900 mb-1">Serviços Mais Contratados</h3>
+          <p className="text-xs text-gray-400 mb-4">Baseado nos serviços registrados em projetos ativos e concluídos</p>
+          <div className="space-y-3">
+            {servicosContratados.map((item: any, i: number) => {
+              const max = servicosContratados[0]?.qtd ?? 1
+              const pct = (item.qtd / max) * 100
+              return (
+                <div key={i}>
+                  <div className="flex justify-between items-center text-sm mb-1">
+                    <span className="text-gray-700 font-medium">{item.nome}</span>
+                    <div className="text-right flex-shrink-0 ml-4">
+                      <span className="font-bold text-gray-900">{item.qtd} projeto(s)</span>
+                      {item.valor > 0 && (
+                        <span className="text-xs text-gray-400 ml-2">{formatCurrency(item.valor)}</span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                    <div
+                      className="h-full rounded-full transition-all duration-700"
+                      style={{ width: `${pct}%`, backgroundColor: CORES[i % CORES.length] }}
+                    />
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Indicadores operacionais */}
       <div className="bg-white rounded-2xl border border-gray-100 p-6">
