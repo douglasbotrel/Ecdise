@@ -2,18 +2,12 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { comparePassword, signToken } from '@/lib/auth'
 
-<<<<<<< HEAD
-export async function POST(request: NextRequest) {
-  try {
-    const { email, senha } = await request.json()
-=======
 // ── Rate Limiting em memória ─────────────────────────────────────
 // Limita tentativas de login por IP: 10 tentativas em 15 minutos.
 // O estado persiste enquanto o servidor Node.js estiver rodando.
 const loginAttempts = new Map<string, { count: number; resetAt: number }>()
 const MAX_ATTEMPTS = 10
 const WINDOW_MS   = 15 * 60 * 1000 // 15 minutos
-const BLOCK_AFTER  = 5             // começa a avisar após 5 falhas
 
 function getClientIP(request: NextRequest): string {
   return (
@@ -63,7 +57,6 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json()
     const { email, senha } = body
->>>>>>> aeffdf8f4107775208bdb5b34f82c4a7a6681bce
 
     if (!email || !senha) {
       return NextResponse.json(
@@ -76,13 +69,6 @@ export async function POST(request: NextRequest) {
       where: { email: email.toLowerCase().trim() },
     })
 
-<<<<<<< HEAD
-    if (!usuario || !usuario.ativo) {
-      return NextResponse.json(
-        { error: 'Credenciais inválidas ou usuário inativo' },
-        { status: 401 }
-      )
-=======
     // Usuário não encontrado ou inativo — mesma mensagem para não revelar se o email existe
     if (!usuario || !usuario.ativo) {
       await prisma.log.create({
@@ -94,19 +80,10 @@ export async function POST(request: NextRequest) {
         },
       }).catch(() => {})
       return NextResponse.json({ error: 'Credenciais inválidas' }, { status: 401 })
->>>>>>> aeffdf8f4107775208bdb5b34f82c4a7a6681bce
     }
 
     const senhaValida = await comparePassword(senha, usuario.senha)
     if (!senhaValida) {
-<<<<<<< HEAD
-      return NextResponse.json(
-        { error: 'Credenciais inválidas' },
-        { status: 401 }
-      )
-    }
-
-=======
       // Log de tentativa com senha errada (sem revelar o motivo ao cliente)
       await prisma.log.create({
         data: {
@@ -124,7 +101,6 @@ export async function POST(request: NextRequest) {
     // Login bem-sucedido — zera o rate limit para esse IP
     clearRateLimit(ip)
 
->>>>>>> aeffdf8f4107775208bdb5b34f82c4a7a6681bce
     const token = signToken({
       id: usuario.id,
       email: usuario.email,
@@ -133,22 +109,14 @@ export async function POST(request: NextRequest) {
       departamento: usuario.departamento,
     })
 
-<<<<<<< HEAD
-    // Log de acesso
-=======
->>>>>>> aeffdf8f4107775208bdb5b34f82c4a7a6681bce
     await prisma.log.create({
       data: {
         usuarioId: usuario.id,
         acao: 'LOGIN',
         entidade: 'Usuario',
         entidadeId: usuario.id,
-<<<<<<< HEAD
-        detalhes: 'Login realizado com sucesso',
-=======
         detalhes: `Login realizado com sucesso | IP: ${ip}`,
         ip,
->>>>>>> aeffdf8f4107775208bdb5b34f82c4a7a6681bce
       },
     })
 
@@ -164,33 +132,17 @@ export async function POST(request: NextRequest) {
       },
     })
 
-<<<<<<< HEAD
-    // Set cookie seguro
     response.cookies.set('ecdise_token', token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 60 * 60 * 24 * 7, // 7 dias
-=======
-    response.cookies.set('ecdise_token', token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',   // era 'lax' — 'strict' é mais seguro para SaaS
+      sameSite: 'strict',
       maxAge: 60 * 60 * 24 * 7,
->>>>>>> aeffdf8f4107775208bdb5b34f82c4a7a6681bce
       path: '/',
     })
 
     return response
   } catch (error) {
     console.error('Erro no login:', error)
-<<<<<<< HEAD
-    return NextResponse.json(
-      { error: 'Erro interno do servidor' },
-      { status: 500 }
-    )
-=======
     return NextResponse.json({ error: 'Erro interno do servidor' }, { status: 500 })
->>>>>>> aeffdf8f4107775208bdb5b34f82c4a7a6681bce
   }
 }

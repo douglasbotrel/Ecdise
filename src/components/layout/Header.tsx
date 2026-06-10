@@ -22,10 +22,7 @@ export function Header({ onMobileMenuOpen, usuario }: HeaderProps) {
   const router = useRouter()
   const [dropdownOpen, setDropdownOpen] = useState(false)
   const [notificacoes, setNotificacoes] = useState<any[]>([])
-<<<<<<< HEAD
-=======
   const [naoLidas, setNaoLidas] = useState(0)
->>>>>>> aeffdf8f4107775208bdb5b34f82c4a7a6681bce
   const [notifOpen, setNotifOpen] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
   const notifRef = useRef<HTMLDivElement>(null)
@@ -45,18 +42,6 @@ export function Header({ onMobileMenuOpen, usuario }: HeaderProps) {
   }, [])
 
   // Carrega notificações
-<<<<<<< HEAD
-  useEffect(() => {
-    async function loadNotificacoes() {
-      try {
-        const res = await fetch('/api/notificacoes?lida=false&limit=5')
-        if (res.ok) {
-          const data = await res.json()
-          setNotificacoes(data.notificacoes || [])
-        }
-      } catch {}
-    }
-=======
   async function loadNotificacoes() {
     try {
       const res = await fetch('/api/notificacoes?limit=10')
@@ -69,14 +54,11 @@ export function Header({ onMobileMenuOpen, usuario }: HeaderProps) {
   }
 
   useEffect(() => {
->>>>>>> aeffdf8f4107775208bdb5b34f82c4a7a6681bce
     loadNotificacoes()
     const interval = setInterval(loadNotificacoes, 30000)
     return () => clearInterval(interval)
   }, [])
 
-<<<<<<< HEAD
-=======
   async function marcarComoLida(id: string) {
     try {
       await fetch('/api/notificacoes', {
@@ -106,7 +88,6 @@ export function Header({ onMobileMenuOpen, usuario }: HeaderProps) {
     if (notif.link) { setNotifOpen(false); router.push(notif.link) }
   }
 
->>>>>>> aeffdf8f4107775208bdb5b34f82c4a7a6681bce
   async function handleLogout() {
     try {
       await fetch('/api/auth/logout', { method: 'POST' })
@@ -124,11 +105,6 @@ export function Header({ onMobileMenuOpen, usuario }: HeaderProps) {
     .join('')
     .toUpperCase()
 
-<<<<<<< HEAD
-  const naoLidas = notificacoes.filter(n => !n.lida).length
-
-=======
->>>>>>> aeffdf8f4107775208bdb5b34f82c4a7a6681bce
   return (
     <header className="h-16 bg-white border-b border-gray-100 flex items-center justify-between px-4 gap-4 flex-shrink-0">
       {/* Mobile menu button */}
@@ -159,19 +135,6 @@ export function Header({ onMobileMenuOpen, usuario }: HeaderProps) {
           </button>
 
           {notifOpen && (
-<<<<<<< HEAD
-            <div className="absolute right-0 top-full mt-2 w-80 bg-white rounded-xl shadow-lg border border-gray-100 z-50">
-              <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
-                <h3 className="font-semibold text-gray-900 text-sm">Notificações</h3>
-                {naoLidas > 0 && (
-                  <span className="text-xs text-green-600 font-medium">{naoLidas} não lida(s)</span>
-                )}
-              </div>
-              <div className="max-h-80 overflow-y-auto">
-                {notificacoes.length === 0 ? (
-                  <div className="px-4 py-8 text-center text-gray-400 text-sm">
-                    Nenhuma notificação
-=======
             <div className="absolute right-0 top-full mt-2 w-[calc(100vw-2rem)] sm:w-96 max-w-sm sm:max-w-none bg-white rounded-xl shadow-xl border border-gray-100 z-50 overflow-hidden">
               {/* Header do painel */}
               <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between bg-gray-50">
@@ -199,18 +162,11 @@ export function Header({ onMobileMenuOpen, usuario }: HeaderProps) {
                   <div className="px-4 py-10 text-center">
                     <Bell className="w-8 h-8 text-gray-200 mx-auto mb-2" />
                     <p className="text-sm text-gray-400">Nenhuma notificação</p>
->>>>>>> aeffdf8f4107775208bdb5b34f82c4a7a6681bce
                   </div>
                 ) : (
                   notificacoes.map((notif) => (
                     <div
                       key={notif.id}
-<<<<<<< HEAD
-                      className={`px-4 py-3 border-b border-gray-50 hover:bg-gray-50 transition-colors cursor-pointer ${!notif.lida ? 'bg-green-50/50' : ''}`}
-                    >
-                      <p className="text-sm font-medium text-gray-900">{notif.titulo}</p>
-                      <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">{notif.mensagem}</p>
-=======
                       onClick={() => handleClicarNotif(notif)}
                       className={`px-4 py-3 hover:bg-gray-50 transition-colors cursor-pointer flex gap-3 ${
                         !notif.lida ? 'bg-green-50/60' : ''
@@ -232,22 +188,10 @@ export function Header({ onMobileMenuOpen, usuario }: HeaderProps) {
                           {new Date(notif.criadoEm).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
                         </p>
                       </div>
->>>>>>> aeffdf8f4107775208bdb5b34f82c4a7a6681bce
                     </div>
                   ))
                 )}
               </div>
-<<<<<<< HEAD
-              <div className="px-4 py-3 border-t border-gray-100">
-                <button
-                  onClick={() => { setNotifOpen(false); router.push('/notificacoes') }}
-                  className="text-xs text-green-600 hover:text-green-700 font-medium"
-                >
-                  Ver todas as notificações →
-                </button>
-              </div>
-=======
->>>>>>> aeffdf8f4107775208bdb5b34f82c4a7a6681bce
             </div>
           )}
         </div>

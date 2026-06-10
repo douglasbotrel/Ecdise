@@ -121,11 +121,6 @@ export const ROLE_LABELS: Record<string, string> = {
   GESTOR_CAMPO: 'Gestor de Campo',
   SUPERVISOR: 'Supervisor',
   ANALISTA: 'Analista',
-<<<<<<< HEAD
-  TECNICO_CAMPO: 'Técnico de Campo',
-}
-
-=======
   ANALISTA_RAPIDO: 'Analista de Serviço Rápido',
   TECNICO_CAMPO: 'Técnico de Campo',
 }
@@ -159,7 +154,6 @@ export const MODULOS_POR_ROLE: Record<string, string[] | null> = {
   TECNICO_CAMPO:          ['dashboard', 'tecnico'],
 }
 
->>>>>>> aeffdf8f4107775208bdb5b34f82c4a7a6681bce
 export const DEPARTAMENTO_LABELS: Record<string, string> = {
   GESTAO_GERAL: 'Gestão Geral',
   COMERCIAL: 'Comercial',

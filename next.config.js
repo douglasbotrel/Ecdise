@@ -1,23 +1,13 @@
 /** @type {import('next').NextConfig} */
-<<<<<<< HEAD
-=======
 
 const securityHeaders = [
-  // Impede que o site seja embutido em iframes externos (proteção contra clickjacking)
-  { key: 'X-Frame-Options', value: 'SAMEORIGIN' },
-  // Impede que o browser "adivinhe" o tipo de conteúdo (MIME sniffing)
-  { key: 'X-Content-Type-Options', value: 'nosniff' },
-  // Ativa o filtro XSS do browser (legacy mas sem custo)
-  { key: 'X-XSS-Protection', value: '1; mode=block' },
-  // Controla o cabeçalho Referer enviado em navegações
-  { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
-  // Desabilita features do browser não utilizadas pela aplicação
-  { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=(), payment=()' },
-  // Remove o header "X-Powered-By: Next.js" para não revelar stack
-  { key: 'X-Powered-By', value: '' },
+  { key: 'X-Frame-Options',           value: 'SAMEORIGIN' },
+  { key: 'X-Content-Type-Options',    value: 'nosniff' },
+  { key: 'X-XSS-Protection',          value: '1; mode=block' },
+  { key: 'Referrer-Policy',           value: 'strict-origin-when-cross-origin' },
+  { key: 'Permissions-Policy',        value: 'camera=(), microphone=(), geolocation=(), payment=()' },
 ]
 
->>>>>>> aeffdf8f4107775208bdb5b34f82c4a7a6681bce
 const nextConfig = {
   experimental: {
     serverActions: {
@@ -27,9 +17,6 @@ const nextConfig = {
   images: {
     remotePatterns: [],
   },
-<<<<<<< HEAD
-=======
-  // Headers de segurança em todas as respostas
   async headers() {
     return [
       {
@@ -38,9 +25,7 @@ const nextConfig = {
       },
     ]
   },
-  // Remove header X-Powered-By automaticamente
   poweredByHeader: false,
->>>>>>> aeffdf8f4107775208bdb5b34f82c4a7a6681bce
 }
 
 module.exports = nextConfig

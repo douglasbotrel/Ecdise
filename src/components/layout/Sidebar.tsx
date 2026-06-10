@@ -1,19 +1,12 @@
 'use client'
 
 import Link from 'next/link'
-<<<<<<< HEAD
-=======
 import Image from 'next/image'
->>>>>>> aeffdf8f4107775208bdb5b34f82c4a7a6681bce
 import { usePathname } from 'next/navigation'
 import {
   LayoutDashboard, Briefcase, FileText, Settings,
   ClipboardList, MapPin, DollarSign, CheckSquare,
-<<<<<<< HEAD
-  BarChart3, Leaf, ChevronLeft, ChevronRight, X
-=======
   BarChart3, ChevronLeft, ChevronRight, X
->>>>>>> aeffdf8f4107775208bdb5b34f82c4a7a6681bce
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -49,15 +42,12 @@ const navItems = [
     modulo: 'campo',
   },
   {
-<<<<<<< HEAD
-=======
     href: '/tecnico',
     label: 'Minhas Vistorias',
     icon: MapPin,
     modulo: 'tecnico',
   },
   {
->>>>>>> aeffdf8f4107775208bdb5b34f82c4a7a6681bce
     href: '/financeiro',
     label: 'Financeiro',
     icon: DollarSign,
@@ -80,11 +70,7 @@ const navItems = [
 const configItems = [
   {
     href: '/configuracoes',
-<<<<<<< HEAD
-    label: 'Configurações',
-=======
     label: 'Cadastro Base',
->>>>>>> aeffdf8f4107775208bdb5b34f82c4a7a6681bce
     icon: Settings,
     modulo: 'configuracoes',
   },
@@ -95,13 +81,6 @@ interface SidebarProps {
   onToggle: () => void
   mobileOpen?: boolean
   onMobileClose?: () => void
-<<<<<<< HEAD
-}
-
-export function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose }: SidebarProps) {
-  const pathname = usePathname()
-
-=======
   modulosPermitidos?: string[] | null  // null = sem restrição (admin)
 }
 
@@ -114,7 +93,6 @@ export function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose, modulo
     return modulosPermitidos.includes(modulo)
   }
 
->>>>>>> aeffdf8f4107775208bdb5b34f82c4a7a6681bce
   return (
     <>
       {/* Overlay mobile */}
@@ -136,18 +114,6 @@ export function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose, modulo
         {/* Logo */}
         <div className={cn(
           'flex items-center border-b border-gray-100 flex-shrink-0',
-<<<<<<< HEAD
-          collapsed ? 'justify-center p-4' : 'px-4 py-4 gap-3'
-        )}>
-          <div className="w-9 h-9 bg-green-600 rounded-xl flex items-center justify-center flex-shrink-0">
-            <Leaf className="w-5 h-5 text-white" />
-          </div>
-          {!collapsed && (
-            <div>
-              <h1 className="font-bold text-gray-900 text-lg leading-none">Ecdise</h1>
-              <p className="text-xs text-gray-400 leading-none mt-0.5">Gestão Ambiental</p>
-            </div>
-=======
           collapsed ? 'justify-center p-3' : 'px-4 py-3 gap-3'
         )}>
           {collapsed ? (
@@ -176,7 +142,6 @@ export function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose, modulo
                 <p className="text-xs text-gray-400 leading-none mt-0.5">Gestão Ambiental</p>
               </div>
             </>
->>>>>>> aeffdf8f4107775208bdb5b34f82c4a7a6681bce
           )}
 
           {/* Close button mobile */}
@@ -192,11 +157,7 @@ export function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose, modulo
 
         {/* Navigation */}
         <nav className="flex-1 overflow-y-auto py-4 px-2 space-y-1">
-<<<<<<< HEAD
-          {navItems.map((item) => {
-=======
           {navItems.filter(item => podeVer(item.modulo)).map((item) => {
->>>>>>> aeffdf8f4107775208bdb5b34f82c4a7a6681bce
             const Icon = item.icon
             const isActive = pathname === item.href || pathname.startsWith(item.href + '/')
 
@@ -238,11 +199,7 @@ export function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose, modulo
 
         {/* Config items */}
         <div className="px-2 py-3 border-t border-gray-100 space-y-1">
-<<<<<<< HEAD
-          {configItems.map((item) => {
-=======
           {configItems.filter(item => podeVer(item.modulo)).map((item) => {
->>>>>>> aeffdf8f4107775208bdb5b34f82c4a7a6681bce
             const Icon = item.icon
             const isActive = pathname === item.href || pathname.startsWith(item.href + '/')
             return (

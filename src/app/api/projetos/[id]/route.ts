@@ -2,8 +2,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getCurrentUser } from '@/lib/auth'
 
-<<<<<<< HEAD
-=======
 // Qual etapa vem depois de cada etapa ao "salvar/confirmar"
 const PROXIMA_ETAPA: Record<string, string> = {
   SOLICITACAO:         'EM_ANALISE_RAPIDA',
@@ -94,7 +92,6 @@ async function criarNotificacaoEtapa(etapa: string, projeto: any) {
   }
 }
 
->>>>>>> aeffdf8f4107775208bdb5b34f82c4a7a6681bce
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
   try {
     const user = await getCurrentUser()
@@ -106,10 +103,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
         cliente: true,
         responsavel: { select: { id: true, nome: true, email: true, cargo: true } },
         supervisor: { select: { id: true, nome: true, email: true } },
-<<<<<<< HEAD
-=======
         analistaRapido: { select: { id: true, nome: true, email: true } },
->>>>>>> aeffdf8f4107775208bdb5b34f82c4a7a6681bce
         contrato: {
           include: { pagamentos: { orderBy: { numeroParcela: 'asc' } } }
         },
@@ -161,9 +155,6 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
     const projeto = await prisma.projeto.findUnique({ where: { id: params.id } })
     if (!projeto) return NextResponse.json({ error: 'Projeto não encontrado' }, { status: 404 })
 
-<<<<<<< HEAD
-    // Salva histórico de status
-=======
     // Avança pipeline quando o responsável da etapa atual confirma
     const avancarPipeline = body.avancarPipeline === true
     let novaEtapa = projeto.etapaPipeline
@@ -188,7 +179,6 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
     }
 
     // Histórico de statusOperacional
->>>>>>> aeffdf8f4107775208bdb5b34f82c4a7a6681bce
     if (body.statusOperacional && body.statusOperacional !== projeto.statusOperacional) {
       await prisma.historicoStatus.create({
         data: {
@@ -201,11 +191,6 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
       }).catch(() => {})
     }
 
-<<<<<<< HEAD
-    const projetoAtualizado = await prisma.projeto.update({
-      where: { id: params.id },
-      data: {
-=======
     // ── Validações de datas ──────────────────────────────────────────────────
     const dataInicio     = body.dataInicio     ? new Date(body.dataInicio)     : projeto.dataInicio
     const dataPrazo      = body.dataPrazo      ? new Date(body.dataPrazo)      : projeto.dataPrazo
@@ -240,7 +225,6 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
       where: { id: params.id },
       data: {
         etapaPipeline: novaEtapa,
->>>>>>> aeffdf8f4107775208bdb5b34f82c4a7a6681bce
         ...(body.statusComercial && { statusComercial: body.statusComercial }),
         ...(body.statusOperacional && { statusOperacional: body.statusOperacional }),
         ...(body.descricao !== undefined && { descricao: body.descricao }),
@@ -248,16 +232,6 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
         ...(body.municipio !== undefined && { municipio: body.municipio }),
         ...(body.estado !== undefined && { estado: body.estado }),
         ...(body.car !== undefined && { car: body.car }),
-<<<<<<< HEAD
-        ...(body.areaHectares !== undefined && { areaHectares: parseFloat(body.areaHectares) }),
-        ...(body.valorProposto !== undefined && { valorProposto: parseFloat(body.valorProposto) }),
-        ...(body.observacoes !== undefined && { observacoes: body.observacoes }),
-        ...(body.responsavelId !== undefined && { responsavelId: body.responsavelId }),
-        ...(body.supervisorId !== undefined && { supervisorId: body.supervisorId }),
-        ...(body.dataPrazo !== undefined && { dataPrazo: body.dataPrazo ? new Date(body.dataPrazo) : null }),
-        ...(body.dataInicio !== undefined && { dataInicio: body.dataInicio ? new Date(body.dataInicio) : null }),
-        ...(body.dataConclusao !== undefined && { dataConclusao: body.dataConclusao ? new Date(body.dataConclusao) : null }),
-=======
         ...(body.areaHectares !== undefined && { areaHectares: body.areaHectares ? parseFloat(body.areaHectares) : null }),
         ...(body.valorProposto !== undefined && { valorProposto: body.valorProposto ? parseFloat(body.valorProposto) : null }),
         ...(body.observacoes !== undefined && { observacoes: body.observacoes }),
@@ -275,16 +249,10 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
         ...(body.dataInicio !== undefined && { dataInicio: body.dataInicio ? new Date(body.dataInicio) : null }),
         ...(body.dataConclusao !== undefined && { dataConclusao: body.dataConclusao ? new Date(body.dataConclusao) : null }),
         ...(body.dataAprovacao !== undefined && { dataAprovacao: body.dataAprovacao ? new Date(body.dataAprovacao) : null }),
->>>>>>> aeffdf8f4107775208bdb5b34f82c4a7a6681bce
       },
       include: {
         cliente: true,
         responsavel: { select: { id: true, nome: true } },
-<<<<<<< HEAD
-      }
-    })
-
-=======
         analistaRapido: { select: { id: true, nome: true } },
         supervisor: { select: { id: true, nome: true } },
       }
@@ -336,18 +304,13 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
       }
     }
 
->>>>>>> aeffdf8f4107775208bdb5b34f82c4a7a6681bce
     await prisma.log.create({
       data: {
         usuarioId: user.id,
         acao: 'ATUALIZAR_PROJETO',
         entidade: 'Projeto',
         entidadeId: params.id,
-<<<<<<< HEAD
-        detalhes: JSON.stringify(body),
-=======
         detalhes: JSON.stringify({ etapa: novaEtapa, campos: Object.keys(body) }),
->>>>>>> aeffdf8f4107775208bdb5b34f82c4a7a6681bce
       }
     })
 
@@ -365,10 +328,6 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
     if (!['ADMIN', 'GESTOR_GERAL'].includes(user.role)) {
       return NextResponse.json({ error: 'Sem permissão' }, { status: 403 })
     }
-<<<<<<< HEAD
-
-=======
->>>>>>> aeffdf8f4107775208bdb5b34f82c4a7a6681bce
     await prisma.projeto.delete({ where: { id: params.id } })
     return NextResponse.json({ success: true })
   } catch (error) {

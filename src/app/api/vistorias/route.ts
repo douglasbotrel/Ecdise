@@ -8,30 +8,19 @@ export async function GET(request: NextRequest) {
     if (!user) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
 
     const { searchParams } = new URL(request.url)
-<<<<<<< HEAD
-    const projetoId = searchParams.get('projetoId')
-    const status = searchParams.get('status')
-    const responsavelId = searchParams.get('responsavelId')
-    const dataInicio = searchParams.get('dataInicio')
-    const dataFim = searchParams.get('dataFim')
-=======
     const projetoId          = searchParams.get('projetoId')
     const status             = searchParams.get('status')
     const responsavelId      = searchParams.get('responsavelId')
     const responsavelAtual   = searchParams.get('responsavelAtual') // técnico vê as suas
     const dataInicio         = searchParams.get('dataInicio')
     const dataFim            = searchParams.get('dataFim')
->>>>>>> aeffdf8f4107775208bdb5b34f82c4a7a6681bce
 
     const where: any = {}
     if (projetoId) where.projetoId = projetoId
     if (status) where.status = status
     if (responsavelId) where.responsavelId = responsavelId
-<<<<<<< HEAD
-=======
     // Técnico: filtra apenas as vistorias atribuídas a ele
     if (responsavelAtual === 'true') where.responsavelId = user.id
->>>>>>> aeffdf8f4107775208bdb5b34f82c4a7a6681bce
     if (dataInicio || dataFim) {
       where.dataAgendada = {}
       if (dataInicio) where.dataAgendada.gte = new Date(dataInicio)
@@ -41,17 +30,11 @@ export async function GET(request: NextRequest) {
     const vistorias = await prisma.vistoria.findMany({
       where,
       include: {
-<<<<<<< HEAD
-        projeto: { select: { id: true, codigo: true, imovelNome: true, municipio: true } },
-        responsavel: { select: { id: true, nome: true } },
-        gastos: true,
-=======
         projeto: { select: { id: true, codigo: true, imovelNome: true, municipio: true, tipoServico: true } },
         responsavel: { select: { id: true, nome: true } },
         equipeRef: { select: { id: true, nome: true, cor: true } },
         gastos: true,
         diarias: { include: { usuario: { select: { id: true, nome: true } } } },
->>>>>>> aeffdf8f4107775208bdb5b34f82c4a7a6681bce
         _count: { select: { documentos: true } }
       },
       orderBy: { dataAgendada: 'desc' }
@@ -70,13 +53,8 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json()
     const {
-<<<<<<< HEAD
-      projetoId, titulo, tipo, dataAgendada, local, municipio,
-      responsavelId, equipe, frota, observacoes
-=======
       projetoId, titulo, tipo, dataAgendada, dataSaida, dataVolta,
       local, municipio, responsavelId, equipeId, frotaId, equipe, frota, observacoes
->>>>>>> aeffdf8f4107775208bdb5b34f82c4a7a6681bce
     } = body
 
     if (!projetoId || !dataAgendada) {
@@ -89,11 +67,6 @@ export async function POST(request: NextRequest) {
         titulo: titulo || 'Vistoria de Campo',
         tipo: tipo || 'VISTORIA_CAMPO',
         dataAgendada: new Date(dataAgendada),
-<<<<<<< HEAD
-        local,
-        municipio,
-        responsavelId: responsavelId || null,
-=======
         dataSaida:    dataSaida ? new Date(dataSaida) : null,
         dataVolta:    dataVolta ? new Date(dataVolta) : null,
         local,
@@ -101,7 +74,6 @@ export async function POST(request: NextRequest) {
         responsavelId: responsavelId || null,
         equipeId:     equipeId  || null,
         frotaId:      frotaId   || null,
->>>>>>> aeffdf8f4107775208bdb5b34f82c4a7a6681bce
         equipe: equipe ? JSON.stringify(equipe) : null,
         frota,
         observacoes,

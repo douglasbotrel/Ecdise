@@ -1,10 +1,3 @@
-<<<<<<< HEAD
-import { NextResponse } from 'next/server'
-
-export async function POST() {
-  const response = NextResponse.json({ success: true })
-  response.cookies.delete('ecdise_token')
-=======
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getCurrentUser } from '@/lib/auth'
@@ -35,6 +28,5 @@ export async function POST(request: NextRequest) {
     maxAge: 0,
     path: '/',
   })
->>>>>>> aeffdf8f4107775208bdb5b34f82c4a7a6681bce
   return response
 }

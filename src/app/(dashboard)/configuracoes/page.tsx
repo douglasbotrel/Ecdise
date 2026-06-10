@@ -1,30 +1,5 @@
 'use client'
 
-<<<<<<< HEAD
-import { useState, useEffect } from 'react'
-import { toast } from 'sonner'
-import { Users, Settings, Plus, Edit2, X, Loader2, Check } from 'lucide-react'
-import { ROLE_LABELS, DEPARTAMENTO_LABELS } from '@/lib/utils'
-
-export default function ConfiguracoesPage() {
-  const [aba, setAba] = useState<'usuarios' | 'servicos' | 'custos'>('usuarios')
-  const [usuarios, setUsuarios] = useState<any[]>([])
-  const [servicos, setServicos] = useState<any[]>([])
-  const [custos, setCustos] = useState<any[]>([])
-  const [loading, setLoading] = useState(true)
-  const [modalUsuario, setModalUsuario] = useState(false)
-  const [editServico, setEditServico] = useState<any>(null)
-  const [novoServico, setNovoServico] = useState(false)
-  const [novaServNome, setNovaServNome] = useState('')
-  const [novaServCateg, setNovaServCateg] = useState('')
-  const [salvando, setSalvando] = useState(false)
-
-  // Form novo usuário
-  const [formUser, setFormUser] = useState({
-    nome: '', email: '', senha: '', cargo: '', role: 'ANALISTA', departamento: 'OPERACIONAL_AMBIENTAL', telefone: ''
-  })
-
-=======
 import React, { useState, useEffect } from 'react'
 import { toast } from 'sonner'
 import { Plus, X, Loader2, Check, ChevronDown, ChevronUp, Trash2, Edit2, ToggleLeft, ToggleRight } from 'lucide-react'
@@ -43,7 +18,6 @@ const MODULOS = [
   { id: 'configuracoes', label: '🔧 Configurações' },
 ]
 
-// Hierarquia visual para o org chart
 const ORG_HIERARQUIA = [
   {
     role: 'ADMIN', cor: 'bg-purple-100 text-purple-800 border-purple-200',
@@ -121,7 +95,7 @@ export default function ConfiguracoesPage() {
     modulosAcesso: ['dashboard', 'operacional'] as string[],
   })
 
-  // Matriz de permissões por perfil (hierarquia)
+  // Matriz de permissões por perfil
   const [matrizEdit, setMatrizEdit] = useState<Record<string, string[]>>(() => {
     const base: Record<string, string[]> = {}
     Object.keys(ROLE_LABELS).forEach(role => {
@@ -228,7 +202,6 @@ export default function ConfiguracoesPage() {
     } finally { setSalvando(false) }
   }
 
->>>>>>> aeffdf8f4107775208bdb5b34f82c4a7a6681bce
   useEffect(() => { loadDados() }, [aba])
 
   async function loadDados() {
@@ -238,11 +211,7 @@ export default function ConfiguracoesPage() {
         const res = await fetch('/api/usuarios')
         if (res.ok) setUsuarios((await res.json()).usuarios)
       } else if (aba === 'servicos') {
-<<<<<<< HEAD
-        const res = await fetch('/api/pre-cadastros?tipo=servicos')
-=======
         const res = await fetch('/api/pre-cadastros?tipo=servicos_todos')
->>>>>>> aeffdf8f4107775208bdb5b34f82c4a7a6681bce
         if (res.ok) setServicos((await res.json()).servicos)
       } else if (aba === 'custos') {
         const res = await fetch('/api/pre-cadastros?tipo=custos')
@@ -251,8 +220,6 @@ export default function ConfiguracoesPage() {
     } finally { setLoading(false) }
   }
 
-<<<<<<< HEAD
-=======
   function toggleModulo(id: string) {
     setFormUser(p => ({
       ...p,
@@ -262,7 +229,6 @@ export default function ConfiguracoesPage() {
     }))
   }
 
->>>>>>> aeffdf8f4107775208bdb5b34f82c4a7a6681bce
   async function criarUsuario() {
     if (!formUser.nome || !formUser.email || !formUser.senha) {
       toast.error('Nome, email e senha são obrigatórios')
@@ -273,14 +239,10 @@ export default function ConfiguracoesPage() {
       const res = await fetch('/api/usuarios', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-<<<<<<< HEAD
-        body: JSON.stringify(formUser),
-=======
         body: JSON.stringify({
           ...formUser,
           modulosAcesso: JSON.stringify(formUser.modulosAcesso),
         }),
->>>>>>> aeffdf8f4107775208bdb5b34f82c4a7a6681bce
       })
       if (!res.ok) {
         const err = await res.json()
@@ -289,11 +251,7 @@ export default function ConfiguracoesPage() {
       }
       toast.success('Usuário criado com sucesso!')
       setModalUsuario(false)
-<<<<<<< HEAD
-      setFormUser({ nome: '', email: '', senha: '', cargo: '', role: 'ANALISTA', departamento: 'OPERACIONAL_AMBIENTAL', telefone: '' })
-=======
       setFormUser({ nome: '', email: '', senha: '', cargo: '', telefone: '', role: 'ANALISTA', departamento: 'OPERACIONAL_AMBIENTAL', modulosAcesso: ['dashboard', 'operacional'] })
->>>>>>> aeffdf8f4107775208bdb5b34f82c4a7a6681bce
       loadDados()
     } finally { setSalvando(false) }
   }
@@ -309,13 +267,7 @@ export default function ConfiguracoesPage() {
       })
       if (!res.ok) throw new Error()
       toast.success('Serviço adicionado!')
-<<<<<<< HEAD
-      setNovoServico(false)
-      setNovaServNome('')
-      setNovaServCateg('')
-=======
       setNovoServico(false); setNovaServNome(''); setNovaServCateg('')
->>>>>>> aeffdf8f4107775208bdb5b34f82c4a7a6681bce
       loadDados()
     } finally { setSalvando(false) }
   }
@@ -331,13 +283,6 @@ export default function ConfiguracoesPage() {
     } catch { toast.error('Erro') }
   }
 
-<<<<<<< HEAD
-  return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">Configurações</h1>
-        <p className="text-gray-500 text-sm mt-1">Gerenciamento de usuários e pré-cadastros do sistema</p>
-=======
   function abrirTarefas(s: any) {
     if (servicoExpandido === s.id) { setServicoExpandido(null); return }
     setServicoExpandido(s.id)
@@ -426,26 +371,10 @@ export default function ConfiguracoesPage() {
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Cadastro Base</h1>
         <p className="text-gray-500 text-sm mt-1">Usuários, perfis, tipos de serviço e tarefas padrão</p>
->>>>>>> aeffdf8f4107775208bdb5b34f82c4a7a6681bce
       </div>
 
       {/* Abas */}
       <div className="border-b border-gray-100">
-<<<<<<< HEAD
-        <div className="flex gap-0">
-          {[
-            { id: 'usuarios', label: '👥 Usuários' },
-            { id: 'servicos', label: '🌿 Tipos de Serviço' },
-            { id: 'custos', label: '💰 Tipos de Custo' },
-          ].map(a => (
-            <button
-              key={a.id}
-              onClick={() => setAba(a.id as any)}
-              className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
-                aba === a.id ? 'border-green-600 text-green-700' : 'border-transparent text-gray-500 hover:text-gray-700'
-              }`}
-            >
-=======
         <div className="flex gap-0 overflow-x-auto">
           {([
             { id: 'usuarios',   label: '👥 Usuários' },
@@ -457,34 +386,20 @@ export default function ConfiguracoesPage() {
               className={`px-4 py-2.5 text-sm font-medium border-b-2 whitespace-nowrap transition-colors ${
                 aba === a.id ? 'border-green-600 text-green-700' : 'border-transparent text-gray-500 hover:text-gray-700'
               }`}>
->>>>>>> aeffdf8f4107775208bdb5b34f82c4a7a6681bce
               {a.label}
             </button>
           ))}
         </div>
       </div>
 
-<<<<<<< HEAD
-      {/* USUÁRIOS */}
-=======
       {/* ── USUÁRIOS ── */}
->>>>>>> aeffdf8f4107775208bdb5b34f82c4a7a6681bce
       {aba === 'usuarios' && (
         <div className="space-y-4">
           <div className="flex justify-between items-center">
             <p className="text-sm text-gray-500">{usuarios.length} usuário(s) cadastrado(s)</p>
-<<<<<<< HEAD
-            <button
-              onClick={() => setModalUsuario(true)}
-              className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white font-semibold px-4 py-2 rounded-xl text-sm transition-colors"
-            >
-              <Plus className="w-4 h-4" />
-              Novo Usuário
-=======
             <button onClick={() => setModalUsuario(true)}
               className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white font-semibold px-4 py-2 rounded-xl text-sm transition-colors">
               <Plus className="w-4 h-4" /> Novo Usuário
->>>>>>> aeffdf8f4107775208bdb5b34f82c4a7a6681bce
             </button>
           </div>
 
@@ -499,39 +414,6 @@ export default function ConfiguracoesPage() {
                   <tr className="bg-gray-50 border-b border-gray-100">
                     <th className="text-left text-xs font-semibold text-gray-500 px-4 py-3">Nome</th>
                     <th className="text-left text-xs font-semibold text-gray-500 px-4 py-3">Email</th>
-<<<<<<< HEAD
-                    <th className="text-left text-xs font-semibold text-gray-500 px-4 py-3">Cargo / Role</th>
-                    <th className="text-left text-xs font-semibold text-gray-500 px-4 py-3">Departamento</th>
-                    <th className="text-left text-xs font-semibold text-gray-500 px-4 py-3">Status</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-50">
-                  {usuarios.map(u => (
-                    <tr key={u.id} className="hover:bg-gray-50 transition-colors">
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-2">
-                          <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center text-green-700 text-sm font-semibold">
-                            {u.nome[0]}
-                          </div>
-                          <p className="text-sm font-medium text-gray-900">{u.nome}</p>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 text-sm text-gray-600">{u.email}</td>
-                      <td className="px-4 py-3">
-                        <p className="text-sm text-gray-900">{u.cargo || '-'}</p>
-                        <p className="text-xs text-gray-400">{ROLE_LABELS[u.role] || u.role}</p>
-                      </td>
-                      <td className="px-4 py-3 text-sm text-gray-600">
-                        {DEPARTAMENTO_LABELS[u.departamento] || u.departamento}
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${u.ativo ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-500'}`}>
-                          {u.ativo ? 'Ativo' : 'Inativo'}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-=======
                     <th className="text-left text-xs font-semibold text-gray-500 px-4 py-3">Perfil</th>
                     <th className="text-left text-xs font-semibold text-gray-500 px-4 py-3">Módulos</th>
                     <th className="text-left text-xs font-semibold text-gray-500 px-4 py-3">Status</th>
@@ -590,7 +472,6 @@ export default function ConfiguracoesPage() {
                       </tr>
                     )
                   })}
->>>>>>> aeffdf8f4107775208bdb5b34f82c4a7a6681bce
                 </tbody>
               </table>
             </div>
@@ -598,19 +479,6 @@ export default function ConfiguracoesPage() {
         </div>
       )}
 
-<<<<<<< HEAD
-      {/* TIPOS DE SERVIÇO */}
-      {aba === 'servicos' && (
-        <div className="space-y-4">
-          <div className="flex justify-between items-center">
-            <p className="text-sm text-gray-500">{servicos.length} tipo(s) de serviço</p>
-            <button
-              onClick={() => setNovoServico(true)}
-              className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white font-semibold px-4 py-2 rounded-xl text-sm transition-colors"
-            >
-              <Plus className="w-4 h-4" />
-              Novo Tipo
-=======
       {/* ── HIERARQUIA ── */}
       {aba === 'hierarquia' && (
         <div className="space-y-6">
@@ -619,12 +487,10 @@ export default function ConfiguracoesPage() {
             <p className="text-sm text-gray-500 mt-0.5">Estrutura hierárquica e módulos de acesso por perfil</p>
           </div>
 
-          {/* Org chart */}
           <div className="bg-white rounded-2xl border border-gray-100 p-6 overflow-x-auto">
             {renderOrgNode(ORG_HIERARQUIA)}
           </div>
 
-          {/* Matriz de permissões */}
           <div>
             <h2 className="text-base font-semibold text-gray-900">Matriz de Permissões por Perfil</h2>
             <p className="text-sm text-gray-500 mt-0.5">
@@ -639,7 +505,7 @@ export default function ConfiguracoesPage() {
                   <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 w-48">Perfil</th>
                   {MODULOS.map(m => (
                     <th key={m.id} className="text-center px-2 py-3 text-xs font-semibold text-gray-500 min-w-[80px]">
-                      <div className="writing-mode-vertical">{m.label.replace(/^[^\s]+\s/, '')}</div>
+                      <div>{m.label.replace(/^[^\s]+\s/, '')}</div>
                     </th>
                   ))}
                   <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 w-32">Ação</th>
@@ -690,12 +556,11 @@ export default function ConfiguracoesPage() {
             </table>
             <div className="px-4 py-3 bg-amber-50 border-t border-amber-100 rounded-b-2xl">
               <p className="text-xs text-amber-700">
-                <strong>Atenção:</strong> "Aplicar" atualiza os módulos de <em>todos</em> os usuários daquele perfil. Usuários com acesso personalizado serão sobrescritos. Para personalizar individualmente, use a aba <strong>Usuários</strong>.
+                <strong>Atenção:</strong> "Aplicar" atualiza os módulos de <em>todos</em> os usuários daquele perfil. Para personalizar individualmente, use a aba <strong>Usuários</strong>.
               </p>
             </div>
           </div>
 
-          {/* Cards descritivos por perfil */}
           <div>
             <h2 className="text-base font-semibold text-gray-900">Descrição dos Perfis</h2>
           </div>
@@ -724,33 +589,11 @@ export default function ConfiguracoesPage() {
             <button onClick={() => setNovoServico(true)}
               className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white font-semibold px-4 py-2 rounded-xl text-sm transition-colors">
               <Plus className="w-4 h-4" /> Novo Tipo
->>>>>>> aeffdf8f4107775208bdb5b34f82c4a7a6681bce
             </button>
           </div>
 
           {novoServico && (
             <div className="bg-green-50 border border-green-200 rounded-xl p-4 flex gap-3">
-<<<<<<< HEAD
-              <input
-                type="text"
-                value={novaServNome}
-                onChange={(e) => setNovaServNome(e.target.value)}
-                placeholder="Nome do serviço"
-                className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
-                autoFocus
-              />
-              <input
-                type="text"
-                value={novaServCateg}
-                onChange={(e) => setNovaServCateg(e.target.value)}
-                placeholder="Categoria"
-                className="w-48 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
-              />
-              <button onClick={criarServico} disabled={salvando} className="px-3 py-2 bg-green-600 text-white rounded-lg text-sm font-medium">
-                {salvando ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
-              </button>
-              <button onClick={() => setNovoServico(false)} className="px-3 py-2 border border-gray-200 rounded-lg text-sm">
-=======
               <input type="text" value={novaServNome} onChange={e => setNovaServNome(e.target.value)}
                 placeholder="Nome do serviço" autoFocus
                 className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500" />
@@ -765,54 +608,18 @@ export default function ConfiguracoesPage() {
                 {salvando ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
               </button>
               <button onClick={() => setNovoServico(false)} className="px-3 py-2 border border-gray-200 rounded-lg">
->>>>>>> aeffdf8f4107775208bdb5b34f82c4a7a6681bce
                 <X className="w-4 h-4" />
               </button>
             </div>
           )}
 
           <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
-<<<<<<< HEAD
-            <table className="w-full">
-              <thead>
-                <tr className="bg-gray-50 border-b border-gray-100">
-                  <th className="text-left text-xs font-semibold text-gray-500 px-4 py-3">Serviço</th>
-                  <th className="text-left text-xs font-semibold text-gray-500 px-4 py-3">Categoria</th>
-                  <th className="text-left text-xs font-semibold text-gray-500 px-4 py-3">Status</th>
-                  <th className="text-left text-xs font-semibold text-gray-500 px-4 py-3">Ação</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-50">
-                {servicos.map(s => (
-                  <tr key={s.id} className="hover:bg-gray-50 transition-colors">
-                    <td className="px-4 py-3 text-sm font-medium text-gray-900">{s.nome}</td>
-                    <td className="px-4 py-3 text-sm text-gray-600">{s.categoria}</td>
-                    <td className="px-4 py-3">
-                      <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${s.ativo ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-500'}`}>
-                        {s.ativo ? 'Ativo' : 'Inativo'}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <button
-                        onClick={() => toggleAtivoServico(s)}
-                        className="text-xs text-gray-500 hover:text-gray-700 font-medium"
-                      >
-                        {s.ativo ? 'Desativar' : 'Ativar'}
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-=======
             {loading ? (
               <div className="flex items-center justify-center h-32">
                 <div className="w-8 h-8 border-4 border-green-600 border-t-transparent rounded-full animate-spin" />
               </div>
             ) : servicos.map((s, idx) => (
               <div key={s.id} className={idx < servicos.length - 1 ? 'border-b border-gray-50' : ''}>
-
-                {/* Linha principal */}
                 <div className="flex items-center justify-between px-4 py-3 hover:bg-gray-50 transition-colors">
                   <div className="flex items-center gap-3">
                     <div>
@@ -871,7 +678,6 @@ export default function ConfiguracoesPage() {
                   </div>
                 </div>
 
-                {/* Painel de edição de tarefas */}
                 {servicoExpandido === s.id && (
                   <div className="bg-blue-50/40 border-t border-blue-100 px-4 py-4 space-y-3">
                     <div className="flex items-center justify-between">
@@ -926,16 +732,11 @@ export default function ConfiguracoesPage() {
                 )}
               </div>
             ))}
->>>>>>> aeffdf8f4107775208bdb5b34f82c4a7a6681bce
           </div>
         </div>
       )}
 
-<<<<<<< HEAD
-      {/* TIPOS DE CUSTO */}
-=======
       {/* ── TIPOS DE CUSTO ── */}
->>>>>>> aeffdf8f4107775208bdb5b34f82c4a7a6681bce
       {aba === 'custos' && (
         <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
           <table className="w-full">
@@ -963,23 +764,6 @@ export default function ConfiguracoesPage() {
         </div>
       )}
 
-<<<<<<< HEAD
-      {/* Modal Novo Usuário */}
-      {modalUsuario && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg p-6">
-            <div className="flex items-center justify-between mb-5">
-              <h2 className="text-lg font-semibold text-gray-900">Novo Usuário</h2>
-              <button onClick={() => setModalUsuario(false)} className="text-gray-400 hover:text-gray-600">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Nome *</label>
-                  <input type="text" value={formUser.nome} onChange={(e) => setFormUser(p => ({ ...p, nome: e.target.value }))}
-=======
       {/* ── MODAL EDITAR SERVIÇO ── */}
       {servicoEditando && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
@@ -996,21 +780,16 @@ export default function ConfiguracoesPage() {
             <div className="p-5 space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Nome *</label>
-                <input
-                  type="text"
-                  value={formServico.nome}
+                <input type="text" value={formServico.nome}
                   onChange={e => setFormServico(p => ({ ...p, nome: e.target.value }))}
                   autoFocus
-                  className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
-                />
+                  className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-green-500" />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Tipo / Categoria</label>
-                <select
-                  value={formServico.categoria}
+                <select value={formServico.categoria}
                   onChange={e => setFormServico(p => ({ ...p, categoria: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-green-500 bg-white"
-                >
+                  className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-green-500 bg-white">
                   <option value="">Selecione...</option>
                   <option value="ambiental">Licenciamento Ambiental</option>
                   <option value="regularizacao">Regularização</option>
@@ -1046,22 +825,17 @@ export default function ConfiguracoesPage() {
               </button>
             </div>
             <div className="p-6 space-y-4">
-
-              {/* Status ativo/inativo */}
               <div className="flex items-center justify-between p-3 bg-gray-50 rounded-xl">
                 <div>
                   <p className="text-sm font-medium text-gray-700">Status do usuário</p>
                   <p className="text-xs text-gray-400">Desativar impede o login imediatamente</p>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setFormEdit(p => ({ ...p, ativo: !p.ativo }))}
+                <button type="button" onClick={() => setFormEdit(p => ({ ...p, ativo: !p.ativo }))}
                   className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-sm font-medium transition-colors ${
                     formEdit.ativo
                       ? 'bg-green-100 text-green-800 hover:bg-green-200'
                       : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
-                  }`}
-                >
+                  }`}>
                   {formEdit.ativo
                     ? <><ToggleRight className="w-4 h-4" /> Ativo</>
                     : <><ToggleLeft className="w-4 h-4" /> Inativo</>
@@ -1073,31 +847,10 @@ export default function ConfiguracoesPage() {
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Nome *</label>
                   <input type="text" value={formEdit.nome} onChange={e => setFormEdit(p => ({ ...p, nome: e.target.value }))}
->>>>>>> aeffdf8f4107775208bdb5b34f82c4a7a6681bce
                     className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-green-500" />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Cargo</label>
-<<<<<<< HEAD
-                  <input type="text" value={formUser.cargo} onChange={(e) => setFormUser(p => ({ ...p, cargo: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-green-500" />
-                </div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Email *</label>
-                <input type="email" value={formUser.email} onChange={(e) => setFormUser(p => ({ ...p, email: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-green-500" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Senha *</label>
-                <input type="password" value={formUser.senha} onChange={(e) => setFormUser(p => ({ ...p, senha: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-green-500" />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Permissão</label>
-                  <select value={formUser.role} onChange={(e) => setFormUser(p => ({ ...p, role: e.target.value }))}
-=======
                   <input type="text" value={formEdit.cargo} onChange={e => setFormEdit(p => ({ ...p, cargo: e.target.value }))}
                     className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-green-500" />
                 </div>
@@ -1122,29 +875,19 @@ export default function ConfiguracoesPage() {
                       modulosAcesso: mods === null ? MODULOS.map(m => m.id) : [...(mods ?? ['dashboard'])],
                     }))
                   }}
->>>>>>> aeffdf8f4107775208bdb5b34f82c4a7a6681bce
                     className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-green-500 bg-white">
                     {Object.entries(ROLE_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
                   </select>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Departamento</label>
-<<<<<<< HEAD
-                  <select value={formUser.departamento} onChange={(e) => setFormUser(p => ({ ...p, departamento: e.target.value }))}
-=======
                   <select value={formEdit.departamento} onChange={e => setFormEdit(p => ({ ...p, departamento: e.target.value }))}
->>>>>>> aeffdf8f4107775208bdb5b34f82c4a7a6681bce
                     className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-green-500 bg-white">
                     {Object.entries(DEPARTAMENTO_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
                   </select>
                 </div>
               </div>
-<<<<<<< HEAD
-              <div className="flex justify-end gap-3 pt-2">
-                <button onClick={() => setModalUsuario(false)} className="px-4 py-2 border border-gray-200 rounded-xl text-sm text-gray-700">Cancelar</button>
-=======
 
-              {/* Módulos */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Módulos com Acesso
@@ -1167,7 +910,6 @@ export default function ConfiguracoesPage() {
                 </div>
               </div>
 
-              {/* Redefinir senha */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Nova Senha <span className="text-gray-400 font-normal">(deixe em branco para não alterar)</span>
@@ -1251,7 +993,6 @@ export default function ConfiguracoesPage() {
                 </div>
               </div>
 
-              {/* Módulos de Acesso */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Módulos com Acesso
@@ -1279,7 +1020,6 @@ export default function ConfiguracoesPage() {
                   className="px-4 py-2 border border-gray-200 rounded-xl text-sm text-gray-700 hover:bg-gray-50">
                   Cancelar
                 </button>
->>>>>>> aeffdf8f4107775208bdb5b34f82c4a7a6681bce
                 <button onClick={criarUsuario} disabled={salvando}
                   className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-xl text-sm font-semibold flex items-center gap-2">
                   {salvando && <Loader2 className="w-4 h-4 animate-spin" />}

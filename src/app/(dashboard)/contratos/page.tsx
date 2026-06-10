@@ -1,42 +1,21 @@
 'use client'
 
-<<<<<<< HEAD
-import { useState, useEffect, useCallback } from 'react'
-import { toast } from 'sonner'
-import { Plus, FileText, Eye } from 'lucide-react'
-import { formatDate, formatCurrency } from '@/lib/utils'
-import { ModalContrato } from '@/components/modals/ModalContrato'
-=======
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { toast } from 'sonner'
 import { Plus, FileText, Clock, AlertCircle, X, Upload, CheckCircle2, XCircle, Loader2, Edit2, Save } from 'lucide-react'
 import { formatDate, formatCurrency } from '@/lib/utils'
 import { ModalContrato } from '@/components/modals/ModalContrato'
 import { ModalProjeto } from '@/components/modals/ModalProjeto'
->>>>>>> aeffdf8f4107775208bdb5b34f82c4a7a6681bce
 
 const STATUS_CONTRATO_LABELS: Record<string, string> = {
   ATIVO: 'Ativo', ASSINADO: 'Assinado', AGUARDANDO_ASSINATURA: 'Aguard. Assinatura',
   FINALIZADO: 'Finalizado', CANCELADO: 'Cancelado', SUSPENSO: 'Suspenso',
-<<<<<<< HEAD
-=======
   DESISTENCIA: 'Desistência',
->>>>>>> aeffdf8f4107775208bdb5b34f82c4a7a6681bce
 }
 const STATUS_CONTRATO_COLORS: Record<string, string> = {
   ATIVO: 'bg-blue-100 text-blue-800', ASSINADO: 'bg-green-100 text-green-800',
   AGUARDANDO_ASSINATURA: 'bg-yellow-100 text-yellow-800',
   FINALIZADO: 'bg-gray-100 text-gray-800', CANCELADO: 'bg-red-100 text-red-800',
-<<<<<<< HEAD
-  SUSPENSO: 'bg-orange-100 text-orange-800',
-}
-
-export default function ContratosPage() {
-  const [contratos, setContratos] = useState<any[]>([])
-  const [loading, setLoading] = useState(true)
-  const [modalOpen, setModalOpen] = useState(false)
-  const [filtroStatus, setFiltroStatus] = useState('')
-=======
   SUSPENSO: 'bg-orange-100 text-orange-800', DESISTENCIA: 'bg-red-100 text-red-800',
 }
 
@@ -84,20 +63,10 @@ export default function ContratosPage() {
   const [formEdicao, setFormEdicao]                 = useState<FormEdicao | null>(null)
   const [salvandoEdicao, setSalvandoEdicao]         = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
->>>>>>> aeffdf8f4107775208bdb5b34f82c4a7a6681bce
 
   const load = useCallback(async () => {
     setLoading(true)
     try {
-<<<<<<< HEAD
-      const params = new URLSearchParams()
-      if (filtroStatus) params.set('statusContrato', filtroStatus)
-      const res = await fetch(`/api/contratos?${params}`)
-      if (!res.ok) throw new Error()
-      const data = await res.json()
-      setContratos(data.contratos)
-    } catch { toast.error('Erro ao carregar contratos') }
-=======
       const [resContratos, resProjetos] = await Promise.all([
         fetch(`/api/contratos${filtroStatus ? `?statusContrato=${filtroStatus}` : ''}`),
         fetch('/api/projetos?etapaPipeline=AGUARDANDO_CONTRATO&limit=50'),
@@ -105,17 +74,11 @@ export default function ContratosPage() {
       if (resContratos.ok) setContratos((await resContratos.json()).contratos)
       if (resProjetos.ok)  setProjetosAguardando((await resProjetos.json()).projetos)
     } catch { toast.error('Erro ao carregar dados') }
->>>>>>> aeffdf8f4107775208bdb5b34f82c4a7a6681bce
     finally { setLoading(false) }
   }, [filtroStatus])
 
   useEffect(() => { load() }, [load])
 
-<<<<<<< HEAD
-  // Totais
-  const valorTotal = contratos.reduce((s, c) => s + (c.valorTotal || 0), 0)
-  const ativos = contratos.filter(c => ['ATIVO', 'ASSINADO'].includes(c.statusContrato)).length
-=======
   function abrirPopup(c: any) {
     setContratoAcao(c)
     setConfirmDesistencia(false)
@@ -222,7 +185,6 @@ export default function ContratosPage() {
   // Totais
   const valorTotal = contratos.reduce((s, c) => s + (c.valorTotal || 0), 0)
   const ativos     = contratos.filter(c => ['ATIVO', 'ASSINADO'].includes(c.statusContrato)).length
->>>>>>> aeffdf8f4107775208bdb5b34f82c4a7a6681bce
 
   return (
     <div className="space-y-6">
@@ -240,8 +202,6 @@ export default function ContratosPage() {
         </button>
       </div>
 
-<<<<<<< HEAD
-=======
       {/* ── FILA: Projetos aguardando elaboração de contrato ──────── */}
       {projetosAguardando.length > 0 && (
         <div className="bg-pink-50 border border-pink-200 rounded-2xl overflow-hidden">
@@ -301,7 +261,6 @@ export default function ContratosPage() {
         </div>
       )}
 
->>>>>>> aeffdf8f4107775208bdb5b34f82c4a7a6681bce
       {/* Cards resumo */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="bg-white rounded-xl border border-gray-100 p-4">
@@ -365,15 +324,11 @@ export default function ContratosPage() {
               </thead>
               <tbody className="divide-y divide-gray-50">
                 {contratos.map((c) => (
-<<<<<<< HEAD
-                  <tr key={c.id} className="hover:bg-gray-50 transition-colors">
-=======
                   <tr
                     key={c.id}
                     className="hover:bg-gray-50 transition-colors cursor-pointer"
                     onClick={() => abrirPopup(c)}
                   >
->>>>>>> aeffdf8f4107775208bdb5b34f82c4a7a6681bce
                     <td className="px-4 py-3">
                       <span className="font-mono text-sm text-gray-900">{c.codigo}</span>
                     </td>
@@ -412,8 +367,6 @@ export default function ContratosPage() {
         onClose={() => setModalOpen(false)}
         onSalvo={() => { setModalOpen(false); load() }}
       />
-<<<<<<< HEAD
-=======
 
       <ModalProjeto
         open={modalProjetoOpen}
@@ -508,7 +461,6 @@ export default function ContratosPage() {
                   </button>
 
                   {editandoDados && formEdicao && (() => {
-                    // Cálculo automático em tempo real
                     const vTotal    = parseFloat(formEdicao.valorTotal    || '0') || 0
                     const vSinal    = parseFloat(formEdicao.valorSinal    || '0') || 0
                     const nParcelas = parseInt(formEdicao.numeroParcelas  || '1') || 1
@@ -519,7 +471,6 @@ export default function ContratosPage() {
                       setFormEdicao(f => {
                         if (!f) return f
                         const next = { ...f, [field]: value }
-                        // Recalcula parcela automaticamente
                         const t = parseFloat(field === 'valorTotal'    ? value : next.valorTotal    || '0') || 0
                         const s = parseFloat(field === 'valorSinal'    ? value : next.valorSinal    || '0') || 0
                         const n = parseInt (field === 'numeroParcelas' ? value : next.numeroParcelas || '1') || 1
@@ -531,7 +482,6 @@ export default function ContratosPage() {
 
                     return (
                       <div className="p-4 space-y-3 bg-white">
-                        {/* Tipo */}
                         <div>
                           <label className="block text-xs font-medium text-gray-600 mb-1">Tipo de Contrato</label>
                           <input
@@ -543,38 +493,31 @@ export default function ContratosPage() {
                           />
                         </div>
 
-                        {/* Bloco financeiro com cálculo automático */}
                         <div className="border border-blue-100 rounded-xl p-3 space-y-3 bg-blue-50/30">
                           <p className="text-xs font-semibold text-blue-700">Valores financeiros</p>
                           <div className="grid grid-cols-2 gap-3">
                             <div>
                               <label className="block text-xs font-medium text-gray-600 mb-1">Valor Total (R$) *</label>
-                              <input
-                                type="number" step="0.01" min="0.01"
+                              <input type="number" step="0.01" min="0.01"
                                 value={formEdicao.valorTotal}
                                 onChange={e => updateCalc('valorTotal', e.target.value)}
                                 placeholder="0,00"
-                                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white"
-                              />
+                                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white" />
                             </div>
                             <div>
                               <label className="block text-xs font-medium text-gray-600 mb-1">Valor do Sinal (R$)</label>
-                              <input
-                                type="number" step="0.01" min="0"
+                              <input type="number" step="0.01" min="0"
                                 value={formEdicao.valorSinal}
                                 onChange={e => updateCalc('valorSinal', e.target.value)}
                                 placeholder="0,00"
-                                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white"
-                              />
+                                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white" />
                             </div>
                             <div>
                               <label className="block text-xs font-medium text-gray-600 mb-1">Nº de Parcelas</label>
-                              <input
-                                type="number" min="1"
+                              <input type="number" min="1"
                                 value={formEdicao.numeroParcelas}
                                 onChange={e => updateCalc('numeroParcelas', e.target.value)}
-                                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white"
-                              />
+                                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white" />
                             </div>
                             <div>
                               <label className="block text-xs font-medium text-gray-600 mb-1">Valor por Parcela</label>
@@ -583,8 +526,6 @@ export default function ContratosPage() {
                               </div>
                             </div>
                           </div>
-
-                          {/* Preview automático */}
                           {vTotal > 0 && (
                             <div className="grid grid-cols-3 gap-2 text-xs mt-1">
                               <div className="text-center bg-white rounded-lg py-1.5 px-2 border border-blue-100">
@@ -602,57 +543,42 @@ export default function ContratosPage() {
                             </div>
                           )}
                           {vSinal > vTotal && vTotal > 0 && (
-                            <p className="text-xs text-red-600">⚠️ Sinal não pode ser maior que o valor total</p>
+                            <p className="text-xs text-red-600">Sinal não pode ser maior que o valor total</p>
                           )}
                         </div>
 
-                        {/* Datas */}
                         <div className="grid grid-cols-2 gap-3">
                           <div>
                             <label className="block text-xs font-medium text-gray-600 mb-1">Data de Assinatura</label>
-                            <input
-                              type="date"
-                              value={formEdicao.dataAssinatura}
+                            <input type="date" value={formEdicao.dataAssinatura}
                               onChange={e => setFormEdicao(f => f ? { ...f, dataAssinatura: e.target.value } : f)}
-                              className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
-                            />
+                              className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
                           </div>
                           <div>
                             <label className="block text-xs font-medium text-gray-600 mb-1">Data de Vencimento</label>
-                            <input
-                              type="date"
-                              value={formEdicao.dataVencimento}
+                            <input type="date" value={formEdicao.dataVencimento}
                               onChange={e => setFormEdicao(f => f ? { ...f, dataVencimento: e.target.value } : f)}
-                              className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
-                            />
+                              className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
                           </div>
                         </div>
 
-                        {/* Observações */}
                         <div>
                           <label className="block text-xs font-medium text-gray-600 mb-1">Observações</label>
-                          <textarea
-                            rows={2}
-                            value={formEdicao.observacoes}
+                          <textarea rows={2} value={formEdicao.observacoes}
                             onChange={e => setFormEdicao(f => f ? { ...f, observacoes: e.target.value } : f)}
                             placeholder="Observações sobre o contrato..."
-                            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 resize-none"
-                          />
+                            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 resize-none" />
                         </div>
 
                         <div className="flex gap-2 pt-1">
-                          <button
-                            onClick={salvarEdicao}
+                          <button onClick={salvarEdicao}
                             disabled={salvandoEdicao || vTotal <= 0 || vSinal > vTotal}
-                            className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold rounded-xl text-sm transition-colors"
-                          >
+                            className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold rounded-xl text-sm transition-colors">
                             {salvandoEdicao ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                             Salvar alterações
                           </button>
-                          <button
-                            onClick={() => setEditandoDados(false)}
-                            className="px-4 py-2 border border-gray-200 rounded-xl text-sm text-gray-600 hover:bg-gray-50"
-                          >
+                          <button onClick={() => setEditandoDados(false)}
+                            className="px-4 py-2 border border-gray-200 rounded-xl text-sm text-gray-600 hover:bg-gray-50">
                             Cancelar
                           </button>
                         </div>
@@ -662,7 +588,7 @@ export default function ContratosPage() {
                 </div>
               )}
 
-              {/* ── VALIDAR ASSINATURA (AGUARDANDO_ASSINATURA) ─────── */}
+              {/* ── VALIDAR ASSINATURA ─────── */}
               {contratoAcao.statusContrato === 'AGUARDANDO_ASSINATURA' && (
                 <div className="border border-green-200 rounded-xl p-4 space-y-3">
                   <p className="text-sm font-semibold text-green-800 flex items-center gap-2">
@@ -676,11 +602,8 @@ export default function ContratosPage() {
                     {fileRef.current?.files?.[0]?.name || 'Selecionar documento assinado (PDF)'}
                     <input ref={fileRef} type="file" accept=".pdf,.doc,.docx" className="hidden" onChange={() => {}} />
                   </label>
-                  <button
-                    onClick={marcarAssinado}
-                    disabled={salvandoAcao || uploading}
-                    className="w-full flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white font-semibold py-2.5 rounded-xl text-sm transition-colors"
-                  >
+                  <button onClick={marcarAssinado} disabled={salvandoAcao || uploading}
+                    className="w-full flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white font-semibold py-2.5 rounded-xl text-sm transition-colors">
                     {(salvandoAcao || uploading) ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
                     Marcar como Assinado
                   </button>
@@ -694,10 +617,8 @@ export default function ContratosPage() {
                     <XCircle className="w-4 h-4" /> Desistência do Proprietário
                   </p>
                   {!confirmDesistencia ? (
-                    <button
-                      onClick={() => setConfirmDesistencia(true)}
-                      className="w-full border border-red-300 text-red-600 hover:bg-red-50 font-medium py-2 rounded-xl text-sm transition-colors"
-                    >
+                    <button onClick={() => setConfirmDesistencia(true)}
+                      className="w-full border border-red-300 text-red-600 hover:bg-red-50 font-medium py-2 rounded-xl text-sm transition-colors">
                       Registrar Desistência
                     </button>
                   ) : (
@@ -706,17 +627,12 @@ export default function ContratosPage() {
                         Tem certeza? O projeto será movido para a base de dados e não poderá avançar.
                       </p>
                       <div className="flex gap-2">
-                        <button
-                          onClick={() => setConfirmDesistencia(false)}
-                          className="flex-1 border border-gray-200 text-gray-600 hover:bg-gray-50 font-medium py-2 rounded-xl text-sm transition-colors"
-                        >
+                        <button onClick={() => setConfirmDesistencia(false)}
+                          className="flex-1 border border-gray-200 text-gray-600 hover:bg-gray-50 font-medium py-2 rounded-xl text-sm transition-colors">
                           Cancelar
                         </button>
-                        <button
-                          onClick={marcarDesistencia}
-                          disabled={salvandoAcao}
-                          className="flex-1 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white font-semibold py-2 rounded-xl text-sm transition-colors"
-                        >
+                        <button onClick={marcarDesistencia} disabled={salvandoAcao}
+                          className="flex-1 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white font-semibold py-2 rounded-xl text-sm transition-colors">
                           {salvandoAcao ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : 'Confirmar'}
                         </button>
                       </div>
@@ -728,7 +644,6 @@ export default function ContratosPage() {
           </div>
         </div>
       )}
->>>>>>> aeffdf8f4107775208bdb5b34f82c4a7a6681bce
     </div>
   )
 }

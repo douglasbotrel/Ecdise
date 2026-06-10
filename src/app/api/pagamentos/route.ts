@@ -9,19 +9,11 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url)
     const contratoId = searchParams.get('contratoId')
-<<<<<<< HEAD
-    const status = searchParams.get('status')
-
-    const where: any = {}
-    if (contratoId) where.contratoId = contratoId
-    if (status) where.status = status
-=======
     const status     = searchParams.get('status')
 
     const where: any = {}
     if (contratoId) where.contratoId = contratoId
     if (status)     where.status = status
->>>>>>> aeffdf8f4107775208bdb5b34f82c4a7a6681bce
 
     const pagamentos = await prisma.pagamento.findMany({
       where,
@@ -29,24 +21,6 @@ export async function GET(request: NextRequest) {
         contrato: {
           include: {
             cliente: { select: { id: true, nome: true } },
-<<<<<<< HEAD
-            projeto: { select: { id: true, codigo: true, tipoServico: true } },
-          }
-        }
-      },
-      orderBy: { dataVencimento: 'asc' }
-    })
-
-    // Totais
-    const totais = {
-      totalPendente: pagamentos.filter(p => p.status === 'PENDENTE').reduce((s, p) => s + p.valor, 0),
-      totalPago: pagamentos.filter(p => p.status === 'PAGO').reduce((s, p) => s + p.valor, 0),
-      totalVencido: pagamentos.filter(p => p.status === 'VENCIDO').reduce((s, p) => s + p.valor, 0),
-    }
-
-    return NextResponse.json({ pagamentos, totais })
-  } catch (error) {
-=======
             projeto: { select: { id: true, codigo: true, tipoServico: true, etapaPipeline: true } },
           },
         },
@@ -62,7 +36,6 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ pagamentos, totais })
   } catch {
->>>>>>> aeffdf8f4107775208bdb5b34f82c4a7a6681bce
     return NextResponse.json({ error: 'Erro interno' }, { status: 500 })
   }
 }
@@ -77,8 +50,6 @@ export async function PATCH(request: NextRequest) {
 
     if (!id) return NextResponse.json({ error: 'ID obrigatório' }, { status: 400 })
 
-<<<<<<< HEAD
-=======
     // Busca pagamento atual com contrato + projeto + servicosContratados
     const pagamentoAtual = await prisma.pagamento.findUnique({
       where: { id },
@@ -100,27 +71,10 @@ export async function PATCH(request: NextRequest) {
     if (!pagamentoAtual) return NextResponse.json({ error: 'Pagamento não encontrado' }, { status: 404 })
 
     // Atualiza pagamento
->>>>>>> aeffdf8f4107775208bdb5b34f82c4a7a6681bce
     const pagamento = await prisma.pagamento.update({
       where: { id },
       data: {
         ...(status && { status }),
-<<<<<<< HEAD
-        ...(dataPagamento && { dataPagamento: new Date(dataPagamento) }),
-        ...(formaPagamento !== undefined && { formaPagamento }),
-        ...(comprovante !== undefined && { comprovante }),
-        ...(observacoes !== undefined && { observacoes }),
-        ...(status === 'PAGO' && !dataPagamento && { dataPagamento: new Date() }),
-      }
-    })
-
-    await prisma.log.create({
-      data: { usuarioId: user.id, acao: 'ATUALIZAR_PAGAMENTO', entidade: 'Pagamento', entidadeId: id }
-    })
-
-    return NextResponse.json({ pagamento })
-  } catch (error) {
-=======
         ...(dataPagamento  && { dataPagamento: new Date(dataPagamento) }),
         ...(formaPagamento !== undefined && { formaPagamento }),
         ...(comprovante    !== undefined && { comprovante }),
@@ -183,7 +137,6 @@ export async function PATCH(request: NextRequest) {
             try { tarefasPadrao = JSON.parse(ts.tarefasPadrao || '[]') } catch {}
 
             for (const item of tarefasPadrao) {
-              // suporta tanto string simples quanto objeto { titulo, etapa, ordem }
               const titulo = typeof item === 'string' ? item : (item as any).titulo
               if (!titulo) continue
               await prisma.tarefa.create({
@@ -192,7 +145,6 @@ export async function PATCH(request: NextRequest) {
                   titulo,
                   etapa: ts.nome,
                   ordem: ordem++,
-                  // prazo e responsavelId ficam em branco para o gestor preencher
                 },
               })
             }
@@ -200,7 +152,6 @@ export async function PATCH(request: NextRequest) {
         }
 
         // 4. Notifica apenas o(s) gestor(es) responsável(eis) pelo projeto
-        // Prioridade: gestorResponsavelId → supervisorId → ADMIN/GESTOR_GERAL (fallback)
         const projetoCompleto = await prisma.projeto.findUnique({
           where: { id: projetoId },
           select: { gestorResponsavelId: true, supervisorId: true },
@@ -211,7 +162,6 @@ export async function PATCH(request: NextRequest) {
           projetoCompleto?.supervisorId,
         ].filter(Boolean) as string[]
 
-        // Se não há nenhum gestor específico atribuído, notifica ADMIN e GESTOR_GERAL
         let destinatariosIds: string[] = idsResponsaveis
         if (destinatariosIds.length === 0) {
           const fallback = await prisma.usuario.findMany({
@@ -221,7 +171,6 @@ export async function PATCH(request: NextRequest) {
           destinatariosIds = fallback.map(u => u.id)
         }
 
-        // Remove duplicatas
         destinatariosIds = [...new Set(destinatariosIds)]
 
         if (destinatariosIds.length > 0) {
@@ -247,7 +196,6 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ pagamento, avancouPipeline: false })
   } catch (error) {
     console.error(error)
->>>>>>> aeffdf8f4107775208bdb5b34f82c4a7a6681bce
     return NextResponse.json({ error: 'Erro interno' }, { status: 500 })
   }
 }

@@ -2,17 +2,12 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { toast } from 'sonner'
-<<<<<<< HEAD
-import { Plus, MapPin, Calendar, Clock } from 'lucide-react'
-import { formatDate } from '@/lib/utils'
-=======
 import {
   Plus, MapPin, Calendar, AlertCircle, CheckCircle2, Loader2,
   Users, Truck, DollarSign, ChevronLeft, ChevronRight,
   Trash2, Edit2, Save, Car
 } from 'lucide-react'
 import { formatDate, formatCurrency } from '@/lib/utils'
->>>>>>> aeffdf8f4107775208bdb5b34f82c4a7a6681bce
 import { ModalVistoria } from '@/components/modals/ModalVistoria'
 
 const STATUS_VISTORIA_LABELS: Record<string, string> = {
@@ -24,15 +19,6 @@ const STATUS_VISTORIA_COLORS: Record<string, string> = {
   REALIZADA: 'bg-green-100 text-green-800', CANCELADA: 'bg-red-100 text-red-800',
   ADIADA: 'bg-orange-100 text-orange-800'
 }
-<<<<<<< HEAD
-
-export default function CampoPage() {
-  const [vistorias, setVistorias] = useState<any[]>([])
-  const [loading, setLoading] = useState(true)
-  const [modalOpen, setModalOpen] = useState(false)
-  const [filtro, setFiltro] = useState('')
-  const [visualizacao, setVisualizacao] = useState<'lista' | 'calendario'>('lista')
-=======
 const TIPO_DIARIA_LABELS: Record<string, string> = {
   ALIMENTACAO: '🍽️ Alimentação', HOSPEDAGEM: '🏨 Hospedagem',
   COMBUSTIVEL: '⛽ Combustível', PEDAGIO: '🚧 Pedágio', OUTRO: '📎 Outro'
@@ -60,7 +46,6 @@ export default function CampoPage() {
   const [salvandoSol, setSalvandoSol]   = useState<string | null>(null)
   const [usuarios, setUsuarios]         = useState<any[]>([])
 
-  // Calendário
   const hoje = new Date()
   const [mesAtual, setMesAtual] = useState(new Date(hoje.getFullYear(), hoje.getMonth(), 1))
 
@@ -76,20 +61,12 @@ export default function CampoPage() {
   // Diárias
   const [formDiaria, setFormDiaria]         = useState({ vistoriaId: '', tipo: 'ALIMENTACAO', descricao: '', valor: '' })
   const [salvandoDiaria, setSalvandoDiaria] = useState(false)
->>>>>>> aeffdf8f4107775208bdb5b34f82c4a7a6681bce
 
   const load = useCallback(async () => {
     setLoading(true)
     try {
       const params = new URLSearchParams()
       if (filtro) params.set('status', filtro)
-<<<<<<< HEAD
-      const res = await fetch(`/api/vistorias?${params}`)
-      if (!res.ok) throw new Error()
-      const data = await res.json()
-      setVistorias(data.vistorias)
-    } catch { toast.error('Erro ao carregar vistorias') }
-=======
       const [resV, resS, resE, resF, resD, resU] = await Promise.all([
         fetch(`/api/vistorias?${params}`),
         fetch('/api/tarefas?solicitadasCampo=true'),
@@ -105,14 +82,11 @@ export default function CampoPage() {
       if (resD.ok) setDiarias((await resD.json()).diarias || [])
       if (resU.ok) setUsuarios((await resU.json()).usuarios || [])
     } catch { toast.error('Erro ao carregar dados') }
->>>>>>> aeffdf8f4107775208bdb5b34f82c4a7a6681bce
     finally { setLoading(false) }
   }, [filtro])
 
   useEffect(() => { load() }, [load])
 
-<<<<<<< HEAD
-=======
   function setSolField(tarefaId: string, field: string, value: string) {
     setFormSol(prev => ({
       ...prev,
@@ -126,7 +100,6 @@ export default function CampoPage() {
     if (f.dataVolta && f.dataVolta < f.dataSaida) { toast.error('Data de volta anterior à de saída'); return }
     setSalvandoSol(tarefa.id)
     try {
-      // 1. Cria a Vistoria
       const resV = await fetch('/api/vistorias', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -145,7 +118,6 @@ export default function CampoPage() {
       })
       if (!resV.ok) { const d = await resV.json(); toast.error(d.error || 'Erro ao criar vistoria'); return }
 
-      // 2. Atualiza a tarefa com a data de campo confirmada
       const resT = await fetch('/api/tarefas', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -160,7 +132,6 @@ export default function CampoPage() {
     finally { setSalvandoSol(null) }
   }
 
->>>>>>> aeffdf8f4107775208bdb5b34f82c4a7a6681bce
   async function atualizarStatus(id: string, status: string) {
     try {
       const res = await fetch(`/api/vistorias/${id}`, {
@@ -174,64 +145,6 @@ export default function CampoPage() {
     } catch { toast.error('Erro') }
   }
 
-<<<<<<< HEAD
-  // Próximas 30 dias
-  const hoje = new Date()
-  const proximas30 = new Date(hoje.getTime() + 30 * 24 * 60 * 60 * 1000)
-  const proximasVistorias = vistorias.filter(v =>
-    new Date(v.dataAgendada) >= hoje && new Date(v.dataAgendada) <= proximas30 && v.status === 'AGENDADA'
-  )
-
-  return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Gestão de Campo</h1>
-          <p className="text-gray-500 text-sm mt-1">{vistorias.length} vistoria(s) registrada(s)</p>
-        </div>
-        <button
-          onClick={() => setModalOpen(true)}
-          className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white font-semibold px-4 py-2.5 rounded-xl transition-colors"
-        >
-          <Plus className="w-4 h-4" />
-          Agendar Vistoria
-        </button>
-      </div>
-
-      {/* Cards resumo */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        {Object.entries(STATUS_VISTORIA_LABELS).map(([status, label]) => (
-          <div key={status} className="bg-white rounded-xl border border-gray-100 p-4 text-center">
-            <p className="text-2xl font-bold text-gray-900">
-              {vistorias.filter(v => v.status === status).length}
-            </p>
-            <p className="text-xs text-gray-400 mt-1">{label}</p>
-          </div>
-        ))}
-      </div>
-
-      {/* Próximas vistorias destaque */}
-      {proximasVistorias.length > 0 && (
-        <div className="bg-blue-50 rounded-2xl border border-blue-100 p-4">
-          <h3 className="text-sm font-semibold text-blue-900 mb-3 flex items-center gap-2">
-            <Calendar className="w-4 h-4" />
-            Próximas vistorias (30 dias)
-          </h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {proximasVistorias.slice(0, 6).map(v => (
-              <div key={v.id} className="bg-white rounded-xl p-3 border border-blue-100">
-                <div className="flex items-center justify-between mb-1">
-                  <span className="font-mono text-xs text-gray-400">{v.projeto?.codigo}</span>
-                  <span className="text-xs text-blue-600 font-medium">{formatDate(v.dataAgendada)}</span>
-                </div>
-                <p className="text-sm font-medium text-gray-900">{v.titulo}</p>
-                <p className="text-xs text-gray-400">{v.municipio || v.projeto?.municipio}</p>
-                {v.responsavel && (
-                  <p className="text-xs text-gray-400 mt-1">👤 {v.responsavel.nome}</p>
-                )}
-              </div>
-            ))}
-=======
   async function criarEquipe() {
     if (!formEquipe.nome) { toast.error('Nome obrigatório'); return }
     setSalvandoEquipe(true)
@@ -291,7 +204,6 @@ export default function CampoPage() {
     } finally { setSalvandoDiaria(false) }
   }
 
-  // Calendário
   function diasDoMes() {
     const ano = mesAtual.getFullYear(), mes = mesAtual.getMonth()
     const primeiroDia = new Date(ano, mes, 1).getDay()
@@ -340,7 +252,6 @@ export default function CampoPage() {
               const f = formSol[tarefa.id] || { dataSaida: '', dataVolta: '', equipeId: '', frotaId: '', responsavelId: '' }
               return (
                 <div key={tarefa.id} className="px-5 py-4 space-y-3">
-                  {/* Cabeçalho da solicitação */}
                   <div className="flex items-start gap-2">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-0.5">
@@ -354,7 +265,6 @@ export default function CampoPage() {
                     </div>
                   </div>
 
-                  {/* Formulário de agendamento */}
                   <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
                     <div>
                       <label className="block text-xs font-medium text-blue-700 mb-1">📅 Saída *</label>
@@ -362,8 +272,7 @@ export default function CampoPage() {
                         value={f.dataSaida}
                         onChange={e => setSolField(tarefa.id, 'dataSaida', e.target.value)}
                         min={new Date().toISOString().slice(0, 16)}
-                        className="w-full border border-blue-300 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
-                      />
+                        className="w-full border border-blue-300 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white" />
                     </div>
                     <div>
                       <label className="block text-xs font-medium text-blue-700 mb-1">🔙 Volta</label>
@@ -371,29 +280,20 @@ export default function CampoPage() {
                         value={f.dataVolta}
                         onChange={e => setSolField(tarefa.id, 'dataVolta', e.target.value)}
                         min={f.dataSaida || new Date().toISOString().slice(0, 16)}
-                        className="w-full border border-blue-300 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
-                      />
+                        className="w-full border border-blue-300 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white" />
                     </div>
                     <div>
                       <label className="block text-xs font-medium text-blue-700 mb-1">👥 Equipe</label>
-                      <select
-                        value={f.equipeId}
-                        onChange={e => setSolField(tarefa.id, 'equipeId', e.target.value)}
-                        className="w-full border border-blue-300 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
-                      >
+                      <select value={f.equipeId} onChange={e => setSolField(tarefa.id, 'equipeId', e.target.value)}
+                        className="w-full border border-blue-300 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
                         <option value="">Sem equipe</option>
-                        {equipes.map((eq: any) => (
-                          <option key={eq.id} value={eq.id}>{eq.nome}</option>
-                        ))}
+                        {equipes.map((eq: any) => <option key={eq.id} value={eq.id}>{eq.nome}</option>)}
                       </select>
                     </div>
                     <div>
                       <label className="block text-xs font-medium text-blue-700 mb-1">🚗 Frota</label>
-                      <select
-                        value={f.frotaId}
-                        onChange={e => setSolField(tarefa.id, 'frotaId', e.target.value)}
-                        className="w-full border border-blue-300 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
-                      >
+                      <select value={f.frotaId} onChange={e => setSolField(tarefa.id, 'frotaId', e.target.value)}
+                        className="w-full border border-blue-300 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
                         <option value="">Sem veículo</option>
                         {frota.filter((v: any) => v.ativa !== false).map((v: any) => (
                           <option key={v.id} value={v.id}>{v.placa} {v.modelo}</option>
@@ -402,20 +302,14 @@ export default function CampoPage() {
                     </div>
                     <div>
                       <label className="block text-xs font-medium text-blue-700 mb-1">👤 Técnico</label>
-                      <select
-                        value={f.responsavelId}
-                        onChange={e => setSolField(tarefa.id, 'responsavelId', e.target.value)}
-                        className="w-full border border-blue-300 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
-                      >
+                      <select value={f.responsavelId} onChange={e => setSolField(tarefa.id, 'responsavelId', e.target.value)}
+                        className="w-full border border-blue-300 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
                         <option value="">Selecione</option>
-                        {usuarios.map((u: any) => (
-                          <option key={u.id} value={u.id}>{u.nome}</option>
-                        ))}
+                        {usuarios.map((u: any) => <option key={u.id} value={u.id}>{u.nome}</option>)}
                       </select>
                     </div>
                   </div>
 
-                  {/* Botão confirmar */}
                   <div className="flex justify-end">
                     <button onClick={() => confirmarAgendamento(tarefa)}
                       disabled={salvandoSol === tarefa.id || !f.dataSaida}
@@ -427,83 +321,10 @@ export default function CampoPage() {
                 </div>
               )
             })}
->>>>>>> aeffdf8f4107775208bdb5b34f82c4a7a6681bce
           </div>
         </div>
       )}
 
-<<<<<<< HEAD
-      {/* Filtros */}
-      <div className="flex gap-2 flex-wrap">
-        <button onClick={() => setFiltro('')} className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${!filtro ? 'bg-green-600 text-white' : 'bg-white border border-gray-200 text-gray-600'}`}>
-          Todas
-        </button>
-        {Object.entries(STATUS_VISTORIA_LABELS).map(([k, v]) => (
-          <button key={k} onClick={() => setFiltro(k)} className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${filtro === k ? 'bg-green-600 text-white' : 'bg-white border border-gray-200 text-gray-600'}`}>
-            {v}
-          </button>
-        ))}
-      </div>
-
-      {/* Lista de vistorias */}
-      {loading ? (
-        <div className="flex items-center justify-center h-40">
-          <div className="w-8 h-8 border-4 border-green-600 border-t-transparent rounded-full animate-spin" />
-        </div>
-      ) : vistorias.length === 0 ? (
-        <div className="text-center py-12 text-gray-400">
-          <MapPin className="w-12 h-12 mx-auto mb-3 opacity-40" />
-          <p>Nenhuma vistoria encontrada</p>
-        </div>
-      ) : (
-        <div className="space-y-3">
-          {vistorias.map((v) => (
-            <div key={v.id} className="bg-white rounded-2xl border border-gray-100 p-4 hover:shadow-sm transition-shadow">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="font-mono text-xs text-gray-400">{v.projeto?.codigo}</span>
-                    <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${STATUS_VISTORIA_COLORS[v.status]}`}>
-                      {STATUS_VISTORIA_LABELS[v.status]}
-                    </span>
-                  </div>
-                  <p className="font-semibold text-gray-900">{v.titulo}</p>
-                  <p className="text-sm text-gray-500">{v.projeto?.imovelNome}</p>
-                  <div className="flex flex-wrap gap-4 mt-2 text-xs text-gray-400">
-                    <span className="flex items-center gap-1">
-                      <Calendar className="w-3 h-3" />
-                      {formatDate(v.dataAgendada)}
-                    </span>
-                    {v.municipio && (
-                      <span className="flex items-center gap-1">
-                        <MapPin className="w-3 h-3" />
-                        {v.municipio}
-                      </span>
-                    )}
-                    {v.responsavel && (
-                      <span>👤 {v.responsavel.nome}</span>
-                    )}
-                    {v.gastos?.length > 0 && (
-                      <span>💰 {v.gastos.length} gasto(s)</span>
-                    )}
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2 flex-shrink-0">
-                  <select
-                    value={v.status}
-                    onChange={(e) => atualizarStatus(v.id, e.target.value)}
-                    className="text-xs px-3 py-1.5 border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-1 focus:ring-green-500"
-                  >
-                    {Object.entries(STATUS_VISTORIA_LABELS).map(([k, label]) => (
-                      <option key={k} value={k}>{label}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-            </div>
-          ))}
-=======
       {/* Abas */}
       <div className="border-b border-gray-100 overflow-x-auto">
         <div className="flex gap-0 min-w-max">
@@ -872,7 +693,6 @@ export default function CampoPage() {
               </div>
             )}
           </div>
->>>>>>> aeffdf8f4107775208bdb5b34f82c4a7a6681bce
         </div>
       )}
 

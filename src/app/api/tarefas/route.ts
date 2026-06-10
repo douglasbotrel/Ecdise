@@ -2,27 +2,14 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getCurrentUser } from '@/lib/auth'
 
-<<<<<<< HEAD
-=======
 const PODE_DEFINIR_DATA_CAMPO = ['ADMIN', 'GESTOR_CAMPO', 'GESTOR_GERAL', 'GESTOR_OPERACIONAL']
 
->>>>>>> aeffdf8f4107775208bdb5b34f82c4a7a6681bce
 export async function GET(request: NextRequest) {
   try {
     const user = await getCurrentUser()
     if (!user) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
 
     const { searchParams } = new URL(request.url)
-<<<<<<< HEAD
-    const projetoId = searchParams.get('projetoId')
-    const responsavelId = searchParams.get('responsavelId')
-    const status = searchParams.get('status')
-
-    const where: any = {}
-    if (projetoId) where.projetoId = projetoId
-    if (responsavelId) where.responsavelId = responsavelId
-    if (status) where.status = status
-=======
     const projetoId         = searchParams.get('projetoId')
     const responsavelId     = searchParams.get('responsavelId')
     const status            = searchParams.get('status')
@@ -36,28 +23,19 @@ export async function GET(request: NextRequest) {
       where.requerVistoriaCampo = true
       where.statusVistoria = 'SOLICITADA'
     }
->>>>>>> aeffdf8f4107775208bdb5b34f82c4a7a6681bce
 
     const tarefas = await prisma.tarefa.findMany({
       where,
       include: {
         responsavel: { select: { id: true, nome: true } },
-<<<<<<< HEAD
-        projeto: { select: { id: true, codigo: true, imovelNome: true } },
-=======
         projeto: { select: { id: true, codigo: true, imovelNome: true, municipio: true, estado: true } },
->>>>>>> aeffdf8f4107775208bdb5b34f82c4a7a6681bce
         documentos: true,
       },
       orderBy: [{ ordem: 'asc' }, { criadoEm: 'asc' }]
     })
 
     return NextResponse.json({ tarefas })
-<<<<<<< HEAD
-  } catch (error) {
-=======
   } catch {
->>>>>>> aeffdf8f4107775208bdb5b34f82c4a7a6681bce
     return NextResponse.json({ error: 'Erro interno' }, { status: 500 })
   }
 }
@@ -74,13 +52,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Projeto e título são obrigatórios' }, { status: 400 })
     }
 
-<<<<<<< HEAD
-    const tarefa = await prisma.tarefa.create({
-      data: {
-        projetoId,
-        titulo,
-        descricao,
-=======
     // ── Validação: prazo não pode ser no passado ───────────────────────────
     if (prazo) {
       const dataPrazo = new Date(prazo)
@@ -98,7 +69,6 @@ export async function POST(request: NextRequest) {
     const tarefa = await prisma.tarefa.create({
       data: {
         projetoId, titulo, descricao,
->>>>>>> aeffdf8f4107775208bdb5b34f82c4a7a6681bce
         tipo: tipo || 'TAREFA',
         responsavelId: responsavelId || null,
         prazo: prazo ? new Date(prazo) : null,
@@ -107,21 +77,11 @@ export async function POST(request: NextRequest) {
         obrigatorio: obrigatorio || false,
         status: 'PENDENTE',
       },
-<<<<<<< HEAD
-      include: {
-        responsavel: { select: { id: true, nome: true } },
-      }
-    })
-
-    return NextResponse.json({ tarefa }, { status: 201 })
-  } catch (error) {
-=======
       include: { responsavel: { select: { id: true, nome: true } } }
     })
 
     return NextResponse.json({ tarefa }, { status: 201 })
   } catch {
->>>>>>> aeffdf8f4107775208bdb5b34f82c4a7a6681bce
     return NextResponse.json({ error: 'Erro interno' }, { status: 500 })
   }
 }
@@ -132,28 +92,6 @@ export async function PATCH(request: NextRequest) {
     if (!user) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
 
     const body = await request.json()
-<<<<<<< HEAD
-    const { id, status, responsavelId, prazo, descricao } = body
-
-    if (!id) return NextResponse.json({ error: 'ID da tarefa é obrigatório' }, { status: 400 })
-
-    const tarefa = await prisma.tarefa.update({
-      where: { id },
-      data: {
-        ...(status && { status }),
-        ...(responsavelId !== undefined && { responsavelId }),
-        ...(prazo !== undefined && { prazo: prazo ? new Date(prazo) : null }),
-        ...(descricao !== undefined && { descricao }),
-        ...(status === 'CONCLUIDA' && { dataConclusao: new Date() }),
-      },
-      include: {
-        responsavel: { select: { id: true, nome: true } },
-      }
-    })
-
-    return NextResponse.json({ tarefa })
-  } catch (error) {
-=======
     const { id, status, responsavelId, prazo, descricao, requerVistoriaCampo, dataCampo } = body
 
     if (!id) return NextResponse.json({ error: 'ID da tarefa é obrigatório' }, { status: 400 })
@@ -201,7 +139,6 @@ export async function PATCH(request: NextRequest) {
       updateData.prazo = null
 
       // Notifica APENAS gestores de campo — são eles quem agendam vistorias
-      // Não inclui ADMIN/GESTOR_GERAL pois não é responsabilidade deles agendar
       const gestoresCampo = await prisma.usuario.findMany({
         where: { ativo: true, role: 'GESTOR_CAMPO' },
         select: { id: true },
@@ -246,10 +183,9 @@ export async function PATCH(request: NextRequest) {
             projetoCompleto?.gestorResponsavelId,
           ].filter(Boolean) as string[]
 
-          // Notifica apenas responsável da tarefa + pessoas do projeto (sem notificar role inteiro)
           const idsEnvolvidos = [
             ...notificar,
-            tarefaAtual.responsavelId,  // responsável da tarefa
+            tarefaAtual.responsavelId,
           ].filter(Boolean) as string[]
 
           let destinatarios = [...new Set(idsEnvolvidos)]
@@ -336,7 +272,7 @@ export async function PATCH(request: NextRequest) {
                 observacao: 'Iniciado automaticamente ao concluir primeira tarefa',
                 usuarioId: user.id,
               },
-            }).catch(() => {}) // não bloqueia se falhar
+            }).catch(() => {})
           }
           // Todas concluídas → finaliza parte operacional
           if (totalTarefas > 0 && concluidas === totalTarefas) {
@@ -360,7 +296,6 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ tarefa })
   } catch (error) {
     console.error(error)
->>>>>>> aeffdf8f4107775208bdb5b34f82c4a7a6681bce
     return NextResponse.json({ error: 'Erro interno' }, { status: 500 })
   }
 }

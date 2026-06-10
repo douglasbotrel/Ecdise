@@ -2,8 +2,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getCurrentUser } from '@/lib/auth'
 
-<<<<<<< HEAD
-=======
 // Roles que têm acesso ao módulo de contratos
 const ROLES_CONTRATOS = ['ADMIN', 'GESTOR_GERAL', 'GESTOR_ADMINISTRATIVO']
 
@@ -11,17 +9,14 @@ function temAcessoContratos(user: any) {
   return ROLES_CONTRATOS.includes(user.role) || user.departamento === 'CONTRATOS'
 }
 
->>>>>>> aeffdf8f4107775208bdb5b34f82c4a7a6681bce
+
 export async function GET(request: NextRequest) {
   try {
     const user = await getCurrentUser()
     if (!user) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
-<<<<<<< HEAD
-=======
     if (!temAcessoContratos(user)) {
       return NextResponse.json({ error: 'Sem permissão para acessar contratos' }, { status: 403 })
     }
->>>>>>> aeffdf8f4107775208bdb5b34f82c4a7a6681bce
 
     const { searchParams } = new URL(request.url)
     const statusContrato = searchParams.get('statusContrato')
@@ -52,91 +47,6 @@ export async function POST(request: NextRequest) {
   try {
     const user = await getCurrentUser()
     if (!user) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
-<<<<<<< HEAD
-
-    const body = await request.json()
-    const {
-      projetoId, clienteId, tipoContrato, dataAssinatura, dataVencimento,
-      valorTotal, valorSinal, numeroParcelas, observacoes, servicosContratados
-    } = body
-
-    if (!projetoId || !clienteId || !valorTotal) {
-      return NextResponse.json({ error: 'Dados obrigatórios faltando' }, { status: 400 })
-    }
-
-    const vTotal = parseFloat(valorTotal)
-    const vSinal = parseFloat(valorSinal || '0')
-    const nParcelas = parseInt(numeroParcelas || '1')
-    const vRestante = vTotal - vSinal
-    const vParcela = nParcelas > 0 ? vRestante / nParcelas : vRestante
-
-    const count = await prisma.contrato.count()
-    const codigo = `CTR-${String(count + 1).padStart(4, '0')}`
-
-    const contrato = await prisma.contrato.create({
-      data: {
-        codigo,
-        projetoId,
-        clienteId,
-        tipoContrato: tipoContrato || 'Serviço Ambiental',
-        dataAssinatura: dataAssinatura ? new Date(dataAssinatura) : null,
-        dataVencimento: dataVencimento ? new Date(dataVencimento) : null,
-        valorTotal: vTotal,
-        valorSinal: vSinal,
-        valorRestante: vRestante,
-        numeroParcelas: nParcelas,
-        valorParcela: vParcela,
-        observacoes,
-        servicosContratados: servicosContratados ? JSON.stringify(servicosContratados) : null,
-        statusContrato: 'AGUARDANDO_ASSINATURA',
-      },
-    })
-
-    // Gera parcelas automaticamente
-    if (vSinal > 0) {
-      await prisma.pagamento.create({
-        data: {
-          contratoId: contrato.id,
-          tipo: 'SINAL',
-          descricao: 'Sinal/Entrada',
-          valor: vSinal,
-          dataVencimento: dataAssinatura ? new Date(dataAssinatura) : new Date(),
-          numeroParcela: 0,
-          status: 'PENDENTE',
-        }
-      })
-    }
-
-    for (let i = 1; i <= nParcelas; i++) {
-      const venc = new Date(dataAssinatura || new Date())
-      venc.setMonth(venc.getMonth() + i)
-      await prisma.pagamento.create({
-        data: {
-          contratoId: contrato.id,
-          tipo: i === nParcelas ? 'PAGAMENTO_FINAL' : 'PARCELA',
-          descricao: i === nParcelas ? 'Pagamento Final' : `Parcela ${i}/${nParcelas}`,
-          valor: vParcela,
-          dataVencimento: venc,
-          numeroParcela: i,
-          status: 'PENDENTE',
-        }
-      })
-    }
-
-    // Atualiza status do projeto
-    await prisma.projeto.update({
-      where: { id: projetoId },
-      data: { statusComercial: 'ACEITO' }
-    })
-
-    await prisma.log.create({
-      data: { usuarioId: user.id, acao: 'CRIAR_CONTRATO', entidade: 'Contrato', entidadeId: contrato.id }
-    })
-
-    return NextResponse.json({ contrato }, { status: 201 })
-  } catch (error) {
-    console.error('Erro ao criar contrato:', error)
-=======
     if (!temAcessoContratos(user)) {
       return NextResponse.json({ error: 'Sem permissão' }, { status: 403 })
     }
@@ -289,7 +199,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ contrato }, { status: existente ? 200 : 201 })
   } catch (error) {
     console.error('Erro ao salvar contrato:', error)
->>>>>>> aeffdf8f4107775208bdb5b34f82c4a7a6681bce
     return NextResponse.json({ error: 'Erro interno' }, { status: 500 })
   }
 }

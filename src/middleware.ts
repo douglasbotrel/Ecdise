@@ -1,15 +1,5 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
-<<<<<<< HEAD
-import { verifyToken } from '@/lib/auth'
-
-const PUBLIC_ROUTES = ['/login', '/api/auth/login']
-
-export function middleware(request: NextRequest) {
-  const { pathname } = request.nextUrl
-
-  // Permite rotas públicas
-=======
 
 const PUBLIC_ROUTES = ['/login', '/api/auth/login']
 
@@ -60,16 +50,11 @@ export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
   // Rotas públicas — sem verificação
->>>>>>> aeffdf8f4107775208bdb5b34f82c4a7a6681bce
   if (PUBLIC_ROUTES.some(route => pathname.startsWith(route))) {
     return NextResponse.next()
   }
 
-<<<<<<< HEAD
-  // Permite arquivos estáticos e uploads
-=======
   // Arquivos estáticos
->>>>>>> aeffdf8f4107775208bdb5b34f82c4a7a6681bce
   if (
     pathname.startsWith('/_next') ||
     pathname.startsWith('/uploads') ||
@@ -78,10 +63,6 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next()
   }
 
-<<<<<<< HEAD
-  // Verifica autenticação
-=======
->>>>>>> aeffdf8f4107775208bdb5b34f82c4a7a6681bce
   const token = request.cookies.get('ecdise_token')?.value
 
   if (!token) {
@@ -90,29 +71,14 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(loginUrl)
   }
 
-<<<<<<< HEAD
-  const payload = verifyToken(token)
-=======
   // Verifica assinatura criptográfica — rejeita JWTs forjados
   const payload = await verifyJWT(token)
->>>>>>> aeffdf8f4107775208bdb5b34f82c4a7a6681bce
   if (!payload) {
     const response = NextResponse.redirect(new URL('/login', request.url))
     response.cookies.delete('ecdise_token')
     return response
   }
 
-<<<<<<< HEAD
-  // Adiciona headers com info do usuário para as APIs
-  const requestHeaders = new Headers(request.headers)
-  requestHeaders.set('x-user-id', payload.id)
-  requestHeaders.set('x-user-role', payload.role)
-  requestHeaders.set('x-user-departamento', payload.departamento)
-
-  return NextResponse.next({
-    request: { headers: requestHeaders },
-  })
-=======
   // Repassa dados do usuário via headers
   const requestHeaders = new Headers(request.headers)
   requestHeaders.set('x-user-id', payload.id || '')
@@ -120,7 +86,6 @@ export async function middleware(request: NextRequest) {
   requestHeaders.set('x-user-departamento', payload.departamento || '')
 
   return NextResponse.next({ request: { headers: requestHeaders } })
->>>>>>> aeffdf8f4107775208bdb5b34f82c4a7a6681bce
 }
 
 export const config = {

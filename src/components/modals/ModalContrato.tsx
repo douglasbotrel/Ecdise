@@ -2,12 +2,8 @@
 
 import { useState, useEffect } from 'react'
 import { toast } from 'sonner'
-<<<<<<< HEAD
-import { X, Loader2 } from 'lucide-react'
-=======
 import { X, Loader2, AlertCircle } from 'lucide-react'
 import { formatCurrency } from '@/lib/utils'
->>>>>>> aeffdf8f4107775208bdb5b34f82c4a7a6681bce
 
 interface ModalContratoProps {
   open: boolean
@@ -16,15 +12,6 @@ interface ModalContratoProps {
 }
 
 export function ModalContrato({ open, onClose, onSalvo }: ModalContratoProps) {
-<<<<<<< HEAD
-  const [projetos, setProjetos] = useState<any[]>([])
-  const [loading, setLoading] = useState(false)
-  const [form, setForm] = useState({
-    projetoId: '', clienteId: '', tipoContrato: 'Serviço Ambiental',
-    dataAssinatura: '', dataVencimento: '',
-    valorTotal: '', valorSinal: '', numeroParcelas: '1',
-    observacoes: '',
-=======
   const [projetos, setProjetos]   = useState<any[]>([])
   const [loading, setLoading]     = useState(false)
   const [erros, setErros]         = useState<Record<string, string>>({})
@@ -38,25 +25,16 @@ export function ModalContrato({ open, onClose, onSalvo }: ModalContratoProps) {
     valorSinal:    '',
     numeroParcelas:'1',
     observacoes:   '',
->>>>>>> aeffdf8f4107775208bdb5b34f82c4a7a6681bce
   })
 
   useEffect(() => {
     if (open) {
       loadProjetos()
-<<<<<<< HEAD
-      setForm({
-        projetoId: '', clienteId: '', tipoContrato: 'Serviço Ambiental',
-        dataAssinatura: '', dataVencimento: '',
-        valorTotal: '', valorSinal: '', numeroParcelas: '1',
-        observacoes: '',
-=======
       setErros({})
       setForm({
         projetoId: '', clienteId: '', tipoContrato: 'Serviço Ambiental',
         dataAssinatura: '', dataVencimento: '',
         valorTotal: '', valorSinal: '', numeroParcelas: '1', observacoes: '',
->>>>>>> aeffdf8f4107775208bdb5b34f82c4a7a6681bce
       })
     }
   }, [open])
@@ -70,14 +48,6 @@ export function ModalContrato({ open, onClose, onSalvo }: ModalContratoProps) {
   }
 
   function handleChange(field: string, value: string) {
-<<<<<<< HEAD
-    setForm(prev => {
-      const next = { ...prev, [field]: value }
-      if (field === 'projetoId') {
-        const proj = projetos.find(p => p.id === value)
-        if (proj) {
-          next.clienteId = proj.clienteId
-=======
     setErros(prev => ({ ...prev, [field]: '' }))
     setForm(prev => {
       const next = { ...prev, [field]: value }
@@ -86,7 +56,6 @@ export function ModalContrato({ open, onClose, onSalvo }: ModalContratoProps) {
         const proj = projetos.find(p => p.id === value)
         if (proj) {
           next.clienteId  = proj.clienteId
->>>>>>> aeffdf8f4107775208bdb5b34f82c4a7a6681bce
           next.valorTotal = proj.valorProposto?.toString() || ''
         }
       }
@@ -94,14 +63,6 @@ export function ModalContrato({ open, onClose, onSalvo }: ModalContratoProps) {
     })
   }
 
-<<<<<<< HEAD
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault()
-    if (!form.projetoId || !form.valorTotal) {
-      toast.error('Projeto e valor são obrigatórios')
-      return
-    }
-=======
   function validar(): boolean {
     const novosErros: Record<string, string> = {}
 
@@ -137,7 +98,6 @@ export function ModalContrato({ open, onClose, onSalvo }: ModalContratoProps) {
     e.preventDefault()
     if (!validar()) return
 
->>>>>>> aeffdf8f4107775208bdb5b34f82c4a7a6681bce
     setLoading(true)
     try {
       const res = await fetch('/api/contratos', {
@@ -161,14 +121,6 @@ export function ModalContrato({ open, onClose, onSalvo }: ModalContratoProps) {
 
   if (!open) return null
 
-<<<<<<< HEAD
-  const proj = projetos.find(p => p.id === form.projetoId)
-  const vTotal = parseFloat(form.valorTotal || '0')
-  const vSinal = parseFloat(form.valorSinal || '0')
-  const nParcelas = parseInt(form.numeroParcelas || '1')
-  const vRestante = vTotal - vSinal
-  const vParcela = nParcelas > 0 ? vRestante / nParcelas : 0
-=======
   const proj      = projetos.find(p => p.id === form.projetoId)
   const vTotal    = parseFloat(form.valorTotal    || '0') || 0
   const vSinal    = parseFloat(form.valorSinal    || '0') || 0
@@ -196,7 +148,6 @@ export function ModalContrato({ open, onClose, onSalvo }: ModalContratoProps) {
     `w-full px-4 py-2.5 border rounded-xl focus:outline-none focus:ring-2 text-sm ${
       err ? 'border-red-400 focus:ring-red-400' : 'border-gray-200 focus:ring-green-500'
     }`
->>>>>>> aeffdf8f4107775208bdb5b34f82c4a7a6681bce
 
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
@@ -209,16 +160,6 @@ export function ModalContrato({ open, onClose, onSalvo }: ModalContratoProps) {
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
-<<<<<<< HEAD
-          {/* Projeto */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">Projeto (aceito) *</label>
-            <select
-              value={form.projetoId}
-              onChange={(e) => handleChange('projetoId', e.target.value)}
-              className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 text-sm bg-white"
-              required
-=======
 
           {/* Projeto */}
           {campo('Projeto (aceito)', (
@@ -226,7 +167,6 @@ export function ModalContrato({ open, onClose, onSalvo }: ModalContratoProps) {
               value={form.projetoId}
               onChange={e => handleChange('projetoId', e.target.value)}
               className={inputClass(erros.projetoId) + ' bg-white'}
->>>>>>> aeffdf8f4107775208bdb5b34f82c4a7a6681bce
             >
               <option value="">Selecione um projeto...</option>
               {projetos.map(p => (
@@ -235,114 +175,6 @@ export function ModalContrato({ open, onClose, onSalvo }: ModalContratoProps) {
                 </option>
               ))}
             </select>
-<<<<<<< HEAD
-            {proj && (
-              <p className="text-xs text-gray-400 mt-1">
-                Cliente: {proj.cliente?.nome} | Município: {proj.municipio}
-              </p>
-            )}
-          </div>
-
-          {/* Tipo */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">Tipo de Contrato</label>
-            <input
-              type="text"
-              value={form.tipoContrato}
-              onChange={(e) => handleChange('tipoContrato', e.target.value)}
-              className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 text-sm"
-            />
-          </div>
-
-          {/* Datas */}
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">Data de Assinatura</label>
-              <input
-                type="date"
-                value={form.dataAssinatura}
-                onChange={(e) => handleChange('dataAssinatura', e.target.value)}
-                className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 text-sm"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">Data de Vencimento</label>
-              <input
-                type="date"
-                value={form.dataVencimento}
-                onChange={(e) => handleChange('dataVencimento', e.target.value)}
-                className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 text-sm"
-              />
-            </div>
-          </div>
-
-          {/* Valores */}
-          <div className="grid grid-cols-3 gap-3">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">Valor Total R$ *</label>
-              <input
-                type="number"
-                step="0.01"
-                value={form.valorTotal}
-                onChange={(e) => handleChange('valorTotal', e.target.value)}
-                placeholder="0,00"
-                className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 text-sm"
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">Sinal R$</label>
-              <input
-                type="number"
-                step="0.01"
-                value={form.valorSinal}
-                onChange={(e) => handleChange('valorSinal', e.target.value)}
-                placeholder="0,00"
-                className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 text-sm"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">Nº Parcelas</label>
-              <input
-                type="number"
-                min="1"
-                value={form.numeroParcelas}
-                onChange={(e) => handleChange('numeroParcelas', e.target.value)}
-                className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 text-sm"
-              />
-            </div>
-          </div>
-
-          {/* Preview financeiro */}
-          {vTotal > 0 && (
-            <div className="bg-green-50 rounded-xl p-4 space-y-1">
-              <p className="text-xs font-semibold text-green-700 mb-2">Resumo do parcelamento:</p>
-              <div className="flex justify-between text-xs text-gray-600">
-                <span>Sinal:</span>
-                <span className="font-medium">R$ {vSinal.toFixed(2)}</span>
-              </div>
-              <div className="flex justify-between text-xs text-gray-600">
-                <span>Restante:</span>
-                <span className="font-medium">R$ {vRestante.toFixed(2)}</span>
-              </div>
-              <div className="flex justify-between text-xs text-gray-600">
-                <span>{nParcelas}x de:</span>
-                <span className="font-medium">R$ {vParcela.toFixed(2)}</span>
-              </div>
-            </div>
-          )}
-
-          {/* Observações */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">Observações</label>
-            <textarea
-              value={form.observacoes}
-              onChange={(e) => handleChange('observacoes', e.target.value)}
-              rows={2}
-              className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 text-sm resize-none"
-            />
-          </div>
-=======
           ), erros.projetoId, true)}
 
           {proj && (
@@ -477,20 +309,14 @@ export function ModalContrato({ open, onClose, onSalvo }: ModalContratoProps) {
               className={inputClass() + ' resize-none'}
             />
           ))}
->>>>>>> aeffdf8f4107775208bdb5b34f82c4a7a6681bce
 
           <div className="flex justify-end gap-3 pt-2">
             <button type="button" onClick={onClose} disabled={loading}
               className="px-5 py-2.5 border border-gray-200 rounded-xl text-gray-700 hover:bg-gray-50 font-medium text-sm">
               Cancelar
             </button>
-<<<<<<< HEAD
-            <button type="submit" disabled={loading}
-              className="px-5 py-2.5 bg-green-600 hover:bg-green-700 disabled:bg-green-400 text-white font-semibold rounded-xl text-sm flex items-center gap-2">
-=======
             <button type="submit" disabled={loading || !form.valorTotal || parseFloat(form.valorTotal) <= 0}
               className="px-5 py-2.5 bg-green-600 hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-semibold rounded-xl text-sm flex items-center gap-2 transition-colors">
->>>>>>> aeffdf8f4107775208bdb5b34f82c4a7a6681bce
               {loading && <Loader2 className="w-4 h-4 animate-spin" />}
               Criar Contrato
             </button>

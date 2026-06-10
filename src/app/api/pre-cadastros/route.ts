@@ -18,8 +18,6 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ servicos })
     }
 
-<<<<<<< HEAD
-=======
     // Para a tela de configurações — retorna todos, inclusive inativos
     if (tipo === 'servicos_todos') {
       const servicos = await prisma.tipoServico.findMany({
@@ -28,7 +26,6 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ servicos })
     }
 
->>>>>>> aeffdf8f4107775208bdb5b34f82c4a7a6681bce
     if (tipo === 'custos') {
       const custos = await prisma.tipoCusto.findMany({
         where: { ativo: true },
@@ -94,8 +91,6 @@ export async function PATCH(request: NextRequest) {
     if (!id) return NextResponse.json({ error: 'ID obrigatório' }, { status: 400 })
 
     if (tipo === 'servico') {
-<<<<<<< HEAD
-=======
       // Se está renomeando, propaga o novo nome para todos os projetos existentes
       if (data.nome) {
         const servicoAtual = await prisma.tipoServico.findUnique({ where: { id }, select: { nome: true } })
@@ -128,7 +123,6 @@ export async function PATCH(request: NextRequest) {
           }
         }
       }
->>>>>>> aeffdf8f4107775208bdb5b34f82c4a7a6681bce
       const servico = await prisma.tipoServico.update({ where: { id }, data })
       return NextResponse.json({ servico })
     }
@@ -143,8 +137,6 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ error: 'Erro interno' }, { status: 500 })
   }
 }
-<<<<<<< HEAD
-=======
 
 export async function DELETE(request: NextRequest) {
   try {
@@ -165,7 +157,7 @@ export async function DELETE(request: NextRequest) {
       const servico = await prisma.tipoServico.findUnique({ where: { id }, select: { nome: true } })
       if (!servico) return NextResponse.json({ error: 'Serviço não encontrado' }, { status: 404 })
 
-      // Verifica se o serviço está em uso em algum projeto (como recomendado ou contratado)
+      // Verifica se o serviço está em uso em algum projeto
       const emUso = await prisma.projeto.count({
         where: {
           OR: [
@@ -200,4 +192,3 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json({ error: 'Erro interno' }, { status: 500 })
   }
 }
->>>>>>> aeffdf8f4107775208bdb5b34f82c4a7a6681bce

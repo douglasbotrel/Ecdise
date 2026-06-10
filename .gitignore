@@ -41,10 +41,9 @@ next-env.d.ts
 # uploads (user files - não versionar)
 /public/uploads/*
 !/public/uploads/.gitkeep
-<<<<<<< HEAD
 
-# Arquivos pessoais / backups locais
-/prisma/schema-Douglas.prisma
+# Arquivos de backup pessoais (não versionar)
+*-Douglas.tsx
+*-Douglas.ts
+*-Douglas.prisma
 *.local.prisma
-=======
->>>>>>> aeffdf8f4107775208bdb5b34f82c4a7a6681bce
