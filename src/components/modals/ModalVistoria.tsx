@@ -21,6 +21,7 @@ const TIPOS_VISTORIA = [
 ]
 
 export function ModalVistoria({ open, onClose, onSalvo, projetoId }: ModalVistoriaProps) {
+<<<<<<< HEAD
   const [projetos, setProjetos] = useState<any[]>([])
   const [usuarios, setUsuarios] = useState<any[]>([])
   const [loading, setLoading] = useState(false)
@@ -28,6 +29,25 @@ export function ModalVistoria({ open, onClose, onSalvo, projetoId }: ModalVistor
     projetoId: projetoId || '', titulo: '', tipo: 'VISTORIA_CAMPO',
     dataAgendada: '', local: '', municipio: '', responsavelId: '',
     frota: '', observacoes: '',
+=======
+  const [projetos, setProjetos]   = useState<any[]>([])
+  const [usuarios, setUsuarios]   = useState<any[]>([])
+  const [equipes, setEquipes]     = useState<any[]>([])
+  const [frota, setFrota]         = useState<any[]>([])
+  const [loading, setLoading]     = useState(false)
+  const [form, setForm] = useState({
+    projetoId: projetoId || '',
+    titulo: '',
+    tipo: 'VISTORIA_CAMPO',
+    dataAgendada: '',   // data de saída (início)
+    dataVolta: '',      // data de volta (fim)
+    local: '',
+    municipio: '',
+    responsavelId: '',
+    equipeId: '',
+    frotaId: '',
+    observacoes: '',
+>>>>>>> aeffdf8f4107775208bdb5b34f82c4a7a6681bce
   })
 
   useEffect(() => {
@@ -38,12 +58,25 @@ export function ModalVistoria({ open, onClose, onSalvo, projetoId }: ModalVistor
   }, [open, projetoId])
 
   async function loadDados() {
+<<<<<<< HEAD
     const [resProjetos, resUsuarios] = await Promise.all([
       fetch('/api/projetos?limit=100'),
       fetch('/api/usuarios?ativo=true'),
     ])
     if (resProjetos.ok) setProjetos((await resProjetos.json()).projetos)
     if (resUsuarios.ok) setUsuarios((await resUsuarios.json()).usuarios)
+=======
+    const [resProjetos, resUsuarios, resEquipes, resFrota] = await Promise.all([
+      fetch('/api/projetos?limit=100'),
+      fetch('/api/usuarios?ativo=true'),
+      fetch('/api/campo/equipes'),
+      fetch('/api/campo/frota'),
+    ])
+    if (resProjetos.ok) setProjetos((await resProjetos.json()).projetos)
+    if (resUsuarios.ok) setUsuarios((await resUsuarios.json()).usuarios)
+    if (resEquipes.ok)  setEquipes((await resEquipes.json()).equipes || [])
+    if (resFrota.ok)    setFrota((await resFrota.json()).frota || [])
+>>>>>>> aeffdf8f4107775208bdb5b34f82c4a7a6681bce
   }
 
   function handleChange(field: string, value: string) {
@@ -53,7 +86,15 @@ export function ModalVistoria({ open, onClose, onSalvo, projetoId }: ModalVistor
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!form.projetoId || !form.dataAgendada) {
+<<<<<<< HEAD
       toast.error('Projeto e data são obrigatórios')
+=======
+      toast.error('Projeto e data de saída são obrigatórios')
+      return
+    }
+    if (form.dataVolta && form.dataVolta < form.dataAgendada) {
+      toast.error('A data de volta não pode ser anterior à data de saída')
+>>>>>>> aeffdf8f4107775208bdb5b34f82c4a7a6681bce
       return
     }
     setLoading(true)
@@ -62,9 +103,24 @@ export function ModalVistoria({ open, onClose, onSalvo, projetoId }: ModalVistor
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+<<<<<<< HEAD
           ...form,
           titulo: form.titulo || TIPOS_VISTORIA.find(t => t.value === form.tipo)?.label,
           responsavelId: form.responsavelId || null,
+=======
+          projetoId:    form.projetoId,
+          titulo:       form.titulo || TIPOS_VISTORIA.find(t => t.value === form.tipo)?.label,
+          tipo:         form.tipo,
+          dataAgendada: form.dataAgendada,   // data de saída serve como data agendada
+          dataSaida:    form.dataAgendada,
+          dataVolta:    form.dataVolta || null,
+          local:        form.local,
+          municipio:    form.municipio,
+          responsavelId: form.responsavelId || null,
+          equipeId:     form.equipeId || null,
+          frotaId:      form.frotaId  || null,
+          observacoes:  form.observacoes,
+>>>>>>> aeffdf8f4107775208bdb5b34f82c4a7a6681bce
         }),
       })
       if (!res.ok) throw new Error()
@@ -90,11 +146,20 @@ export function ModalVistoria({ open, onClose, onSalvo, projetoId }: ModalVistor
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
+<<<<<<< HEAD
+=======
+
+          {/* Projeto */}
+>>>>>>> aeffdf8f4107775208bdb5b34f82c4a7a6681bce
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1.5">Projeto *</label>
             <select
               value={form.projetoId}
+<<<<<<< HEAD
               onChange={(e) => handleChange('projetoId', e.target.value)}
+=======
+              onChange={e => handleChange('projetoId', e.target.value)}
+>>>>>>> aeffdf8f4107775208bdb5b34f82c4a7a6681bce
               className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 text-sm bg-white"
               required
               disabled={!!projetoId}
@@ -106,6 +171,7 @@ export function ModalVistoria({ open, onClose, onSalvo, projetoId }: ModalVistor
             </select>
           </div>
 
+<<<<<<< HEAD
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1.5">Tipo de Vistoria</label>
@@ -123,30 +189,85 @@ export function ModalVistoria({ open, onClose, onSalvo, projetoId }: ModalVistor
                 type="datetime-local"
                 value={form.dataAgendada}
                 onChange={(e) => handleChange('dataAgendada', e.target.value)}
+=======
+          {/* Tipo */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">Tipo de Vistoria</label>
+            <select
+              value={form.tipo}
+              onChange={e => handleChange('tipo', e.target.value)}
+              className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 text-sm bg-white"
+            >
+              {TIPOS_VISTORIA.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+            </select>
+          </div>
+
+          {/* Datas: saída e volta */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                📅 Data de Saída *
+              </label>
+              <input
+                type="datetime-local"
+                value={form.dataAgendada}
+                onChange={e => handleChange('dataAgendada', e.target.value)}
+                min={new Date().toISOString().slice(0, 16)}
+>>>>>>> aeffdf8f4107775208bdb5b34f82c4a7a6681bce
                 className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 text-sm"
                 required
               />
             </div>
+<<<<<<< HEAD
           </div>
 
+=======
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                🔙 Data de Volta
+              </label>
+              <input
+                type="datetime-local"
+                value={form.dataVolta}
+                onChange={e => handleChange('dataVolta', e.target.value)}
+                min={form.dataAgendada || new Date().toISOString().slice(0, 16)}
+                className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 text-sm"
+              />
+            </div>
+          </div>
+
+          {/* Título */}
+>>>>>>> aeffdf8f4107775208bdb5b34f82c4a7a6681bce
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1.5">Título (opcional)</label>
             <input
               type="text"
               value={form.titulo}
+<<<<<<< HEAD
               onChange={(e) => handleChange('titulo', e.target.value)}
+=======
+              onChange={e => handleChange('titulo', e.target.value)}
+>>>>>>> aeffdf8f4107775208bdb5b34f82c4a7a6681bce
               placeholder="Deixe em branco para usar o tipo"
               className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 text-sm"
             />
           </div>
 
+<<<<<<< HEAD
+=======
+          {/* Município / Local */}
+>>>>>>> aeffdf8f4107775208bdb5b34f82c4a7a6681bce
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1.5">Município</label>
               <input
                 type="text"
                 value={form.municipio}
+<<<<<<< HEAD
                 onChange={(e) => handleChange('municipio', e.target.value)}
+=======
+                onChange={e => handleChange('municipio', e.target.value)}
+>>>>>>> aeffdf8f4107775208bdb5b34f82c4a7a6681bce
                 placeholder="Cidade"
                 className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 text-sm"
               />
@@ -156,18 +277,32 @@ export function ModalVistoria({ open, onClose, onSalvo, projetoId }: ModalVistor
               <input
                 type="text"
                 value={form.local}
+<<<<<<< HEAD
                 onChange={(e) => handleChange('local', e.target.value)}
+=======
+                onChange={e => handleChange('local', e.target.value)}
+>>>>>>> aeffdf8f4107775208bdb5b34f82c4a7a6681bce
                 className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 text-sm"
               />
             </div>
           </div>
 
+<<<<<<< HEAD
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1.5">Responsável</label>
               <select
                 value={form.responsavelId}
                 onChange={(e) => handleChange('responsavelId', e.target.value)}
+=======
+          {/* Responsável + Equipe */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">👤 Responsável</label>
+              <select
+                value={form.responsavelId}
+                onChange={e => handleChange('responsavelId', e.target.value)}
+>>>>>>> aeffdf8f4107775208bdb5b34f82c4a7a6681bce
                 className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 text-sm bg-white"
               >
                 <option value="">Selecione...</option>
@@ -175,6 +310,7 @@ export function ModalVistoria({ open, onClose, onSalvo, projetoId }: ModalVistor
               </select>
             </div>
             <div>
+<<<<<<< HEAD
               <label className="block text-sm font-medium text-gray-700 mb-1.5">Frota / Veículo</label>
               <input
                 type="text"
@@ -186,11 +322,49 @@ export function ModalVistoria({ open, onClose, onSalvo, projetoId }: ModalVistor
             </div>
           </div>
 
+=======
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">👥 Equipe</label>
+              <select
+                value={form.equipeId}
+                onChange={e => handleChange('equipeId', e.target.value)}
+                className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 text-sm bg-white"
+              >
+                <option value="">Sem equipe</option>
+                {equipes.map((eq: any) => (
+                  <option key={eq.id} value={eq.id}>{eq.nome}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {/* Frota */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">🚗 Veículo / Frota</label>
+            <select
+              value={form.frotaId}
+              onChange={e => handleChange('frotaId', e.target.value)}
+              className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 text-sm bg-white"
+            >
+              <option value="">Sem veículo designado</option>
+              {frota.filter((v: any) => v.ativa !== false).map((v: any) => (
+                <option key={v.id} value={v.id}>
+                  {v.placa} — {v.marca} {v.modelo} {v.ano ? `(${v.ano})` : ''}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Observações */}
+>>>>>>> aeffdf8f4107775208bdb5b34f82c4a7a6681bce
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1.5">Observações</label>
             <textarea
               value={form.observacoes}
+<<<<<<< HEAD
               onChange={(e) => handleChange('observacoes', e.target.value)}
+=======
+              onChange={e => handleChange('observacoes', e.target.value)}
+>>>>>>> aeffdf8f4107775208bdb5b34f82c4a7a6681bce
               rows={2}
               className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 text-sm resize-none"
             />

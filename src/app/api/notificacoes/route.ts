@@ -14,6 +14,7 @@ export async function GET(request: NextRequest) {
     const where: any = { usuarioId: user.id }
     if (lida !== null) where.lida = lida === 'true'
 
+<<<<<<< HEAD
     const notificacoes = await prisma.notificacao.findMany({
       where,
       orderBy: { criadoEm: 'desc' },
@@ -21,6 +22,18 @@ export async function GET(request: NextRequest) {
     })
 
     return NextResponse.json({ notificacoes })
+=======
+    const [notificacoes, naoLidas] = await Promise.all([
+      prisma.notificacao.findMany({
+        where,
+        orderBy: { criadoEm: 'desc' },
+        take: limit,
+      }),
+      prisma.notificacao.count({ where: { usuarioId: user.id, lida: false } }),
+    ])
+
+    return NextResponse.json({ notificacoes, naoLidas })
+>>>>>>> aeffdf8f4107775208bdb5b34f82c4a7a6681bce
   } catch (error) {
     return NextResponse.json({ error: 'Erro interno' }, { status: 500 })
   }

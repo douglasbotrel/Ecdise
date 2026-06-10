@@ -2,7 +2,12 @@
 
 import { useState, useEffect } from 'react'
 import { toast } from 'sonner'
+<<<<<<< HEAD
 import { X, Loader2 } from 'lucide-react'
+=======
+import { X, Loader2, AlertCircle } from 'lucide-react'
+import { formatCurrency } from '@/lib/utils'
+>>>>>>> aeffdf8f4107775208bdb5b34f82c4a7a6681bce
 
 interface ModalContratoProps {
   open: boolean
@@ -11,6 +16,7 @@ interface ModalContratoProps {
 }
 
 export function ModalContrato({ open, onClose, onSalvo }: ModalContratoProps) {
+<<<<<<< HEAD
   const [projetos, setProjetos] = useState<any[]>([])
   const [loading, setLoading] = useState(false)
   const [form, setForm] = useState({
@@ -18,16 +24,39 @@ export function ModalContrato({ open, onClose, onSalvo }: ModalContratoProps) {
     dataAssinatura: '', dataVencimento: '',
     valorTotal: '', valorSinal: '', numeroParcelas: '1',
     observacoes: '',
+=======
+  const [projetos, setProjetos]   = useState<any[]>([])
+  const [loading, setLoading]     = useState(false)
+  const [erros, setErros]         = useState<Record<string, string>>({})
+  const [form, setForm] = useState({
+    projetoId:     '',
+    clienteId:     '',
+    tipoContrato:  'Serviço Ambiental',
+    dataAssinatura:'',
+    dataVencimento:'',
+    valorTotal:    '',
+    valorSinal:    '',
+    numeroParcelas:'1',
+    observacoes:   '',
+>>>>>>> aeffdf8f4107775208bdb5b34f82c4a7a6681bce
   })
 
   useEffect(() => {
     if (open) {
       loadProjetos()
+<<<<<<< HEAD
       setForm({
         projetoId: '', clienteId: '', tipoContrato: 'Serviço Ambiental',
         dataAssinatura: '', dataVencimento: '',
         valorTotal: '', valorSinal: '', numeroParcelas: '1',
         observacoes: '',
+=======
+      setErros({})
+      setForm({
+        projetoId: '', clienteId: '', tipoContrato: 'Serviço Ambiental',
+        dataAssinatura: '', dataVencimento: '',
+        valorTotal: '', valorSinal: '', numeroParcelas: '1', observacoes: '',
+>>>>>>> aeffdf8f4107775208bdb5b34f82c4a7a6681bce
       })
     }
   }, [open])
@@ -41,12 +70,23 @@ export function ModalContrato({ open, onClose, onSalvo }: ModalContratoProps) {
   }
 
   function handleChange(field: string, value: string) {
+<<<<<<< HEAD
     setForm(prev => {
       const next = { ...prev, [field]: value }
       if (field === 'projetoId') {
         const proj = projetos.find(p => p.id === value)
         if (proj) {
           next.clienteId = proj.clienteId
+=======
+    setErros(prev => ({ ...prev, [field]: '' }))
+    setForm(prev => {
+      const next = { ...prev, [field]: value }
+      // Auto-fill clienteId + valorTotal quando seleciona projeto
+      if (field === 'projetoId') {
+        const proj = projetos.find(p => p.id === value)
+        if (proj) {
+          next.clienteId  = proj.clienteId
+>>>>>>> aeffdf8f4107775208bdb5b34f82c4a7a6681bce
           next.valorTotal = proj.valorProposto?.toString() || ''
         }
       }
@@ -54,12 +94,50 @@ export function ModalContrato({ open, onClose, onSalvo }: ModalContratoProps) {
     })
   }
 
+<<<<<<< HEAD
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!form.projetoId || !form.valorTotal) {
       toast.error('Projeto e valor são obrigatórios')
       return
     }
+=======
+  function validar(): boolean {
+    const novosErros: Record<string, string> = {}
+
+    if (!form.projetoId) {
+      novosErros.projetoId = 'Selecione um projeto'
+    }
+    const vTotal = parseFloat(form.valorTotal)
+    if (!form.valorTotal || isNaN(vTotal) || vTotal <= 0) {
+      novosErros.valorTotal = 'Valor total é obrigatório e deve ser maior que zero'
+    }
+    const vSinal = parseFloat(form.valorSinal || '0')
+    if (vSinal < 0) {
+      novosErros.valorSinal = 'Valor do sinal não pode ser negativo'
+    }
+    if (!isNaN(vTotal) && vSinal > vTotal) {
+      novosErros.valorSinal = 'Sinal não pode ser maior que o valor total'
+    }
+    const nParcelas = parseInt(form.numeroParcelas)
+    if (!form.numeroParcelas || isNaN(nParcelas) || nParcelas < 1) {
+      novosErros.numeroParcelas = 'Mínimo 1 parcela'
+    }
+    if (form.dataAssinatura && form.dataVencimento) {
+      if (new Date(form.dataVencimento) <= new Date(form.dataAssinatura)) {
+        novosErros.dataVencimento = 'Vencimento deve ser posterior à assinatura'
+      }
+    }
+
+    setErros(novosErros)
+    return Object.keys(novosErros).length === 0
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    if (!validar()) return
+
+>>>>>>> aeffdf8f4107775208bdb5b34f82c4a7a6681bce
     setLoading(true)
     try {
       const res = await fetch('/api/contratos', {
@@ -83,12 +161,42 @@ export function ModalContrato({ open, onClose, onSalvo }: ModalContratoProps) {
 
   if (!open) return null
 
+<<<<<<< HEAD
   const proj = projetos.find(p => p.id === form.projetoId)
   const vTotal = parseFloat(form.valorTotal || '0')
   const vSinal = parseFloat(form.valorSinal || '0')
   const nParcelas = parseInt(form.numeroParcelas || '1')
   const vRestante = vTotal - vSinal
   const vParcela = nParcelas > 0 ? vRestante / nParcelas : 0
+=======
+  const proj      = projetos.find(p => p.id === form.projetoId)
+  const vTotal    = parseFloat(form.valorTotal    || '0') || 0
+  const vSinal    = parseFloat(form.valorSinal    || '0') || 0
+  const nParcelas = parseInt(form.numeroParcelas  || '1') || 1
+  const vRestante = Math.max(0, vTotal - vSinal)
+  const vParcela  = nParcelas > 0 ? vRestante / nParcelas : 0
+
+  function campo(label: string, children: React.ReactNode, erro?: string, obrigatorio = false) {
+    return (
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1.5">
+          {label}{obrigatorio && <span className="text-red-500 ml-0.5">*</span>}
+        </label>
+        {children}
+        {erro && (
+          <p className="flex items-center gap-1 text-xs text-red-600 mt-1">
+            <AlertCircle className="w-3 h-3 flex-shrink-0" />{erro}
+          </p>
+        )}
+      </div>
+    )
+  }
+
+  const inputClass = (err?: string) =>
+    `w-full px-4 py-2.5 border rounded-xl focus:outline-none focus:ring-2 text-sm ${
+      err ? 'border-red-400 focus:ring-red-400' : 'border-gray-200 focus:ring-green-500'
+    }`
+>>>>>>> aeffdf8f4107775208bdb5b34f82c4a7a6681bce
 
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
@@ -101,6 +209,7 @@ export function ModalContrato({ open, onClose, onSalvo }: ModalContratoProps) {
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
+<<<<<<< HEAD
           {/* Projeto */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1.5">Projeto (aceito) *</label>
@@ -109,6 +218,15 @@ export function ModalContrato({ open, onClose, onSalvo }: ModalContratoProps) {
               onChange={(e) => handleChange('projetoId', e.target.value)}
               className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 text-sm bg-white"
               required
+=======
+
+          {/* Projeto */}
+          {campo('Projeto (aceito)', (
+            <select
+              value={form.projetoId}
+              onChange={e => handleChange('projetoId', e.target.value)}
+              className={inputClass(erros.projetoId) + ' bg-white'}
+>>>>>>> aeffdf8f4107775208bdb5b34f82c4a7a6681bce
             >
               <option value="">Selecione um projeto...</option>
               {projetos.map(p => (
@@ -117,6 +235,7 @@ export function ModalContrato({ open, onClose, onSalvo }: ModalContratoProps) {
                 </option>
               ))}
             </select>
+<<<<<<< HEAD
             {proj && (
               <p className="text-xs text-gray-400 mt-1">
                 Cliente: {proj.cliente?.nome} | Município: {proj.municipio}
@@ -223,14 +342,155 @@ export function ModalContrato({ open, onClose, onSalvo }: ModalContratoProps) {
               className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 text-sm resize-none"
             />
           </div>
+=======
+          ), erros.projetoId, true)}
+
+          {proj && (
+            <div className="bg-blue-50 rounded-xl px-4 py-2.5 text-xs text-blue-700 space-y-0.5">
+              <p><span className="font-semibold">Cliente:</span> {proj.cliente?.nome}</p>
+              <p><span className="font-semibold">Município:</span> {proj.municipio || '—'}</p>
+              {proj.valorProposto > 0 && (
+                <p><span className="font-semibold">Valor proposto:</span> {formatCurrency(proj.valorProposto)}</p>
+              )}
+            </div>
+          )}
+
+          {/* Tipo */}
+          {campo('Tipo de Contrato', (
+            <input
+              type="text"
+              value={form.tipoContrato}
+              onChange={e => handleChange('tipoContrato', e.target.value)}
+              className={inputClass()}
+            />
+          ))}
+
+          {/* Datas */}
+          <div className="grid grid-cols-2 gap-3">
+            {campo('Data de Assinatura', (
+              <input
+                type="date"
+                value={form.dataAssinatura}
+                onChange={e => handleChange('dataAssinatura', e.target.value)}
+                className={inputClass()}
+              />
+            ))}
+            {campo('Data de Vencimento', (
+              <input
+                type="date"
+                value={form.dataVencimento}
+                onChange={e => handleChange('dataVencimento', e.target.value)}
+                className={inputClass(erros.dataVencimento)}
+              />
+            ), erros.dataVencimento)}
+          </div>
+
+          {/* Valores financeiros */}
+          <div className="border border-gray-100 rounded-xl p-4 space-y-3 bg-gray-50/50">
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Valores financeiros</p>
+
+            <div className="grid grid-cols-2 gap-3">
+              {campo('Valor Total (R$)', (
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0.01"
+                  value={form.valorTotal}
+                  onChange={e => handleChange('valorTotal', e.target.value)}
+                  placeholder="0,00"
+                  className={inputClass(erros.valorTotal)}
+                />
+              ), erros.valorTotal, true)}
+
+              {campo('Valor do Sinal (R$)', (
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={form.valorSinal}
+                  onChange={e => handleChange('valorSinal', e.target.value)}
+                  placeholder="0,00"
+                  className={inputClass(erros.valorSinal)}
+                />
+              ), erros.valorSinal)}
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              {campo('Nº de Parcelas', (
+                <input
+                  type="number"
+                  min="1"
+                  value={form.numeroParcelas}
+                  onChange={e => handleChange('numeroParcelas', e.target.value)}
+                  className={inputClass(erros.numeroParcelas)}
+                />
+              ), erros.numeroParcelas, true)}
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Valor por Parcela</label>
+                <div className="w-full px-4 py-2.5 border border-gray-100 rounded-xl bg-white text-sm text-gray-500 font-medium">
+                  {vTotal > 0 ? formatCurrency(vParcela) : '—'}
+                </div>
+              </div>
+            </div>
+
+            {/* Preview do parcelamento */}
+            {vTotal > 0 && (
+              <div className="bg-green-50 border border-green-100 rounded-xl p-3 space-y-1.5">
+                <p className="text-xs font-semibold text-green-700">Resumo do parcelamento</p>
+                <div className="grid grid-cols-3 gap-2 text-xs">
+                  <div className="text-center bg-white rounded-lg py-1.5 px-2">
+                    <p className="text-gray-400">Sinal</p>
+                    <p className="font-bold text-gray-900">{formatCurrency(vSinal)}</p>
+                  </div>
+                  <div className="text-center bg-white rounded-lg py-1.5 px-2">
+                    <p className="text-gray-400">Restante</p>
+                    <p className="font-bold text-gray-900">{formatCurrency(vRestante)}</p>
+                  </div>
+                  <div className="text-center bg-white rounded-lg py-1.5 px-2">
+                    <p className="text-gray-400">{nParcelas}x de</p>
+                    <p className="font-bold text-green-700">{formatCurrency(vParcela)}</p>
+                  </div>
+                </div>
+                {vSinal > vTotal && (
+                  <p className="text-xs text-red-600 flex items-center gap-1">
+                    <AlertCircle className="w-3 h-3" /> Sinal maior que o valor total
+                  </p>
+                )}
+              </div>
+            )}
+
+            {!form.valorTotal && (
+              <div className="flex items-center gap-2 text-xs text-amber-600 bg-amber-50 rounded-lg px-3 py-2">
+                <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
+                O valor total é obrigatório para gerar as parcelas de pagamento
+              </div>
+            )}
+          </div>
+
+          {/* Observações */}
+          {campo('Observações', (
+            <textarea
+              value={form.observacoes}
+              onChange={e => handleChange('observacoes', e.target.value)}
+              rows={2}
+              className={inputClass() + ' resize-none'}
+            />
+          ))}
+>>>>>>> aeffdf8f4107775208bdb5b34f82c4a7a6681bce
 
           <div className="flex justify-end gap-3 pt-2">
             <button type="button" onClick={onClose} disabled={loading}
               className="px-5 py-2.5 border border-gray-200 rounded-xl text-gray-700 hover:bg-gray-50 font-medium text-sm">
               Cancelar
             </button>
+<<<<<<< HEAD
             <button type="submit" disabled={loading}
               className="px-5 py-2.5 bg-green-600 hover:bg-green-700 disabled:bg-green-400 text-white font-semibold rounded-xl text-sm flex items-center gap-2">
+=======
+            <button type="submit" disabled={loading || !form.valorTotal || parseFloat(form.valorTotal) <= 0}
+              className="px-5 py-2.5 bg-green-600 hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-semibold rounded-xl text-sm flex items-center gap-2 transition-colors">
+>>>>>>> aeffdf8f4107775208bdb5b34f82c4a7a6681bce
               {loading && <Loader2 className="w-4 h-4 animate-spin" />}
               Criar Contrato
             </button>

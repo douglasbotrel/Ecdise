@@ -2,6 +2,99 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getCurrentUser } from '@/lib/auth'
 
+<<<<<<< HEAD
+=======
+// Qual etapa vem depois de cada etapa ao "salvar/confirmar"
+const PROXIMA_ETAPA: Record<string, string> = {
+  SOLICITACAO:         'EM_ANALISE_RAPIDA',
+  EM_ANALISE_RAPIDA:   'ANALISE_CONCLUIDA',
+  ANALISE_CONCLUIDA:   'AGUARDANDO_CONTRATO',  // ADM valida → direto para contratos
+  AGUARDANDO_CONTRATO: 'AGUARDANDO_SINAL',      // Contratos elabora → financeiro aguarda sinal
+  AGUARDANDO_SINAL:    'OPERACIONAL',            // Financeiro confirma pagamento → área técnica
+  OPERACIONAL:         'EM_EXECUCAO',
+  EM_EXECUCAO:         'CONCLUIDO',
+}
+
+async function criarNotificacaoEtapa(etapa: string, projeto: any) {
+  const notifs: { usuarioId: string; titulo: string; mensagem: string; tipo: string; link: string }[] = []
+  const base = `Projeto ${projeto.codigo} — ${projeto.imovelNome || projeto.tipoServico}`
+
+  switch (etapa) {
+    case 'ANALISE_CONCLUIDA': {
+      const admins = await prisma.usuario.findMany({
+        where: { role: { in: ['ADMIN', 'GESTOR_GERAL'] }, ativo: true },
+        select: { id: true },
+      })
+      admins.forEach(a => notifs.push({
+        usuarioId: a.id,
+        titulo: '✅ Análise concluída — aguardando sua validação',
+        mensagem: `${base}: análise técnica rápida finalizada. Revise os serviços recomendados e valide para negociação.`,
+        tipo: 'success',
+        link: '/comercial',
+      }))
+      break
+    }
+    case 'AGUARDANDO_CONTRATO': {
+      const contratos = await prisma.usuario.findMany({
+        where: { departamento: 'CONTRATOS', ativo: true },
+        select: { id: true },
+      })
+      contratos.forEach(c => notifs.push({
+        usuarioId: c.id,
+        titulo: '📄 Novo contrato para elaborar',
+        mensagem: `${base}: serviços e valores validados pelo ADM. Elabore o contrato com os dados fornecidos.`,
+        tipo: 'info',
+        link: '/contratos',
+      }))
+      break
+    }
+    case 'AGUARDANDO_SINAL': {
+      const financeiro = await prisma.usuario.findMany({
+        where: { departamento: 'FINANCEIRO', ativo: true },
+        select: { id: true },
+      })
+      financeiro.forEach(f => notifs.push({
+        usuarioId: f.id,
+        titulo: '💰 Aguardando sinal — novo contrato',
+        mensagem: `${base}: contrato elaborado. Aguardando recebimento do sinal para liberar operações.`,
+        tipo: 'info',
+        link: '/financeiro',
+      }))
+      break
+    }
+    case 'OPERACIONAL': {
+      const gestorId = projeto.gestorResponsavelId || projeto.supervisorId
+      if (gestorId) {
+        notifs.push({
+          usuarioId: gestorId,
+          titulo: '🚀 Novo projeto operacional',
+          mensagem: `${base}: sinal recebido. Atribua um analista e defina o prazo para iniciar.`,
+          tipo: 'info',
+          link: '/operacional',
+        })
+      }
+      break
+    }
+    case 'EM_EXECUCAO': {
+      if (projeto.responsavelId) {
+        notifs.push({
+          usuarioId: projeto.responsavelId,
+          titulo: '📋 Novo projeto atribuído a você',
+          mensagem: `${base}: você foi designado responsável. Acesse o módulo operacional para executar as tarefas.`,
+          tipo: 'info',
+          link: `/operacional/${projeto.id}`,
+        })
+      }
+      break
+    }
+  }
+
+  if (notifs.length > 0) {
+    await prisma.notificacao.createMany({ data: notifs })
+  }
+}
+
+>>>>>>> aeffdf8f4107775208bdb5b34f82c4a7a6681bce
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
   try {
     const user = await getCurrentUser()
@@ -13,6 +106,10 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
         cliente: true,
         responsavel: { select: { id: true, nome: true, email: true, cargo: true } },
         supervisor: { select: { id: true, nome: true, email: true } },
+<<<<<<< HEAD
+=======
+        analistaRapido: { select: { id: true, nome: true, email: true } },
+>>>>>>> aeffdf8f4107775208bdb5b34f82c4a7a6681bce
         contrato: {
           include: { pagamentos: { orderBy: { numeroParcela: 'asc' } } }
         },
@@ -64,7 +161,34 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
     const projeto = await prisma.projeto.findUnique({ where: { id: params.id } })
     if (!projeto) return NextResponse.json({ error: 'Projeto não encontrado' }, { status: 404 })
 
+<<<<<<< HEAD
     // Salva histórico de status
+=======
+    // Avança pipeline quando o responsável da etapa atual confirma
+    const avancarPipeline = body.avancarPipeline === true
+    let novaEtapa = projeto.etapaPipeline
+    if (avancarPipeline && PROXIMA_ETAPA[projeto.etapaPipeline]) {
+      novaEtapa = PROXIMA_ETAPA[projeto.etapaPipeline]
+    } else if (body.etapaPipeline && body.etapaPipeline !== projeto.etapaPipeline) {
+      novaEtapa = body.etapaPipeline
+    }
+
+    // Histórico de etapa
+    if (novaEtapa !== projeto.etapaPipeline) {
+      await prisma.historicoStatus.create({
+        data: {
+          projetoId: params.id,
+          statusAnterior: projeto.etapaPipeline,
+          statusNovo: novaEtapa,
+          campo: 'etapaPipeline',
+          observacao: body.observacaoTransicao || null,
+          usuarioId: user.id,
+        }
+      }).catch(() => {})
+    }
+
+    // Histórico de statusOperacional
+>>>>>>> aeffdf8f4107775208bdb5b34f82c4a7a6681bce
     if (body.statusOperacional && body.statusOperacional !== projeto.statusOperacional) {
       await prisma.historicoStatus.create({
         data: {
@@ -77,9 +201,46 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
       }).catch(() => {})
     }
 
+<<<<<<< HEAD
     const projetoAtualizado = await prisma.projeto.update({
       where: { id: params.id },
       data: {
+=======
+    // ── Validações de datas ──────────────────────────────────────────────────
+    const dataInicio     = body.dataInicio     ? new Date(body.dataInicio)     : projeto.dataInicio
+    const dataPrazo      = body.dataPrazo      ? new Date(body.dataPrazo)      : projeto.dataPrazo
+    const dataConclusao  = body.dataConclusao  ? new Date(body.dataConclusao)  : null
+
+    if (body.dataPrazo && dataInicio && dataPrazo) {
+      if (dataPrazo < dataInicio) {
+        return NextResponse.json(
+          { error: 'O prazo do projeto não pode ser anterior à data de início.' },
+          { status: 400 }
+        )
+      }
+    }
+    if (body.dataConclusao && dataInicio && dataConclusao) {
+      if (dataConclusao < dataInicio) {
+        return NextResponse.json(
+          { error: 'A data de conclusão não pode ser anterior à data de início.' },
+          { status: 400 }
+        )
+      }
+    }
+    if (body.dataInicio && dataPrazo && dataInicio) {
+      if (dataPrazo < dataInicio) {
+        return NextResponse.json(
+          { error: 'A data de início não pode ser posterior ao prazo já definido.' },
+          { status: 400 }
+        )
+      }
+    }
+
+    const projetoAtualizado = await prisma.projeto.update({
+      where: { id: params.id },
+      data: {
+        etapaPipeline: novaEtapa,
+>>>>>>> aeffdf8f4107775208bdb5b34f82c4a7a6681bce
         ...(body.statusComercial && { statusComercial: body.statusComercial }),
         ...(body.statusOperacional && { statusOperacional: body.statusOperacional }),
         ...(body.descricao !== undefined && { descricao: body.descricao }),
@@ -87,6 +248,7 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
         ...(body.municipio !== undefined && { municipio: body.municipio }),
         ...(body.estado !== undefined && { estado: body.estado }),
         ...(body.car !== undefined && { car: body.car }),
+<<<<<<< HEAD
         ...(body.areaHectares !== undefined && { areaHectares: parseFloat(body.areaHectares) }),
         ...(body.valorProposto !== undefined && { valorProposto: parseFloat(body.valorProposto) }),
         ...(body.observacoes !== undefined && { observacoes: body.observacoes }),
@@ -95,20 +257,97 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
         ...(body.dataPrazo !== undefined && { dataPrazo: body.dataPrazo ? new Date(body.dataPrazo) : null }),
         ...(body.dataInicio !== undefined && { dataInicio: body.dataInicio ? new Date(body.dataInicio) : null }),
         ...(body.dataConclusao !== undefined && { dataConclusao: body.dataConclusao ? new Date(body.dataConclusao) : null }),
+=======
+        ...(body.areaHectares !== undefined && { areaHectares: body.areaHectares ? parseFloat(body.areaHectares) : null }),
+        ...(body.valorProposto !== undefined && { valorProposto: body.valorProposto ? parseFloat(body.valorProposto) : null }),
+        ...(body.observacoes !== undefined && { observacoes: body.observacoes }),
+        ...(body.observacoesAnalise !== undefined && { observacoesAnalise: body.observacoesAnalise }),
+        ...(body.servicosRecomendados !== undefined && { servicosRecomendados: body.servicosRecomendados }),
+        ...(body.servicosContratados !== undefined && { servicosContratados: body.servicosContratados }),
+        ...(body.valorSinal !== undefined && { valorSinal: body.valorSinal ? parseFloat(body.valorSinal) : null }),
+        ...(body.valorPrestacao !== undefined && { valorPrestacao: body.valorPrestacao ? parseFloat(body.valorPrestacao) : null }),
+        ...(body.numeroPrestacoes !== undefined && { numeroPrestacoes: body.numeroPrestacoes ? parseInt(body.numeroPrestacoes) : null }),
+        ...(body.responsavelId !== undefined && { responsavelId: body.responsavelId || null }),
+        ...(body.supervisorId !== undefined && { supervisorId: body.supervisorId || null }),
+        ...(body.analistaRapidoId !== undefined && { analistaRapidoId: body.analistaRapidoId || null }),
+        ...(body.gestorResponsavelId !== undefined && { gestorResponsavelId: body.gestorResponsavelId || null }),
+        ...(body.dataPrazo !== undefined && { dataPrazo: body.dataPrazo ? new Date(body.dataPrazo) : null }),
+        ...(body.dataInicio !== undefined && { dataInicio: body.dataInicio ? new Date(body.dataInicio) : null }),
+        ...(body.dataConclusao !== undefined && { dataConclusao: body.dataConclusao ? new Date(body.dataConclusao) : null }),
+        ...(body.dataAprovacao !== undefined && { dataAprovacao: body.dataAprovacao ? new Date(body.dataAprovacao) : null }),
+>>>>>>> aeffdf8f4107775208bdb5b34f82c4a7a6681bce
       },
       include: {
         cliente: true,
         responsavel: { select: { id: true, nome: true } },
+<<<<<<< HEAD
       }
     })
 
+=======
+        analistaRapido: { select: { id: true, nome: true } },
+        supervisor: { select: { id: true, nome: true } },
+      }
+    })
+
+    // Notificações para a nova etapa
+    if (novaEtapa !== projeto.etapaPipeline) {
+      await criarNotificacaoEtapa(novaEtapa, projetoAtualizado)
+    }
+
+    // ── AUTO-CRIAR TAREFAS ao entrar em EM_EXECUCAO ─────────────
+    if (novaEtapa === 'EM_EXECUCAO' && projeto.etapaPipeline !== 'EM_EXECUCAO') {
+      try {
+        const servicosRaw = projetoAtualizado.servicosContratados
+        if (servicosRaw) {
+          const nomesServicos: string[] = JSON.parse(servicosRaw)
+          const tiposServico = await prisma.tipoServico.findMany({
+            where: { nome: { in: nomesServicos }, ativo: true },
+            orderBy: { ordem: 'asc' },
+          })
+          const tarefasParaCriar: {
+            projetoId: string; titulo: string; etapa: string | null
+            ordem: number; responsavelId: string | null; status: string; obrigatorio: boolean
+          }[] = []
+          let ordemBase = 0
+          for (const tipo of tiposServico) {
+            if (tipo.tarefasPadrao) {
+              const tasks: { titulo: string; etapa: string; ordem: number }[] = JSON.parse(tipo.tarefasPadrao)
+              for (const t of tasks) {
+                tarefasParaCriar.push({
+                  projetoId: params.id,
+                  titulo: `[${tipo.nome}] ${t.titulo}`,
+                  etapa: t.etapa || null,
+                  ordem: ordemBase + t.ordem,
+                  responsavelId: projetoAtualizado.responsavelId || null,
+                  status: 'PENDENTE',
+                  obrigatorio: true,
+                })
+              }
+              ordemBase += tasks.length
+            }
+          }
+          if (tarefasParaCriar.length > 0) {
+            await prisma.tarefa.createMany({ data: tarefasParaCriar })
+          }
+        }
+      } catch (e) {
+        console.error('Erro ao criar tarefas automáticas:', e)
+      }
+    }
+
+>>>>>>> aeffdf8f4107775208bdb5b34f82c4a7a6681bce
     await prisma.log.create({
       data: {
         usuarioId: user.id,
         acao: 'ATUALIZAR_PROJETO',
         entidade: 'Projeto',
         entidadeId: params.id,
+<<<<<<< HEAD
         detalhes: JSON.stringify(body),
+=======
+        detalhes: JSON.stringify({ etapa: novaEtapa, campos: Object.keys(body) }),
+>>>>>>> aeffdf8f4107775208bdb5b34f82c4a7a6681bce
       }
     })
 
@@ -126,7 +365,10 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
     if (!['ADMIN', 'GESTOR_GERAL'].includes(user.role)) {
       return NextResponse.json({ error: 'Sem permissão' }, { status: 403 })
     }
+<<<<<<< HEAD
 
+=======
+>>>>>>> aeffdf8f4107775208bdb5b34f82c4a7a6681bce
     await prisma.projeto.delete({ where: { id: params.id } })
     return NextResponse.json({ success: true })
   } catch (error) {

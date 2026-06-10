@@ -22,6 +22,10 @@ export function Header({ onMobileMenuOpen, usuario }: HeaderProps) {
   const router = useRouter()
   const [dropdownOpen, setDropdownOpen] = useState(false)
   const [notificacoes, setNotificacoes] = useState<any[]>([])
+<<<<<<< HEAD
+=======
+  const [naoLidas, setNaoLidas] = useState(0)
+>>>>>>> aeffdf8f4107775208bdb5b34f82c4a7a6681bce
   const [notifOpen, setNotifOpen] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
   const notifRef = useRef<HTMLDivElement>(null)
@@ -41,6 +45,7 @@ export function Header({ onMobileMenuOpen, usuario }: HeaderProps) {
   }, [])
 
   // Carrega notificações
+<<<<<<< HEAD
   useEffect(() => {
     async function loadNotificacoes() {
       try {
@@ -51,11 +56,57 @@ export function Header({ onMobileMenuOpen, usuario }: HeaderProps) {
         }
       } catch {}
     }
+=======
+  async function loadNotificacoes() {
+    try {
+      const res = await fetch('/api/notificacoes?limit=10')
+      if (res.ok) {
+        const data = await res.json()
+        setNotificacoes(data.notificacoes || [])
+        setNaoLidas(data.naoLidas || 0)
+      }
+    } catch {}
+  }
+
+  useEffect(() => {
+>>>>>>> aeffdf8f4107775208bdb5b34f82c4a7a6681bce
     loadNotificacoes()
     const interval = setInterval(loadNotificacoes, 30000)
     return () => clearInterval(interval)
   }, [])
 
+<<<<<<< HEAD
+=======
+  async function marcarComoLida(id: string) {
+    try {
+      await fetch('/api/notificacoes', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id }),
+      })
+      setNotificacoes(prev => prev.map(n => n.id === id ? { ...n, lida: true } : n))
+      setNaoLidas(prev => Math.max(0, prev - 1))
+    } catch {}
+  }
+
+  async function marcarTodasLidas() {
+    try {
+      await fetch('/api/notificacoes', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ marcarTodasLidas: true }),
+      })
+      setNotificacoes(prev => prev.map(n => ({ ...n, lida: true })))
+      setNaoLidas(0)
+    } catch {}
+  }
+
+  async function handleClicarNotif(notif: any) {
+    if (!notif.lida) await marcarComoLida(notif.id)
+    if (notif.link) { setNotifOpen(false); router.push(notif.link) }
+  }
+
+>>>>>>> aeffdf8f4107775208bdb5b34f82c4a7a6681bce
   async function handleLogout() {
     try {
       await fetch('/api/auth/logout', { method: 'POST' })
@@ -73,8 +124,11 @@ export function Header({ onMobileMenuOpen, usuario }: HeaderProps) {
     .join('')
     .toUpperCase()
 
+<<<<<<< HEAD
   const naoLidas = notificacoes.filter(n => !n.lida).length
 
+=======
+>>>>>>> aeffdf8f4107775208bdb5b34f82c4a7a6681bce
   return (
     <header className="h-16 bg-white border-b border-gray-100 flex items-center justify-between px-4 gap-4 flex-shrink-0">
       {/* Mobile menu button */}
@@ -105,6 +159,7 @@ export function Header({ onMobileMenuOpen, usuario }: HeaderProps) {
           </button>
 
           {notifOpen && (
+<<<<<<< HEAD
             <div className="absolute right-0 top-full mt-2 w-80 bg-white rounded-xl shadow-lg border border-gray-100 z-50">
               <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
                 <h3 className="font-semibold text-gray-900 text-sm">Notificações</h3>
@@ -116,19 +171,73 @@ export function Header({ onMobileMenuOpen, usuario }: HeaderProps) {
                 {notificacoes.length === 0 ? (
                   <div className="px-4 py-8 text-center text-gray-400 text-sm">
                     Nenhuma notificação
+=======
+            <div className="absolute right-0 top-full mt-2 w-[calc(100vw-2rem)] sm:w-96 max-w-sm sm:max-w-none bg-white rounded-xl shadow-xl border border-gray-100 z-50 overflow-hidden">
+              {/* Header do painel */}
+              <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between bg-gray-50">
+                <div className="flex items-center gap-2">
+                  <h3 className="font-semibold text-gray-900 text-sm">Notificações</h3>
+                  {naoLidas > 0 && (
+                    <span className="bg-red-500 text-white text-xs px-1.5 py-0.5 rounded-full font-medium">
+                      {naoLidas}
+                    </span>
+                  )}
+                </div>
+                {naoLidas > 0 && (
+                  <button
+                    onClick={marcarTodasLidas}
+                    className="text-xs text-green-600 hover:text-green-700 font-medium"
+                  >
+                    Marcar todas como lidas
+                  </button>
+                )}
+              </div>
+
+              {/* Lista */}
+              <div className="max-h-96 overflow-y-auto divide-y divide-gray-50">
+                {notificacoes.length === 0 ? (
+                  <div className="px-4 py-10 text-center">
+                    <Bell className="w-8 h-8 text-gray-200 mx-auto mb-2" />
+                    <p className="text-sm text-gray-400">Nenhuma notificação</p>
+>>>>>>> aeffdf8f4107775208bdb5b34f82c4a7a6681bce
                   </div>
                 ) : (
                   notificacoes.map((notif) => (
                     <div
                       key={notif.id}
+<<<<<<< HEAD
                       className={`px-4 py-3 border-b border-gray-50 hover:bg-gray-50 transition-colors cursor-pointer ${!notif.lida ? 'bg-green-50/50' : ''}`}
                     >
                       <p className="text-sm font-medium text-gray-900">{notif.titulo}</p>
                       <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">{notif.mensagem}</p>
+=======
+                      onClick={() => handleClicarNotif(notif)}
+                      className={`px-4 py-3 hover:bg-gray-50 transition-colors cursor-pointer flex gap-3 ${
+                        !notif.lida ? 'bg-green-50/60' : ''
+                      }`}
+                    >
+                      {/* Indicador não lida */}
+                      <div className="flex-shrink-0 mt-1">
+                        {!notif.lida
+                          ? <div className="w-2 h-2 bg-green-500 rounded-full" />
+                          : <div className="w-2 h-2 rounded-full" />
+                        }
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className={`text-sm leading-snug ${!notif.lida ? 'font-semibold text-gray-900' : 'font-medium text-gray-700'}`}>
+                          {notif.titulo}
+                        </p>
+                        <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">{notif.mensagem}</p>
+                        <p className="text-xs text-gray-300 mt-1">
+                          {new Date(notif.criadoEm).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                        </p>
+                      </div>
+>>>>>>> aeffdf8f4107775208bdb5b34f82c4a7a6681bce
                     </div>
                   ))
                 )}
               </div>
+<<<<<<< HEAD
               <div className="px-4 py-3 border-t border-gray-100">
                 <button
                   onClick={() => { setNotifOpen(false); router.push('/notificacoes') }}
@@ -137,6 +246,8 @@ export function Header({ onMobileMenuOpen, usuario }: HeaderProps) {
                   Ver todas as notificações →
                 </button>
               </div>
+=======
+>>>>>>> aeffdf8f4107775208bdb5b34f82c4a7a6681bce
             </div>
           )}
         </div>

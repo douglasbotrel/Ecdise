@@ -121,9 +121,45 @@ export const ROLE_LABELS: Record<string, string> = {
   GESTOR_CAMPO: 'Gestor de Campo',
   SUPERVISOR: 'Supervisor',
   ANALISTA: 'Analista',
+<<<<<<< HEAD
   TECNICO_CAMPO: 'Técnico de Campo',
 }
 
+=======
+  ANALISTA_RAPIDO: 'Analista de Serviço Rápido',
+  TECNICO_CAMPO: 'Técnico de Campo',
+}
+
+export const ETAPA_LABELS: Record<string, string> = {
+  SOLICITACAO:         'Nova Solicitação',
+  EM_ANALISE_RAPIDA:   'Em Análise',
+  ANALISE_CONCLUIDA:   'Análise Concluída',
+  EM_NEGOCIACAO:       'Em Negociação',
+  PROPOSTA_ACEITA:     'Proposta Aceita',
+  AGUARDANDO_CONTRATO: 'Aguard. Contrato',
+  EM_CONTRATO:         'Em Contrato',
+  AGUARDANDO_SINAL:    'Aguard. Sinal',
+  OPERACIONAL:         'Operacional',
+  EM_EXECUCAO:         'Em Execução',
+  CONCLUIDO:           'Concluído',
+  CANCELADO:           'Cancelado',
+}
+
+// Módulos padrão por perfil — usados quando o usuário não tem modulosAcesso definido individualmente
+// null = acesso irrestrito; array = lista exata de módulos permitidos
+export const MODULOS_POR_ROLE: Record<string, string[] | null> = {
+  ADMIN:                  null,
+  GESTOR_GERAL:           null,
+  GESTOR_ADMINISTRATIVO:  ['dashboard', 'comercial', 'contratos', 'financeiro', 'encerramento', 'configuracoes'],
+  GESTOR_OPERACIONAL:     ['dashboard', 'comercial', 'operacional', 'campo', 'encerramento'],
+  GESTOR_CAMPO:           ['dashboard', 'campo', 'tecnico'],
+  SUPERVISOR:             ['dashboard', 'comercial', 'operacional'],
+  ANALISTA:               ['dashboard', 'operacional'],
+  ANALISTA_RAPIDO:        ['dashboard', 'comercial'],
+  TECNICO_CAMPO:          ['dashboard', 'tecnico'],
+}
+
+>>>>>>> aeffdf8f4107775208bdb5b34f82c4a7a6681bce
 export const DEPARTAMENTO_LABELS: Record<string, string> = {
   GESTAO_GERAL: 'Gestão Geral',
   COMERCIAL: 'Comercial',

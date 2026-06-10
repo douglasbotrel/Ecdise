@@ -9,17 +9,35 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url)
     const statusComercial = searchParams.get('statusComercial')
+<<<<<<< HEAD
     const statusOperacional = searchParams.get('statusOperacional')
     const clienteId = searchParams.get('clienteId')
+=======
+    const etapaPipeline = searchParams.get('etapaPipeline')
+    const clienteId = searchParams.get('clienteId')
+    const analistaRapidoId = searchParams.get('analistaRapidoId')
+>>>>>>> aeffdf8f4107775208bdb5b34f82c4a7a6681bce
     const responsavelId = searchParams.get('responsavelId')
     const search = searchParams.get('search')
     const limit = parseInt(searchParams.get('limit') || '50')
     const page = parseInt(searchParams.get('page') || '1')
 
+<<<<<<< HEAD
     const where: any = {}
     if (statusComercial) where.statusComercial = statusComercial
     if (statusOperacional) where.statusOperacional = statusOperacional
     if (clienteId) where.clienteId = clienteId
+=======
+    // suporta múltiplas etapas via "etapas=A,B,C"
+    const etapasParam = searchParams.get('etapas')
+
+    const where: any = {}
+    if (statusComercial) where.statusComercial = statusComercial
+    if (etapaPipeline) where.etapaPipeline = etapaPipeline
+    if (etapasParam) where.etapaPipeline = { in: etapasParam.split(',').map(e => e.trim()) }
+    if (clienteId) where.clienteId = clienteId
+    if (analistaRapidoId) where.analistaRapidoId = analistaRapidoId
+>>>>>>> aeffdf8f4107775208bdb5b34f82c4a7a6681bce
     if (responsavelId) where.responsavelId = responsavelId
     if (search) {
       where.OR = [
@@ -30,8 +48,15 @@ export async function GET(request: NextRequest) {
       ]
     }
 
+<<<<<<< HEAD
     // Restrição por departamento
     if (user.role === 'ANALISTA' || user.role === 'TECNICO_CAMPO') {
+=======
+    // Restrição por role: analista rápido vê só os seus
+    if (user.role === 'ANALISTA_RAPIDO') {
+      where.analistaRapidoId = user.id
+    } else if (user.role === 'ANALISTA' || user.role === 'TECNICO_CAMPO') {
+>>>>>>> aeffdf8f4107775208bdb5b34f82c4a7a6681bce
       where.responsavelId = user.id
     }
 
@@ -42,6 +67,10 @@ export async function GET(request: NextRequest) {
           cliente: { select: { id: true, nome: true, cpfCnpj: true } },
           responsavel: { select: { id: true, nome: true } },
           supervisor: { select: { id: true, nome: true } },
+<<<<<<< HEAD
+=======
+          analistaRapido: { select: { id: true, nome: true } },
+>>>>>>> aeffdf8f4107775208bdb5b34f82c4a7a6681bce
           contrato: { select: { id: true, statusContrato: true, valorTotal: true } },
           _count: { select: { tarefas: true, vistorias: true, documentos: true } },
         },
@@ -67,15 +96,24 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const {
       clienteId, tipoServico, descricao, imovelNome, imovelEndereco,
+<<<<<<< HEAD
       municipio, estado, car, areaHectares, valorProposto, tipoContrato,
       observacoes, responsavelId, supervisorId
+=======
+      municipio, estado, car, areaHectares, valorProposto,
+      observacoes, analistaRapidoId,
+>>>>>>> aeffdf8f4107775208bdb5b34f82c4a7a6681bce
     } = body
 
     if (!clienteId || !tipoServico) {
       return NextResponse.json({ error: 'Cliente e tipo de serviço são obrigatórios' }, { status: 400 })
     }
 
+<<<<<<< HEAD
     // Gera código sequencial
+=======
+    // Código sequencial
+>>>>>>> aeffdf8f4107775208bdb5b34f82c4a7a6681bce
     const count = await prisma.projeto.count()
     const codigo = `PRJ-${String(count + 1).padStart(4, '0')}`
 
@@ -92,27 +130,57 @@ export async function POST(request: NextRequest) {
         car,
         areaHectares: areaHectares ? parseFloat(areaHectares) : null,
         valorProposto: valorProposto ? parseFloat(valorProposto) : null,
+<<<<<<< HEAD
         tipoContrato,
         observacoes,
         responsavelId: responsavelId || null,
         supervisorId: supervisorId || null,
+=======
+        observacoes,
+        analistaRapidoId: analistaRapidoId || null,
+        etapaPipeline: 'SOLICITACAO',
+>>>>>>> aeffdf8f4107775208bdb5b34f82c4a7a6681bce
         statusComercial: 'RECEBIDO',
         statusOperacional: 'NAO_INICIADO',
       },
       include: {
         cliente: true,
+<<<<<<< HEAD
         responsavel: { select: { id: true, nome: true } },
       },
     })
 
     // Log
+=======
+        analistaRapido: { select: { id: true, nome: true, email: true } },
+      },
+    })
+
+    // Notifica o analista rápido designado
+    if (analistaRapidoId) {
+      await prisma.notificacao.create({
+        data: {
+          usuarioId: analistaRapidoId,
+          titulo: 'Nova solicitação para análise',
+          mensagem: `Projeto ${codigo} — ${imovelNome || tipoServico} (${municipio || 'sem município'}) aguarda sua análise técnica rápida.`,
+          tipo: 'info',
+          link: `/comercial`,
+        },
+      })
+    }
+
+>>>>>>> aeffdf8f4107775208bdb5b34f82c4a7a6681bce
     await prisma.log.create({
       data: {
         usuarioId: user.id,
         acao: 'CRIAR_PROJETO',
         entidade: 'Projeto',
         entidadeId: projeto.id,
+<<<<<<< HEAD
         detalhes: `Projeto ${codigo} criado`,
+=======
+        detalhes: `Projeto ${codigo} criado — etapa: SOLICITACAO`,
+>>>>>>> aeffdf8f4107775208bdb5b34f82c4a7a6681bce
       },
     })
 
