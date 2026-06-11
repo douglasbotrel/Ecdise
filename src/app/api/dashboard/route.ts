@@ -85,7 +85,7 @@ export async function GET(request: NextRequest) {
     if (['GESTOR_OPERACIONAL', 'GESTOR_CAMPO', 'SUPERVISOR'].includes(user.role)) {
       // Gestor vê TODOS os projetos em estágio operacional (não só os que ele é supervisor)
       // Inclui projetos onde é gestorResponsavelId OU supervisorId OU todos os operacionais
-      const etapasOperacionais = ['OPERACIONAL', 'EM_EXECUCAO'] as const
+      const etapasOperacionais: string[] = ['OPERACIONAL', 'EM_EXECUCAO']
 
       const [novos, andamento, concluidos, projetos, proximasVistorias, tarefasAtrasadas, tarefasConcluidas, tarefasTotais] = await Promise.all([
         prisma.projeto.count({ where: { etapaPipeline: 'OPERACIONAL' } }),
