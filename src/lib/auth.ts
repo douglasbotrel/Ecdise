@@ -3,12 +3,17 @@ import bcrypt from 'bcryptjs'
 import { cookies } from 'next/headers'
 import { prisma } from './prisma'
 
-// Falha rápida se JWT_SECRET não estiver definido — nunca use fallback em produção
-const JWT_SECRET = process.env.JWT_SECRET
-if (!JWT_SECRET) {
-  throw new Error('❌ JWT_SECRET não definido. Adicione ao arquivo .env antes de iniciar o servidor.')
+// Acessa JWT_SECRET de forma lazy (só na hora de usar), nunca no carregamento do módulo.
+// Isso permite que o Next.js compile as rotas sem precisar do env durante o build.
+function getJwtSecret(): string {
+  const secret = process.env.JWT_SECRET
+  if (!secret) {
+    throw new Error('JWT_SECRET não definido nas variáveis de ambiente.')
+  }
+  return secret
 }
-const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d'
+
+const JWT_EXPIRES_IN = () => process.env.JWT_EXPIRES_IN || '7d'
 
 export interface JWTPayload {
   id: string
@@ -19,12 +24,14 @@ export interface JWTPayload {
 }
 
 export function signToken(payload: JWTPayload): string {
-  return jwt.sign(payload, JWT_SECRET!, { expiresIn: JWT_EXPIRES_IN as jwt.SignOptions['expiresIn'] })
+  return jwt.sign(payload, getJwtSecret(), {
+    expiresIn: JWT_EXPIRES_IN() as jwt.SignOptions['expiresIn'],
+  })
 }
 
 export function verifyToken(token: string): JWTPayload | null {
   try {
-    return jwt.verify(token, JWT_SECRET!) as JWTPayload
+    return jwt.verify(token, getJwtSecret()) as JWTPayload
   } catch {
     return null
   }
@@ -47,9 +54,6 @@ export async function getCurrentUser(): Promise<JWTPayload | null> {
     const payload = verifyToken(token)
     if (!payload) return null
 
-    // Verifica se o usuário ainda existe e está ativo no banco.
-    // Isso invalida sessões de usuários desativados imediatamente,
-    // sem precisar esperar o token expirar.
     const usuario = await prisma.usuario.findUnique({
       where: { id: payload.id },
       select: { ativo: true },
@@ -64,13 +68,10 @@ export async function getCurrentUser(): Promise<JWTPayload | null> {
 
 export async function requireAuth(): Promise<JWTPayload> {
   const user = await getCurrentUser()
-  if (!user) {
-    throw new Error('Não autenticado')
-  }
+  if (!user) throw new Error('Não autenticado')
   return user
 }
 
-// Hierarquia de roles (maior número = mais permissão)
 export const ROLE_HIERARCHY: Record<string, number> = {
   TECNICO_CAMPO: 1,
   ANALISTA_RAPIDO: 2,
@@ -87,7 +88,6 @@ export function hasPermission(userRole: string, requiredRole: string): boolean {
   return (ROLE_HIERARCHY[userRole] || 0) >= (ROLE_HIERARCHY[requiredRole] || 0)
 }
 
-// Departamentos com acesso a cada módulo
 export const MODULE_ACCESS: Record<string, string[]> = {
   comercial: ['GESTAO_GERAL', 'COMERCIAL', 'CONTRATOS'],
   contratos: ['GESTAO_GERAL', 'COMERCIAL', 'FINANCEIRO', 'CONTRATOS'],
