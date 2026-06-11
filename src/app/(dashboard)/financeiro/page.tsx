@@ -65,12 +65,13 @@ export default function FinanceiroPage() {
   useEffect(() => { load() }, [load])
 
   // ── Group by contrato ──────────────────────────────────────
-  const grupos = pagamentos.reduce((acc, p) => {
+  type GrupoContrato = { contrato: any; pagamentos: any[] }
+  const grupos: Record<string, GrupoContrato> = pagamentos.reduce<Record<string, GrupoContrato>>((acc, p) => {
     const key = p.contratoId
     if (!acc[key]) acc[key] = { contrato: p.contrato, pagamentos: [] }
     acc[key].pagamentos.push(p)
     return acc
-  }, {} as Record<string, { contrato: any; pagamentos: any[] }>)
+  }, {})
 
   function toggleExpand(key: string) {
     setExpandidos(prev => {
@@ -193,7 +194,7 @@ export default function FinanceiroPage() {
             <p>Nenhum pagamento encontrado</p>
           </div>
         ) : (
-          Object.entries(grupos).map(([key, grupo]) => {
+          (Object.entries(grupos) as [string, GrupoContrato][]).map(([key, grupo]) => {
             const { contrato, pagamentos: pags } = grupo
             const expanded    = expandidos.has(key)
             const pagos       = pags.filter(p => p.status === 'PAGO').length
