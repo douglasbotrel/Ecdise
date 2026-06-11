@@ -90,7 +90,7 @@ export default function CampoPage() {
   function setSolField(tarefaId: string, field: string, value: string) {
     setFormSol(prev => ({
       ...prev,
-      [tarefaId]: { dataSaida: '', dataVolta: '', equipeId: '', frotaId: '', responsavelId: '', ...prev[tarefaId], [field]: value }
+      [tarefaId]: { ...{ dataSaida: '', dataVolta: '', equipeId: '', frotaId: '', responsavelId: '' }, ...prev[tarefaId], [field]: value }
     }))
   }
 
