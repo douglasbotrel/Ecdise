@@ -171,7 +171,7 @@ export async function PATCH(request: NextRequest) {
           destinatariosIds = fallback.map(u => u.id)
         }
 
-        destinatariosIds = [...new Set(destinatariosIds)]
+        destinatariosIds = Array.from(new Set(destinatariosIds))
 
         if (destinatariosIds.length > 0) {
           await prisma.notificacao.createMany({

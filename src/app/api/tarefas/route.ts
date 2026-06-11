@@ -188,7 +188,7 @@ export async function PATCH(request: NextRequest) {
             tarefaAtual.responsavelId,
           ].filter(Boolean) as string[]
 
-          let destinatarios = [...new Set(idsEnvolvidos)]
+          let destinatarios = Array.from(new Set(idsEnvolvidos))
 
           // Fallback: se ninguém específico atribuído, notifica ADMIN/GESTOR_GERAL
           if (destinatarios.length === 0) {

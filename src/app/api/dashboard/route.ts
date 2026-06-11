@@ -40,7 +40,7 @@ export async function GET(request: NextRequest) {
         where: { responsavelId: user.id, status: { not: 'CONCLUIDA' } },
         select: { projetoId: true, status: true },
       })
-      const projetoIdsComTarefas = [...new Set(minhasTarefas.map(t => t.projetoId))]
+      const projetoIdsComTarefas = Array.from(new Set(minhasTarefas.map(t => t.projetoId)))
 
       const [ativos, concluidos, proximasVistorias, projetos, tarefasList] = await Promise.all([
         prisma.projeto.count({ where: { etapaPipeline: 'EM_EXECUCAO', id: { in: projetoIdsComTarefas } } }),

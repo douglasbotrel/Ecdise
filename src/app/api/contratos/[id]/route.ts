@@ -59,7 +59,7 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
           select: { codigo: true, imovelNome: true },
         })
         // Remove duplicatas
-        const idsUnicos = [...new Set(equipeContratos.map(u => u.id))]
+        const idsUnicos = Array.from(new Set(equipeContratos.map(u => u.id)))
         await prisma.notificacao.createMany({
           data: idsUnicos.map(uid => ({
             usuarioId: uid,
