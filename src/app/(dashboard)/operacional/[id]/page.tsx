@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import {
@@ -324,6 +324,19 @@ export default function ProjetoDetalhe() {
   // Gestores podem editar em qualquer etapa válida
   const modoEdicao   = emOperacional || (modoGestor && ETAPAS_VALIDAS.includes(projeto.etapaPipeline))
   const tarefas       = projeto.tarefas || []
+
+  // ── Agrupa tarefas por serviço (extrai "[NomeServico] título") ──
+  const gruposTarefas = useMemo(() => {
+    const grupos: Record<string, { servico: string; tarefas: any[] }> = {}
+    tarefas.forEach((t: any) => {
+      const m = t.titulo.match(/^\[([^\]]+)\]\s*(.+)$/)
+      const servico     = m ? m[1].trim() : 'Geral'
+      const tituloLimpo = m ? m[2].trim() : t.titulo
+      if (!grupos[servico]) grupos[servico] = { servico, tarefas: [] }
+      grupos[servico].tarefas.push({ ...t, _tituloLimpo: tituloLimpo })
+    })
+    return Object.values(grupos)
+  }, [tarefas])
 
   // Helper para exibir nome completo no select de usuário
   function labelUsuario(u: any) {
@@ -976,156 +989,133 @@ export default function ProjetoDetalhe() {
         </div>
       )}
 
-      {/* ── Tarefas flat ─────────────────────────────────────  */}
-      {aba === 'tarefas' && (() => {
-        // Extrai o serviço do título: "[LUAR - Licença] Fazer algo" → { servico, titulo }
-        function parseTarefa(t: any) {
-          const m = t.titulo.match(/^\[([^\]]+)\]\s*(.+)$/)
-          return m
-            ? { ...t, _servico: m[1].trim(), _tituloLimpo: m[2].trim() }
-            : { ...t, _servico: 'Geral', _tituloLimpo: t.titulo }
-        }
-        const tarefasParseadas = tarefas.map(parseTarefa)
-
-        // Agrupa por serviço preservando a ordem de inserção
-        const grupos: Record<string, any[]> = {}
-        tarefasParseadas.forEach((t: any) => {
-          if (!grupos[t._servico]) grupos[t._servico] = []
-          grupos[t._servico].push(t)
-        })
-        const nomeGrupos = Object.keys(grupos)
-
-        return (
-          <div className="space-y-4">
-            {/* Header */}
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="font-semibold text-gray-900">Tarefas por Serviço</h3>
-                <p className="text-xs text-gray-400 mt-0.5">
-                  {tarefas.filter((t: any) => t.status === 'CONCLUIDA').length}/{tarefas.length} concluídas
-                </p>
-              </div>
-              {modoGestor && (
-                <button onClick={() => setNovaT(true)} className="flex items-center gap-1.5 text-sm text-green-600 font-medium">
-                  <Plus className="w-4 h-4" /> Nova
-                </button>
-              )}
+      {/* ── Tarefas agrupadas por serviço ──────────────────────  */}
+      {aba === 'tarefas' && (
+        <div className="space-y-4">
+          {/* Header */}
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="font-semibold text-gray-900">Tarefas por Serviço</h3>
+              <p className="text-xs text-gray-400 mt-0.5">
+                {tarefas.filter((t: any) => t.status === 'CONCLUIDA').length}/{tarefas.length} concluídas
+              </p>
             </div>
-
-            {tarefas.length === 0 ? (
-              <div className="bg-white rounded-2xl border border-gray-100 p-8 text-center text-gray-400 text-sm">
-                Nenhuma tarefa cadastrada
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                {nomeGrupos.map(servico => {
-                  const todas    = grupos[servico]
-                  const pendentes  = todas.filter((t: any) => t.status !== 'CONCLUIDA')
-                  const concluidas = todas.filter((t: any) => t.status === 'CONCLUIDA')
-                  const pct        = todas.length > 0 ? Math.round((concluidas.length / todas.length) * 100) : 0
-                  const [verConcl, setVerConcl] = [
-                    !!expandido[`concl_${servico}`],
-                    (v: boolean) => setExpandido(prev => ({ ...prev, [`concl_${servico}`]: v })),
-                  ]
-
-                  return (
-                    <div key={servico} className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
-
-                      {/* Cabeçalho do grupo */}
-                      <div className="px-4 py-3 border-b border-gray-50 bg-gray-50">
-                        <div className="flex items-center justify-between mb-1.5">
-                          <h4 className="font-semibold text-gray-800 text-sm leading-snug">{servico}</h4>
-                          <span className={`text-xs font-bold ${pct === 100 ? 'text-green-600' : 'text-gray-400'}`}>
-                            {pct}%
-                          </span>
-                        </div>
-                        {/* Barra de progresso do grupo */}
-                        <div className="w-full bg-gray-200 rounded-full h-1.5 overflow-hidden">
-                          <div
-                            className={`h-1.5 rounded-full transition-all duration-500 ${pct === 100 ? 'bg-green-500' : 'bg-green-400'}`}
-                            style={{ width: `${pct}%` }}
-                          />
-                        </div>
-                        <p className="text-xs text-gray-400 mt-1">
-                          {pendentes.length > 0 ? `${pendentes.length} pendente(s)` : '✅ Tudo concluído'}
-                          {concluidas.length > 0 && ` · ${concluidas.length} concluída(s)`}
-                        </p>
-                      </div>
-
-                      {/* Tarefas PENDENTES */}
-                      <div className="divide-y divide-gray-50">
-                        {pendentes.length === 0 && !verConcl && (
-                          <div className="px-4 py-4 text-center text-xs text-gray-400">
-                            Todas as atividades concluídas ✅
-                          </div>
-                        )}
-                        {pendentes.map((tarefa: any) => (
-                          <div key={tarefa.id} className="flex items-start gap-3 px-4 py-3 hover:bg-gray-50 transition-colors">
-                            <button
-                              onClick={() => toggleTarefa(tarefa.id, tarefa.status)}
-                              className="w-5 h-5 rounded-full border-2 border-gray-300 hover:border-green-500 flex items-center justify-center flex-shrink-0 mt-0.5 transition-colors"
-                            />
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm text-gray-900 font-medium leading-snug">
-                                {tarefa._tituloLimpo}
-                              </p>
-                              <div className="flex gap-2 text-xs text-gray-400 mt-0.5 flex-wrap">
-                                {tarefa.responsavel && <span>👤 {tarefa.responsavel.nome}</span>}
-                                {tarefa.prazo && <span>📅 {formatDate(tarefa.prazo)}</span>}
-                                {!tarefa.responsavel && <span className="text-amber-400">Sem responsável</span>}
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-
-                      {/* Toggle de concluídas */}
-                      {concluidas.length > 0 && (
-                        <div className="border-t border-gray-50">
-                          <button
-                            onClick={() => setVerConcl(!verConcl)}
-                            className="w-full flex items-center justify-between px-4 py-2.5 text-xs text-gray-400 hover:text-gray-600 hover:bg-gray-50 transition-colors"
-                          >
-                            <span className="flex items-center gap-1.5">
-                              <Check className="w-3.5 h-3.5 text-green-500" />
-                              {concluidas.length} concluída(s) — {verConcl ? 'ocultar' : 'ver'}
-                            </span>
-                            <span className="text-lg leading-none">{verConcl ? '∧' : '∨'}</span>
-                          </button>
-
-                          {verConcl && (
-                            <div className="divide-y divide-gray-50 bg-green-50/30">
-                              {concluidas.map((tarefa: any) => (
-                                <div key={tarefa.id} className="flex items-start gap-3 px-4 py-2.5 hover:bg-green-50/50 transition-colors">
-                                  <button
-                                    onClick={() => toggleTarefa(tarefa.id, tarefa.status)}
-                                    className="w-5 h-5 rounded-full bg-green-600 border-2 border-green-600 flex items-center justify-center flex-shrink-0 mt-0.5"
-                                  >
-                                    <Check className="w-3 h-3 text-white" />
-                                  </button>
-                                  <div className="flex-1 min-w-0">
-                                    <p className="text-sm text-gray-400 line-through leading-snug">
-                                      {tarefa._tituloLimpo}
-                                    </p>
-                                    <div className="flex gap-2 text-xs text-gray-400 mt-0.5 flex-wrap">
-                                      {tarefa.responsavel && <span>{tarefa.responsavel.nome}</span>}
-                                      {tarefa.prazo && <span>{formatDate(tarefa.prazo)}</span>}
-                                    </div>
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  )
-                })}
-              </div>
+            {modoGestor && (
+              <button onClick={() => setNovaT(true)} className="flex items-center gap-1.5 text-sm text-green-600 font-medium">
+                <Plus className="w-4 h-4" /> Nova
+              </button>
             )}
           </div>
-        )
-      })()}
+
+          {tarefas.length === 0 ? (
+            <div className="bg-white rounded-2xl border border-gray-100 p-8 text-center text-gray-400 text-sm">
+              Nenhuma tarefa cadastrada
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              {gruposTarefas.map(({ servico, tarefas: tGrupo }) => {
+                const pendentes  = tGrupo.filter((t: any) => t.status !== 'CONCLUIDA')
+                const concluidas = tGrupo.filter((t: any) => t.status === 'CONCLUIDA')
+                const pct        = tGrupo.length > 0 ? Math.round((concluidas.length / tGrupo.length) * 100) : 0
+                const verConcl   = !!expandido[`concl_${servico}`]
+                const toggleConcl = () => setExpandido(prev => ({ ...prev, [`concl_${servico}`]: !prev[`concl_${servico}`] }))
+
+                return (
+                  <div key={servico} className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
+
+                    {/* Cabeçalho do grupo */}
+                    <div className="px-4 py-3 border-b border-gray-50 bg-gray-50">
+                      <div className="flex items-center justify-between mb-1.5">
+                        <h4 className="font-semibold text-gray-800 text-sm leading-snug">{servico}</h4>
+                        <span className={`text-xs font-bold ${pct === 100 ? 'text-green-600' : 'text-gray-400'}`}>
+                          {pct}%
+                        </span>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-1.5 overflow-hidden">
+                        <div
+                          className={`h-1.5 rounded-full transition-all duration-500 ${pct === 100 ? 'bg-green-500' : 'bg-green-400'}`}
+                          style={{ width: `${pct}%` }}
+                        />
+                      </div>
+                      <p className="text-xs text-gray-400 mt-1">
+                        {pendentes.length > 0 ? `${pendentes.length} pendente(s)` : '✅ Tudo concluído'}
+                        {concluidas.length > 0 && ` · ${concluidas.length} concluída(s)`}
+                      </p>
+                    </div>
+
+                    {/* Tarefas PENDENTES */}
+                    <div className="divide-y divide-gray-50">
+                      {pendentes.length === 0 && !verConcl && (
+                        <div className="px-4 py-4 text-center text-xs text-gray-400">
+                          Todas as atividades concluídas ✅
+                        </div>
+                      )}
+                      {pendentes.map((tarefa: any) => (
+                        <div key={tarefa.id} className="flex items-start gap-3 px-4 py-3 hover:bg-gray-50 transition-colors">
+                          <button
+                            onClick={() => toggleTarefa(tarefa.id, tarefa.status)}
+                            className="w-5 h-5 rounded-full border-2 border-gray-300 hover:border-green-500 flex items-center justify-center flex-shrink-0 mt-0.5 transition-colors"
+                          />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm text-gray-900 font-medium leading-snug">
+                              {tarefa._tituloLimpo}
+                            </p>
+                            <div className="flex gap-2 text-xs text-gray-400 mt-0.5 flex-wrap">
+                              {tarefa.responsavel && <span>👤 {tarefa.responsavel.nome}</span>}
+                              {tarefa.prazo && <span>📅 {formatDate(tarefa.prazo)}</span>}
+                              {!tarefa.responsavel && <span className="text-amber-400">Sem responsável</span>}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Toggle de concluídas */}
+                    {concluidas.length > 0 && (
+                      <div className="border-t border-gray-50">
+                        <button
+                          onClick={toggleConcl}
+                          className="w-full flex items-center justify-between px-4 py-2.5 text-xs text-gray-400 hover:text-gray-600 hover:bg-gray-50 transition-colors"
+                        >
+                          <span className="flex items-center gap-1.5">
+                            <Check className="w-3.5 h-3.5 text-green-500" />
+                            {concluidas.length} concluída(s) — {verConcl ? 'ocultar' : 'ver'}
+                          </span>
+                          <span className="text-lg leading-none">{verConcl ? '∧' : '∨'}</span>
+                        </button>
+
+                        {verConcl && (
+                          <div className="divide-y divide-gray-50 bg-green-50/30">
+                            {concluidas.map((tarefa: any) => (
+                              <div key={tarefa.id} className="flex items-start gap-3 px-4 py-2.5 hover:bg-green-50/50 transition-colors">
+                                <button
+                                  onClick={() => toggleTarefa(tarefa.id, tarefa.status)}
+                                  className="w-5 h-5 rounded-full bg-green-600 border-2 border-green-600 flex items-center justify-center flex-shrink-0 mt-0.5"
+                                >
+                                  <Check className="w-3 h-3 text-white" />
+                                </button>
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-sm text-gray-400 line-through leading-snug">
+                                    {tarefa._tituloLimpo}
+                                  </p>
+                                  <div className="flex gap-2 text-xs text-gray-400 mt-0.5 flex-wrap">
+                                    {tarefa.responsavel && <span>{tarefa.responsavel.nome}</span>}
+                                    {tarefa.prazo && <span>{formatDate(tarefa.prazo)}</span>}
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* ── Documentos ────────────────────────────────────── */}
       {aba === 'documentos' && (
