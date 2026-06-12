@@ -238,6 +238,7 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
         ...(body.observacoesAnalise !== undefined && { observacoesAnalise: body.observacoesAnalise }),
         ...(body.servicosRecomendados !== undefined && { servicosRecomendados: body.servicosRecomendados }),
         ...(body.servicosContratados !== undefined && { servicosContratados: body.servicosContratados }),
+        ...(body.credenciais        !== undefined && { credenciais: body.credenciais }),
         ...(body.valorSinal !== undefined && { valorSinal: body.valorSinal ? parseFloat(body.valorSinal) : null }),
         ...(body.valorPrestacao !== undefined && { valorPrestacao: body.valorPrestacao ? parseFloat(body.valorPrestacao) : null }),
         ...(body.numeroPrestacoes !== undefined && { numeroPrestacoes: body.numeroPrestacoes ? parseInt(body.numeroPrestacoes) : null }),

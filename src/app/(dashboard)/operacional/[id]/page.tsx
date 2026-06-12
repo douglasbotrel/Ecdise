@@ -38,14 +38,23 @@ export default function ProjetoDetalhe() {
   const [salvandoT, setSalvandoT]   = useState(false)
 
   // Usuário logado (para controle de permissões)
-  const [currentUser, setCurrentUser]       = useState<any>(null)
+  const [currentUser, setCurrentUser]             = useState<any>(null)
   // Responsável em lote
   const [bulkResponsavelId, setBulkResponsavelId] = useState('')
+  const [bulkPrazo, setBulkPrazo]                 = useState('')
   const [salvandoBulk, setSalvandoBulk]           = useState(false)
   // Gerar tarefas dos serviços contratados
   const [gerandoTarefas, setGerandoTarefas]       = useState(false)
   // Iniciar execução manualmente (avança de OPERACIONAL para EM_EXECUCAO)
   const [iniciandoExecucao, setIniciandoExecucao] = useState(false)
+  // Controle de linhas expandidas no painel de atribuição
+  const [expandido, setExpandido]                 = useState<Record<string, boolean>>({})
+  // Filtro: mostrar apenas tarefas sem atribuição completa
+  const [filtroPendentes, setFiltroPendentes]     = useState(false)
+  // Modal de credenciais (SIGLA / CTF)
+  const [modalCredencial, setModalCredencial]     = useState<{ sistema: string } | null>(null)
+  const [credForm, setCredForm]                   = useState({ login: '', senha: '' })
+  const [salvandoCred, setSalvandoCred]           = useState(false)
 
   // Etapas que têm acesso ao módulo Operacional (após primeiro pagamento)
   const ETAPAS_VALIDAS    = ['OPERACIONAL', 'EM_EXECUCAO', 'CONCLUIDO']
@@ -101,13 +110,12 @@ export default function ProjetoDetalhe() {
     })
   }, [projeto])
 
-  // ── Salvar atribuição de uma tarefa ───────────────────────
+  // ── Salvar atribuição de uma tarefa (fecha a linha ao salvar) ─
   async function salvarAtribuicao(tarefaId: string) {
     setSalvandoId(tarefaId)
     try {
       const e = editando[tarefaId]
       const tarefa = (projeto?.tarefas || []).find((t: any) => t.id === tarefaId)
-      // Não envia prazo se tarefa aguarda campo definir
       const podeEnviarPrazo = !tarefa?.requerVistoriaCampo || tarefa?.statusVistoria === null
       await fetch('/api/tarefas', {
         method: 'PATCH',
@@ -118,34 +126,40 @@ export default function ProjetoDetalhe() {
           responsavelId: e.responsavelId || null,
         }),
       })
-      toast.success('Salvo')
+      // Fecha a linha automaticamente após salvar
+      setExpandido(prev => ({ ...prev, [tarefaId]: false }))
+      toast.success('Atribuição salva!')
       loadProjeto()
     } catch { toast.error('Erro ao salvar') }
     finally { setSalvandoId(null) }
   }
 
-  // ── Aplicar responsável a todas as tarefas sem responsável ───
+  // ── Aplicar responsável e/ou data a todas as tarefas pendentes ─
   async function aplicarBulkResponsavel() {
-    if (!bulkResponsavelId) { toast.error('Selecione um responsável'); return }
-    const semResponsavel = (projeto?.tarefas || []).filter((t: any) => !t.responsavelId)
-    if (semResponsavel.length === 0) { toast.info('Todas as tarefas já têm responsável'); return }
+    if (!bulkResponsavelId && !bulkPrazo) {
+      toast.error('Selecione pelo menos responsável ou data')
+      return
+    }
+    const pendentes = (projeto?.tarefas || []).filter((t: any) =>
+      (bulkResponsavelId && !t.responsavelId) || (bulkPrazo && !t.prazo)
+    )
+    if (pendentes.length === 0) { toast.info('Todas as tarefas já estão preenchidas'); return }
     setSalvandoBulk(true)
     try {
-      await Promise.all(semResponsavel.map((t: any) =>
+      await Promise.all(pendentes.map((t: any) =>
         fetch('/api/tarefas', {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ id: t.id, responsavelId: bulkResponsavelId }),
+          body: JSON.stringify({
+            id: t.id,
+            ...(bulkResponsavelId && !t.responsavelId && { responsavelId: bulkResponsavelId }),
+            ...(!t.requerVistoriaCampo && bulkPrazo && !t.prazo && { prazo: bulkPrazo }),
+          }),
         })
       ))
-      setEditando(prev => {
-        const next = { ...prev }
-        semResponsavel.forEach((t: any) => {
-          next[t.id] = { ...next[t.id], responsavelId: bulkResponsavelId }
-        })
-        return next
-      })
-      toast.success(`Responsável definido para ${semResponsavel.length} tarefa(s)!`)
+      toast.success(`Atribuição aplicada em ${pendentes.length} tarefa(s)!`)
+      // Fecha todas as linhas expandidas
+      setExpandido({})
       loadProjeto()
     } catch { toast.error('Erro ao aplicar em massa') }
     finally { setSalvandoBulk(false) }
@@ -179,10 +193,11 @@ export default function ProjetoDetalhe() {
     } catch { toast.error('Erro') }
   }
 
-  // ── Marcar tarefa como concluída/pendente (optimistic, sem scroll) ──
+  // ── Marcar tarefa como concluída/pendente ────────────────────
   async function toggleTarefa(tarefaId: string, atual: string) {
     const novoStatus = atual === 'CONCLUIDA' ? 'PENDENTE' : 'CONCLUIDA'
-    // Atualiza localmente sem re-renderizar a página toda
+    const tarefa = (projeto?.tarefas || []).find((t: any) => t.id === tarefaId)
+    // Atualiza localmente (optimistic)
     setProjeto((prev: any) => ({
       ...prev,
       tarefas: prev.tarefas.map((t: any) =>
@@ -195,12 +210,46 @@ export default function ProjetoDetalhe() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: tarefaId, status: novoStatus }),
       })
-      // Reload silencioso para sincronizar statusOperacional e etapaPipeline
       loadProjeto()
+      // ── Abre modal de credenciais ao concluir tarefas SIGLA/CTF ──
+      if (novoStatus === 'CONCLUIDA' && tarefa) {
+        const titulo = tarefa.titulo.toUpperCase()
+        if (titulo.includes('SIGLA')) {
+          const creds = projeto?.credenciais ? JSON.parse(projeto.credenciais) : {}
+          setCredForm({ login: creds.SIGLA?.login || '', senha: creds.SIGLA?.senha || '' })
+          setModalCredencial({ sistema: 'SIGLA' })
+        } else if (titulo.includes('CTF')) {
+          const creds = projeto?.credenciais ? JSON.parse(projeto.credenciais) : {}
+          setCredForm({ login: creds.CTF?.login || '', senha: creds.CTF?.senha || '' })
+          setModalCredencial({ sistema: 'CTF' })
+        }
+      }
     } catch {
       toast.error('Erro ao atualizar tarefa')
-      loadProjeto() // reverte
+      loadProjeto()
     }
+  }
+
+  // ── Salvar credenciais do sistema (SIGLA / CTF / etc.) ────────
+  async function salvarCredencial() {
+    if (!modalCredencial) return
+    setSalvandoCred(true)
+    try {
+      const credsAtuais = projeto?.credenciais ? JSON.parse(projeto.credenciais) : {}
+      const novasCreds = {
+        ...credsAtuais,
+        [modalCredencial.sistema]: { login: credForm.login, senha: credForm.senha },
+      }
+      await fetch(`/api/projetos/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ credenciais: JSON.stringify(novasCreds) }),
+      })
+      toast.success(`Credenciais do ${modalCredencial.sistema} salvas!`)
+      setModalCredencial(null)
+      loadProjeto()
+    } catch { toast.error('Erro ao salvar credenciais') }
+    finally { setSalvandoCred(false) }
   }
 
   // ── Nova tarefa avulsa ─────────────────────────────────────
@@ -361,248 +410,369 @@ export default function ProjetoDetalhe() {
       </div>
 
       {/* ══════════════════════════════════════════════════════
-          BANNER OPERACIONAL — só aparece quando etapa=OPERACIONAL
+          PAINEL DE ATRIBUIÇÃO — aparece em OPERACIONAL e para gestores
           ══════════════════════════════════════════════════════ */}
-      {modoEdicao && (
-        <div className="bg-amber-50 border border-amber-200 rounded-2xl overflow-hidden">
-          {/* Header do banner */}
-          <div className="flex flex-col sm:flex-row sm:items-center gap-3 px-4 sm:px-6 py-4 border-b border-amber-200">
-            <div className="flex-1">
-              <div className="flex items-center gap-2 mb-0.5">
-                <AlertCircle className="w-4 h-4 text-amber-600" />
-                <h2 className="font-bold text-amber-900 text-sm sm:text-base">
-                  {emOperacional ? 'Defina prazos e responsáveis' : 'Gerenciar Atividades'}
+      {modoEdicao && (() => {
+        // Tarefas filtradas (pendentes = sem responsável ou sem prazo)
+        const tarefasFiltradas = filtroPendentes
+          ? tarefas.filter((t: any) => !t.responsavelId || !t.prazo)
+          : tarefas
+        const totalPendentes = tarefas.filter((t: any) => !t.responsavelId || !t.prazo).length
+
+        return (
+        <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm">
+
+          {/* ── Header: título + barra de progresso ────────────────── */}
+          <div className="px-4 sm:px-6 py-4 border-b border-gray-100">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 text-amber-500" />
+                <h2 className="font-semibold text-gray-800 text-sm sm:text-base">
+                  {emOperacional ? 'Planejamento — Atribuir prazos e responsáveis' : 'Gerenciar Atividades'}
                 </h2>
               </div>
-              <p className="text-xs text-amber-700">
-                {emOperacional
-                  ? 'Atribua prazos e responsáveis. Execução inicia ao 1º check.'
-                  : 'Gestores podem editar responsáveis e prazos a qualquer momento.'}
-              </p>
-            </div>
-            <div className="text-center flex-shrink-0">
-              <div className="text-lg font-bold text-amber-700">{pctAtribuido}%</div>
-              <div className="text-xs text-amber-600">atribuído</div>
-              <div className="text-xs text-amber-500 mt-0.5">execução inicia ao 1º check</div>
-            </div>
-          </div>
-
-          {/* Linha de responsável em lote + Iniciar Execução */}
-          <div className="px-4 sm:px-6 py-3 bg-amber-100/40 border-b border-amber-200 flex flex-col sm:flex-row items-start sm:items-center gap-2">
-            <span className="text-xs font-semibold text-amber-800 whitespace-nowrap">Definir para todas:</span>
-            <select
-              value={bulkResponsavelId}
-              onChange={e => setBulkResponsavelId(e.target.value)}
-              className="flex-1 border border-amber-300 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-amber-400 bg-white min-w-0"
-            >
-              <option value="">Selecione um responsável...</option>
-              {usuarios.map(u => (
-                <option key={u.id} value={u.id}>{labelUsuario(u)}</option>
-              ))}
-            </select>
-            <button
-              onClick={aplicarBulkResponsavel}
-              disabled={salvandoBulk || !bulkResponsavelId}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white rounded-lg text-xs font-semibold transition-colors flex-shrink-0"
-            >
-              {salvandoBulk ? <Loader2 className="w-3 h-3 animate-spin" /> : <User className="w-3 h-3" />}
-              Aplicar às sem responsável
-            </button>
-          </div>
-
-          {/* Tarefas para atribuição — agrupadas por serviço */}
-          {tarefas.length === 0 ? (
-            <div className="px-6 py-8 text-center">
-              <Clock className="w-8 h-8 mx-auto mb-3 text-amber-400 opacity-60" />
-              <p className="text-sm font-semibold text-amber-700 mb-1">Nenhuma tarefa gerada ainda</p>
-              <p className="text-xs text-amber-600 mb-4">
-                As tarefas são geradas automaticamente a partir dos Tipos de Serviço cadastrados em{' '}
-                <strong>Configurações → Tipos de Serviço</strong>. Se ainda não configurou as tarefas padrão,
-                adicione-as manualmente ou use o botão abaixo.
-              </p>
-              <div className="flex flex-col sm:flex-row gap-2 justify-center">
-                {modoGestor && (
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold text-gray-700">{pctAtribuido}%</span>
+                {modoGestor && tarefas.length > 0 && (
                   <button
-                    onClick={gerarTarefasServicos}
-                    disabled={gerandoTarefas}
-                    className="flex items-center justify-center gap-2 px-4 py-2 bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white rounded-lg text-sm font-semibold transition-colors"
+                    onClick={() => setNovaT(true)}
+                    className="flex items-center gap-1 text-xs text-green-600 hover:text-green-700 font-medium px-2 py-1 rounded-lg hover:bg-green-50 transition-colors"
                   >
-                    {gerandoTarefas ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
-                    Gerar Tarefas dos Serviços
-                  </button>
-                )}
-                {modoGestor && (
-                  <button
-                    onClick={() => { setAba('timeline'); setNovaT(true) }}
-                    className="flex items-center justify-center gap-2 px-4 py-2 border border-amber-400 text-amber-700 hover:bg-amber-100 rounded-lg text-sm font-medium transition-colors"
-                  >
-                    <Plus className="w-4 h-4" />
-                    Adicionar Tarefa Manual
-                  </button>
-                )}
-                {modoGestor && (
-                  <button
-                    onClick={iniciarExecucao}
-                    disabled={iniciandoExecucao}
-                    className="flex items-center justify-center gap-2 px-4 py-2 border border-green-500 text-green-700 hover:bg-green-50 disabled:opacity-50 rounded-lg text-sm font-medium transition-colors"
-                  >
-                    {iniciandoExecucao ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
-                    Iniciar Execução Sem Tarefas
+                    <Plus className="w-3.5 h-3.5" /> Tarefa
                   </button>
                 )}
               </div>
             </div>
-          ) : (
-            <div className="divide-y divide-amber-100">
-              {etapas.map(etapa => (
-                <div key={etapa}>
-                  {/* Header do serviço */}
-                  <div className="px-4 sm:px-6 py-2 bg-amber-100/50">
-                    <span className="text-xs font-bold text-amber-700 uppercase tracking-wider">{etapa}</span>
-                    <span className="ml-2 text-xs text-amber-500">
-                      {tarefasPorEtapa[etapa].filter((t: any) => t.prazo && t.responsavelId).length}/{tarefasPorEtapa[etapa].length} atribuídas
-                    </span>
-                  </div>
+            {/* Barra de progresso */}
+            <div className="w-full bg-gray-100 rounded-full h-2 overflow-hidden">
+              <div
+                className={`h-2 rounded-full transition-all duration-500 ${
+                  pctAtribuido === 100 ? 'bg-green-500' : pctAtribuido > 50 ? 'bg-amber-400' : 'bg-amber-300'
+                }`}
+                style={{ width: `${pctAtribuido}%` }}
+              />
+            </div>
+            <div className="flex justify-between mt-1.5">
+              <span className="text-xs text-gray-400">
+                {comAtribuicao} de {tarefas.length} atribuídas
+              </span>
+              {totalPendentes > 0 && (
+                <button
+                  onClick={() => setFiltroPendentes(f => !f)}
+                  className={`text-xs font-medium transition-colors ${
+                    filtroPendentes
+                      ? 'text-amber-600 underline'
+                      : 'text-gray-400 hover:text-amber-600'
+                  }`}
+                >
+                  {filtroPendentes ? `Ver todas (${tarefas.length})` : `Ver só pendentes (${totalPendentes})`}
+                </button>
+              )}
+            </div>
+          </div>
 
-                  {/* Linhas de tarefas */}
-                  {tarefasPorEtapa[etapa].map((tarefa: any) => {
-                    const edit      = editando[tarefa.id] || { prazo: '', responsavelId: '' }
-                    const isSaving  = salvandoId === tarefa.id
-                    const atribuida = tarefa.prazo && tarefa.responsavelId
-                    const aguardaCampo  = tarefa.requerVistoriaCampo && tarefa.statusVistoria === 'SOLICITADA'
-                    const campoAgendado = tarefa.requerVistoriaCampo && tarefa.statusVistoria === 'AGENDADA'
-
-                    return (
-                      <div
-                        key={tarefa.id}
-                        className={`px-4 sm:px-6 py-3 border-b border-amber-50 last:border-0 ${
-                          campoAgendado ? 'bg-green-50/40'
-                          : aguardaCampo ? 'bg-blue-50/30'
-                          : atribuida   ? 'bg-green-50/20'
-                          : 'bg-white/60'
-                        }`}
-                      >
-                        <div className="flex flex-col gap-2">
-                          {/* Linha 1: indicador + título + checkbox campo */}
-                          <div className="flex items-center gap-2">
-                            <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${
-                              campoAgendado ? 'bg-green-500'
-                              : aguardaCampo ? 'bg-blue-400'
-                              : atribuida   ? 'bg-green-400'
-                              : 'bg-amber-400'
-                            }`} />
-                            <span className="text-sm text-gray-800 flex-1 min-w-0 truncate">{tarefa.titulo}</span>
-
-                            {/* Checkbox: Requer vistoria de campo */}
-                            <label className={`flex items-center gap-1.5 text-xs cursor-pointer select-none flex-shrink-0 px-2 py-1 rounded-lg transition-colors ${
-                              tarefa.requerVistoriaCampo
-                                ? aguardaCampo  ? 'bg-blue-100 text-blue-700'
-                                  : campoAgendado ? 'bg-green-100 text-green-700'
-                                  : 'bg-blue-100 text-blue-700'
-                                : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
-                            }`}>
-                              <input
-                                type="checkbox"
-                                checked={tarefa.requerVistoriaCampo}
-                                onChange={() => toggleVistoriaCampo(tarefa.id, tarefa.requerVistoriaCampo)}
-                                className="accent-blue-600 w-3.5 h-3.5"
-                              />
-                              <span>Vistoria de campo</span>
-                            </label>
-                          </div>
-
-                          {/* Linha 2: status campo OU inputs de prazo/responsável */}
-                          {aguardaCampo ? (
-                            <div className="ml-4 flex items-center gap-2">
-                              <span className="inline-flex items-center gap-1.5 text-xs text-blue-600 bg-blue-50 border border-blue-200 px-2.5 py-1.5 rounded-lg font-medium">
-                                🔵 Aguardando Gestão de Campo definir data
-                              </span>
-                            </div>
-                          ) : campoAgendado ? (
-                            <div className="ml-4 flex items-center gap-2 flex-wrap">
-                              <span className="inline-flex items-center gap-1.5 text-xs text-green-700 bg-green-50 border border-green-200 px-2.5 py-1.5 rounded-lg font-medium">
-                                ✅ Data definida pelo Campo: {tarefa.dataCampo
-                                  ? new Date(tarefa.dataCampo).toLocaleDateString('pt-BR')
-                                  : '—'}
-                              </span>
-                              <span className="text-xs text-gray-400 italic">Data gerenciada pelo setor de campo</span>
-                              {/* Responsável ainda pode ser definido */}
-                              <select
-                                value={edit.responsavelId}
-                                onChange={e => setEditando(prev => ({
-                                  ...prev, [tarefa.id]: { ...prev[tarefa.id], responsavelId: e.target.value },
-                                }))}
-                                className="border border-gray-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-amber-400 bg-white min-w-36 sm:w-52"
-                              >
-                                <option value="">Responsável...</option>
-                                {usuarios.map(u => (
-                                  <option key={u.id} value={u.id}>{labelUsuario(u)}</option>
-                                ))}
-                              </select>
-                              <button
-                                onClick={() => salvarAtribuicao(tarefa.id)}
-                                disabled={isSaving}
-                                className="flex items-center gap-1 px-3 py-1.5 bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white rounded-lg text-xs font-medium"
-                              >
-                                {isSaving ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />}
-                                Salvar
-                              </button>
-                            </div>
-                          ) : (
-                            <div className="ml-4 flex flex-col xs:flex-row gap-2 sm:flex-row sm:items-center flex-wrap">
-                              <input
-                                type="date"
-                                value={edit.prazo}
-                                min={HOJE_STR}
-                                max={MAX_DATE_STR}
-                                onChange={e => {
-                                  const val = e.target.value
-                                  const ano = parseInt(val.split('-')[0] || '0', 10)
-                                  if (val && (ano < new Date().getFullYear() || ano > new Date().getFullYear() + 5)) return
-                                  setEditando(prev => ({
-                                    ...prev, [tarefa.id]: { ...prev[tarefa.id], prazo: val },
-                                  }))
-                                }}
-                                className="border border-gray-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-amber-400"
-                              />
-                              <select
-                                value={edit.responsavelId}
-                                onChange={e => setEditando(prev => ({
-                                  ...prev, [tarefa.id]: { ...prev[tarefa.id], responsavelId: e.target.value },
-                                }))}
-                                className="border border-gray-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-amber-400 bg-white min-w-36 sm:w-52"
-                              >
-                                <option value="">Responsável...</option>
-                                {usuarios.map(u => (
-                                  <option key={u.id} value={u.id}>{labelUsuario(u)}</option>
-                                ))}
-                              </select>
-                              <button
-                                onClick={() => salvarAtribuicao(tarefa.id)}
-                                disabled={isSaving}
-                                className="flex items-center justify-center gap-1 px-3 py-1.5 bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white rounded-lg text-xs font-medium"
-                              >
-                                {isSaving ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />}
-                                Salvar
-                              </button>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    )
-                  })}
-                </div>
-              ))}
+          {/* ── Toolbar: atribuição em lote ──────────────────────────── */}
+          {tarefas.length > 0 && (
+            <div className="px-4 sm:px-6 py-3 bg-gray-50 border-b border-gray-100">
+              <p className="text-xs font-semibold text-gray-500 mb-2 uppercase tracking-wide">Aplicar a todas sem atribuição</p>
+              <div className="flex flex-col sm:flex-row gap-2">
+                <select
+                  value={bulkResponsavelId}
+                  onChange={e => setBulkResponsavelId(e.target.value)}
+                  className="flex-1 border border-gray-200 rounded-lg px-2.5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 bg-white min-w-0"
+                >
+                  <option value="">Responsável...</option>
+                  {usuarios.map(u => (
+                    <option key={u.id} value={u.id}>{labelUsuario(u)}</option>
+                  ))}
+                </select>
+                <input
+                  type="date"
+                  value={bulkPrazo}
+                  min={HOJE_STR}
+                  max={MAX_DATE_STR}
+                  onChange={e => setBulkPrazo(e.target.value)}
+                  className="border border-gray-200 rounded-lg px-2.5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
+                  placeholder="Prazo..."
+                />
+                <button
+                  onClick={aplicarBulkResponsavel}
+                  disabled={salvandoBulk || (!bulkResponsavelId && !bulkPrazo)}
+                  className="flex items-center justify-center gap-1.5 px-4 py-2 bg-amber-500 hover:bg-amber-600 disabled:opacity-40 text-white rounded-lg text-sm font-semibold transition-colors flex-shrink-0"
+                >
+                  {salvandoBulk ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                  Aplicar
+                </button>
+              </div>
             </div>
           )}
 
-          {/* Rodapé: Iniciar Execução manual quando há tarefas e está em OPERACIONAL */}
+          {/* ── Lista de tarefas ──────────────────────────────────────── */}
+          {tarefas.length === 0 ? (
+            // Estado vazio — sem tarefas
+            <div className="px-6 py-10 text-center">
+              <Clock className="w-9 h-9 mx-auto mb-3 text-amber-300" />
+              <p className="text-sm font-semibold text-gray-700 mb-1">Nenhuma tarefa gerada</p>
+              <p className="text-xs text-gray-500 mb-5 max-w-sm mx-auto">
+                Configure as <strong>Tarefas Padrão</strong> em Configurações → Tipos de Serviço,
+                ou adicione tarefas manualmente para este projeto.
+              </p>
+              {modoGestor && (
+                <div className="flex flex-col sm:flex-row gap-2 justify-center">
+                  <button
+                    onClick={gerarTarefasServicos}
+                    disabled={gerandoTarefas}
+                    className="flex items-center justify-center gap-2 px-4 py-2 bg-amber-500 hover:bg-amber-600 disabled:opacity-50 text-white rounded-lg text-sm font-semibold"
+                  >
+                    {gerandoTarefas ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+                    Gerar dos Serviços
+                  </button>
+                  <button
+                    onClick={() => setNovaT(true)}
+                    className="flex items-center justify-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-lg text-sm font-medium"
+                  >
+                    <Plus className="w-4 h-4" /> Tarefa Manual
+                  </button>
+                  <button
+                    onClick={iniciarExecucao}
+                    disabled={iniciandoExecucao}
+                    className="flex items-center justify-center gap-2 px-4 py-2 border border-green-400 text-green-700 hover:bg-green-50 disabled:opacity-50 rounded-lg text-sm font-medium"
+                  >
+                    {iniciandoExecucao ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                    Iniciar sem tarefas
+                  </button>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div>
+              {/* Agrupado por etapa/serviço */}
+              {etapas.map(etapa => {
+                const tarefasEtapa = filtroPendentes
+                  ? tarefasPorEtapa[etapa].filter((t: any) => !t.responsavelId || !t.prazo)
+                  : tarefasPorEtapa[etapa]
+                if (tarefasEtapa.length === 0) return null
+
+                const atribuidasNaEtapa = tarefasPorEtapa[etapa].filter((t: any) => t.prazo && t.responsavelId).length
+                const totalNaEtapa      = tarefasPorEtapa[etapa].length
+
+                return (
+                  <div key={etapa}>
+                    {/* Cabeçalho do grupo */}
+                    <div className="flex items-center justify-between px-4 sm:px-6 py-2 bg-gray-50 border-b border-gray-100">
+                      <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">{etapa}</span>
+                      <span className={`text-xs font-medium ${
+                        atribuidasNaEtapa === totalNaEtapa ? 'text-green-600' : 'text-amber-500'
+                      }`}>
+                        {atribuidasNaEtapa}/{totalNaEtapa}
+                      </span>
+                    </div>
+
+                    {/* Linhas de tarefa — compactas por padrão */}
+                    {tarefasEtapa.map((tarefa: any) => {
+                      const edit           = editando[tarefa.id] || { prazo: '', responsavelId: '' }
+                      const isOpen         = !!expandido[tarefa.id]
+                      const isSaving       = salvandoId === tarefa.id
+                      const totalAtrib     = tarefa.prazo && tarefa.responsavelId
+                      const semResponsavel = !tarefa.responsavelId
+                      const semPrazo       = !tarefa.prazo && !tarefa.requerVistoriaCampo
+                      const aguardaCampo   = tarefa.requerVistoriaCampo && tarefa.statusVistoria === 'SOLICITADA'
+                      const campoAgendado  = tarefa.requerVistoriaCampo && tarefa.statusVistoria === 'AGENDADA'
+
+                      // Status visual da linha
+                      const statusCor = campoAgendado ? 'bg-green-500'
+                        : aguardaCampo ? 'bg-blue-400'
+                        : totalAtrib  ? 'bg-green-400'
+                        : semResponsavel && semPrazo ? 'bg-red-400'
+                        : 'bg-amber-400'
+
+                      const linhaBg = isOpen
+                        ? 'bg-amber-50'
+                        : campoAgendado ? 'hover:bg-green-50/50'
+                        : totalAtrib    ? 'hover:bg-green-50/40'
+                        : 'hover:bg-amber-50/40'
+
+                      return (
+                        <div key={tarefa.id} className={`border-b border-gray-50 last:border-0 transition-colors ${linhaBg}`}>
+
+                          {/* ── Linha compacta (sempre visível) ── */}
+                          <div
+                            className="flex items-center gap-3 px-4 sm:px-6 py-3 cursor-pointer"
+                            onClick={() => setExpandido(prev => ({ ...prev, [tarefa.id]: !prev[tarefa.id] }))}
+                          >
+                            {/* Dot de status */}
+                            <div className={`w-2 h-2 rounded-full flex-shrink-0 ${statusCor}`} />
+
+                            {/* Título */}
+                            <span className="text-sm text-gray-800 flex-1 min-w-0 truncate leading-snug">
+                              {tarefa.titulo}
+                            </span>
+
+                            {/* Chips de atribuição (visíveis quando fechado) */}
+                            {!isOpen && (
+                              <div className="flex items-center gap-1.5 flex-shrink-0 flex-wrap justify-end">
+                                {aguardaCampo && (
+                                  <span className="text-xs bg-blue-50 text-blue-600 border border-blue-200 px-2 py-0.5 rounded-full font-medium">
+                                    🔵 Campo
+                                  </span>
+                                )}
+                                {campoAgendado && (
+                                  <span className="text-xs bg-green-50 text-green-700 border border-green-200 px-2 py-0.5 rounded-full font-medium">
+                                    📅 {new Date(tarefa.dataCampo).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}
+                                  </span>
+                                )}
+                                {tarefa.responsavel ? (
+                                  <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full font-medium max-w-[100px] truncate">
+                                    {tarefa.responsavel.nome.split(' ')[0]}
+                                  </span>
+                                ) : (
+                                  <span className="text-xs bg-red-50 text-red-500 border border-red-200 px-2 py-0.5 rounded-full font-medium">
+                                    Sem resp.
+                                  </span>
+                                )}
+                                {tarefa.prazo && !campoAgendado ? (
+                                  <span className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">
+                                    {new Date(tarefa.prazo).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}
+                                  </span>
+                                ) : !campoAgendado && !aguardaCampo ? (
+                                  <span className="text-xs bg-amber-50 text-amber-500 border border-amber-200 px-2 py-0.5 rounded-full">
+                                    Sem prazo
+                                  </span>
+                                ) : null}
+                              </div>
+                            )}
+
+                            {/* Ícone expandir/fechar */}
+                            <Edit2 className={`w-3.5 h-3.5 flex-shrink-0 transition-colors ${
+                              isOpen ? 'text-amber-500' : 'text-gray-300 group-hover:text-gray-400'
+                            }`} />
+                          </div>
+
+                          {/* ── Formulário expandido ── */}
+                          {isOpen && (
+                            <div className="px-4 sm:px-6 pb-4 pt-1">
+                              <div className="bg-amber-50 rounded-xl p-3 border border-amber-100">
+                                {aguardaCampo ? (
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <span className="text-xs text-blue-600 bg-blue-50 border border-blue-200 px-2.5 py-1.5 rounded-lg font-medium">
+                                      🔵 Aguardando Campo definir data
+                                    </span>
+                                    {/* Ainda permite definir responsável */}
+                                    <select
+                                      value={edit.responsavelId}
+                                      onChange={e => setEditando(prev => ({ ...prev, [tarefa.id]: { ...prev[tarefa.id], responsavelId: e.target.value } }))}
+                                      className="flex-1 border border-gray-200 rounded-lg px-2.5 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-amber-400 min-w-40"
+                                    >
+                                      <option value="">Responsável...</option>
+                                      {usuarios.map(u => <option key={u.id} value={u.id}>{labelUsuario(u)}</option>)}
+                                    </select>
+                                    <button
+                                      onClick={() => salvarAtribuicao(tarefa.id)}
+                                      disabled={isSaving}
+                                      className="flex items-center gap-1.5 px-3 py-2 bg-amber-500 hover:bg-amber-600 disabled:opacity-50 text-white rounded-lg text-sm font-medium"
+                                    >
+                                      {isSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+                                      Salvar
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <div className="flex flex-col sm:flex-row gap-2 flex-wrap">
+                                    {/* Prazo */}
+                                    {!campoAgendado ? (
+                                      <div className="flex flex-col gap-1">
+                                        <label className="text-xs text-gray-500 font-medium">Prazo</label>
+                                        <input
+                                          type="date"
+                                          value={edit.prazo}
+                                          min={HOJE_STR}
+                                          max={MAX_DATE_STR}
+                                          onChange={e => {
+                                            const val = e.target.value
+                                            const ano = parseInt(val.split('-')[0] || '0', 10)
+                                            if (val && (ano < new Date().getFullYear() || ano > new Date().getFullYear() + 5)) return
+                                            setEditando(prev => ({ ...prev, [tarefa.id]: { ...prev[tarefa.id], prazo: val } }))
+                                          }}
+                                          className="border border-gray-200 rounded-lg px-2.5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
+                                        />
+                                      </div>
+                                    ) : (
+                                      <span className="text-xs text-green-700 bg-green-50 border border-green-200 px-2.5 py-2 rounded-lg font-medium self-end">
+                                        📅 Campo: {new Date(tarefa.dataCampo).toLocaleDateString('pt-BR')}
+                                      </span>
+                                    )}
+
+                                    {/* Responsável */}
+                                    <div className="flex flex-col gap-1 flex-1 min-w-36">
+                                      <label className="text-xs text-gray-500 font-medium">Responsável</label>
+                                      <select
+                                        value={edit.responsavelId}
+                                        onChange={e => setEditando(prev => ({ ...prev, [tarefa.id]: { ...prev[tarefa.id], responsavelId: e.target.value } }))}
+                                        className="border border-gray-200 rounded-lg px-2.5 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-amber-400"
+                                      >
+                                        <option value="">Selecione...</option>
+                                        {usuarios.map(u => <option key={u.id} value={u.id}>{labelUsuario(u)}</option>)}
+                                      </select>
+                                    </div>
+
+                                    {/* Vistoria de campo */}
+                                    <div className="flex flex-col gap-1 justify-end">
+                                      <label className="text-xs text-gray-500 font-medium invisible">.</label>
+                                      <label className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm cursor-pointer select-none border transition-colors ${
+                                        tarefa.requerVistoriaCampo
+                                          ? 'bg-blue-50 border-blue-200 text-blue-700'
+                                          : 'border-gray-200 text-gray-500 hover:bg-gray-50'
+                                      }`}>
+                                        <input
+                                          type="checkbox"
+                                          checked={tarefa.requerVistoriaCampo}
+                                          onChange={() => toggleVistoriaCampo(tarefa.id, tarefa.requerVistoriaCampo)}
+                                          className="accent-blue-600 w-3.5 h-3.5"
+                                        />
+                                        Vistoria campo
+                                      </label>
+                                    </div>
+
+                                    {/* Botões Salvar / Cancelar */}
+                                    <div className="flex flex-col gap-1 justify-end">
+                                      <label className="text-xs text-gray-500 font-medium invisible">.</label>
+                                      <div className="flex gap-2">
+                                        <button
+                                          onClick={() => salvarAtribuicao(tarefa.id)}
+                                          disabled={isSaving}
+                                          className="flex items-center gap-1.5 px-4 py-2 bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white rounded-lg text-sm font-semibold transition-colors"
+                                        >
+                                          {isSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+                                          Salvar
+                                        </button>
+                                        <button
+                                          onClick={() => setExpandido(prev => ({ ...prev, [tarefa.id]: false }))}
+                                          className="px-3 py-2 border border-gray-200 text-gray-500 hover:bg-gray-100 rounded-lg text-sm transition-colors"
+                                        >
+                                          ✕
+                                        </button>
+                                      </div>
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
+                )
+              })}
+            </div>
+          )}
+
+          {/* ── Rodapé: Iniciar Execução ─────────────────────────────── */}
           {emOperacional && modoGestor && tarefas.length > 0 && (
-            <div className="px-4 sm:px-6 py-3 bg-amber-50 border-t border-amber-200 flex flex-col sm:flex-row items-center justify-between gap-2">
-              <p className="text-xs text-amber-700">
+            <div className="px-4 sm:px-6 py-3 bg-gray-50 border-t border-gray-100 flex flex-col sm:flex-row items-center justify-between gap-3">
+              <p className="text-xs text-gray-500">
                 {pctAtribuido === 100
-                  ? '✅ Todas as tarefas atribuídas — pronto para iniciar!'
-                  : `⏳ ${pctAtribuido}% atribuído — atribua prazos/responsáveis ou inicie mesmo assim`}
+                  ? '✅ Tudo atribuído — execute o 1º check na linha do tempo para iniciar, ou clique em Iniciar.'
+                  : `⏳ ${totalPendentes} tarefa(s) ainda sem atribuição completa.`}
               </p>
               <button
                 onClick={iniciarExecucao}
@@ -615,7 +785,8 @@ export default function ProjetoDetalhe() {
             </div>
           )}
         </div>
-      )}
+        )
+      })()}
 
       {/* ── Abas ────────────────────────────────────────────── */}
       <div className="border-b border-gray-100 overflow-x-auto">
@@ -898,6 +1069,136 @@ export default function ProjetoDetalhe() {
               ))}
             </div>
           )}
+        </div>
+      )}
+
+      {/* ── Credenciais de Sistemas (SIGLA / CTF) ──────────── */}
+      {(() => {
+        const creds = projeto.credenciais ? (() => { try { return JSON.parse(projeto.credenciais) } catch { return {} } })() : {}
+        const sistemas = Object.keys(creds)
+        if (sistemas.length === 0) return null
+        return (
+          <div className="bg-white rounded-2xl border border-gray-100 p-4 sm:p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-semibold text-gray-900">🔑 Credenciais de Sistemas</h3>
+              {modoGestor && (
+                <button
+                  onClick={() => {
+                    const s = prompt('Sistema (ex: SIGLA, CTF, IBAMA):')
+                    if (s) {
+                      const existing = creds[s.toUpperCase()] || {}
+                      setCredForm({ login: existing.login || '', senha: existing.senha || '' })
+                      setModalCredencial({ sistema: s.toUpperCase() })
+                    }
+                  }}
+                  className="text-xs text-green-600 hover:text-green-700 font-medium"
+                >
+                  + Adicionar
+                </button>
+              )}
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {sistemas.map(s => (
+                <div key={s} className="bg-gray-50 rounded-xl p-3 border border-gray-100">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">{s}</span>
+                    {modoGestor && (
+                      <button
+                        onClick={() => {
+                          setCredForm({ login: creds[s].login || '', senha: creds[s].senha || '' })
+                          setModalCredencial({ sistema: s })
+                        }}
+                        className="text-xs text-gray-400 hover:text-gray-600"
+                      >
+                        Editar
+                      </button>
+                    )}
+                  </div>
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-gray-400 w-12 flex-shrink-0">Login:</span>
+                      <span className="text-sm font-mono text-gray-800">{creds[s].login || '—'}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-gray-400 w-12 flex-shrink-0">Senha:</span>
+                      <span className="text-sm font-mono text-gray-800">{creds[s].senha || '—'}</span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )
+      })()}
+
+      {/* ══════════════════════════════════════════════════════
+          MODAL DE CREDENCIAIS — aparece ao concluir SIGLA/CTF
+          ══════════════════════════════════════════════════════ */}
+      {modalCredencial && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+            {/* Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+              <div>
+                <h2 className="font-bold text-gray-900">🔑 Credenciais do {modalCredencial.sistema}</h2>
+                <p className="text-xs text-gray-500 mt-0.5">
+                  Registre o login e senha obtidos no cadastro
+                </p>
+              </div>
+              <button
+                onClick={() => setModalCredencial(null)}
+                className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Formulário */}
+            <div className="px-6 py-5 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Login / Usuário</label>
+                <input
+                  type="text"
+                  value={credForm.login}
+                  onChange={e => setCredForm(p => ({ ...p, login: e.target.value }))}
+                  placeholder={`Login no sistema ${modalCredencial.sistema}`}
+                  className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                  autoFocus
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Senha</label>
+                <input
+                  type="text"
+                  value={credForm.senha}
+                  onChange={e => setCredForm(p => ({ ...p, senha: e.target.value }))}
+                  placeholder="Senha definida no cadastro"
+                  className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                />
+              </div>
+              <p className="text-xs text-amber-600 bg-amber-50 rounded-lg px-3 py-2">
+                ⚠️ Essas informações ficam salvas no projeto e visíveis para toda a equipe.
+              </p>
+            </div>
+
+            {/* Ações */}
+            <div className="px-6 pb-5 flex gap-2">
+              <button
+                onClick={salvarCredencial}
+                disabled={salvandoCred}
+                className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white rounded-xl text-sm font-semibold transition-colors"
+              >
+                {salvandoCred ? <Loader2 className="w-4 h-4 animate-spin" /> : '💾'}
+                Salvar Credenciais
+              </button>
+              <button
+                onClick={() => setModalCredencial(null)}
+                className="px-5 py-2.5 border border-gray-200 text-gray-600 hover:bg-gray-50 rounded-xl text-sm font-medium"
+              >
+                Pular
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

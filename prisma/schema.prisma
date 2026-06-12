@@ -107,6 +107,7 @@ model Projeto {
   etapaPipeline        String   @default("SOLICITACAO")
   servicosRecomendados String?  // JSON: ["Licenciamento Ambiental", "Outorga"]
   servicosContratados  String?  // JSON: serviços fechados
+  credenciais          String?  // JSON: {"SIGLA":{"login":"...","senha":"..."},"CTF":{...}}
   valorSinal           Float?
   valorPrestacao       Float?
   numeroPrestacoes     Int?
