@@ -182,6 +182,66 @@ export async function POST(request: NextRequest) {
             },
           })
         }
+      } else {
+        // Contrato sem valor definido → avança direto para OPERACIONAL e cria tarefas
+        if (projeto.etapaPipeline === 'AGUARDANDO_SINAL') {
+          await prisma.projeto.update({
+            where: { id: projetoId },
+            data: { etapaPipeline: 'OPERACIONAL', dataAprovacao: new Date() },
+          })
+
+          // Cria tarefas padrão baseadas nos serviços contratados
+          let nomesServicos: string[] = []
+          try {
+            const raw = projeto.servicosContratados || '[]'
+            nomesServicos = JSON.parse(raw as string)
+          } catch {}
+
+          if (nomesServicos.length > 0) {
+            const tiposServico = await prisma.tipoServico.findMany({
+              where: { nome: { in: nomesServicos } },
+              orderBy: { ordem: 'asc' },
+            })
+            let ordem = 1
+            for (const ts of tiposServico) {
+              let tarefasPadrao: string[] = []
+              try { tarefasPadrao = JSON.parse(ts.tarefasPadrao || '[]') } catch {}
+              for (const item of tarefasPadrao) {
+                const titulo = typeof item === 'string' ? item : (item as any).titulo
+                if (!titulo) continue
+                await prisma.tarefa.create({
+                  data: { projetoId, titulo, etapa: ts.nome, ordem: ordem++ },
+                })
+              }
+            }
+          }
+
+          // Notifica gestores responsáveis
+          const projetoInfo = await prisma.projeto.findUnique({
+            where: { id: projetoId },
+            select: { gestorResponsavelId: true, supervisorId: true },
+          })
+          let destinatariosIds = [projetoInfo?.gestorResponsavelId, projetoInfo?.supervisorId].filter(Boolean) as string[]
+          if (destinatariosIds.length === 0) {
+            const fallback = await prisma.usuario.findMany({
+              where: { ativo: true, role: { in: ['ADMIN', 'GESTOR_GERAL'] } },
+              select: { id: true },
+            })
+            destinatariosIds = fallback.map(u => u.id)
+          }
+          destinatariosIds = Array.from(new Set(destinatariosIds))
+          if (destinatariosIds.length > 0) {
+            await prisma.notificacao.createMany({
+              data: destinatariosIds.map(uid => ({
+                usuarioId: uid,
+                titulo: '🚀 Projeto liberado para execução (valor a definir)',
+                mensagem: `Projeto ${projeto.codigo} teve contrato registrado sem valor definido e foi liberado para Operacional. Lembre-se de definir o valor do contrato depois.`,
+                tipo: 'aviso',
+                link: `/operacional/${projetoId}`,
+              })),
+            })
+          }
+        }
       }
     }
 
@@ -191,11 +251,11 @@ export async function POST(request: NextRequest) {
         acao: existente ? 'ATUALIZAR_CONTRATO' : 'CRIAR_CONTRATO',
         entidade: 'Contrato',
         entidadeId: contrato.id,
-        detalhes: JSON.stringify({ projetoId, tipoContrato }),
+        detalhes: JSON.stringify({ projetoId, tipoContrato, valorADefinir }),
       },
     })
 
-    return NextResponse.json({ contrato }, { status: existente ? 200 : 201 })
+    return NextResponse.json({ contrato, avancouPipeline: valorADefinir && !existente }, { status: existente ? 200 : 201 })
   } catch (error) {
     console.error('Erro ao salvar contrato:', error)
     return NextResponse.json({ error: 'Erro interno' }, { status: 500 })

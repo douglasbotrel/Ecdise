@@ -111,8 +111,15 @@ export function ModalContrato({ open, onClose, onSalvo }: ModalContratoProps) {
         toast.error(err.error || 'Erro ao criar contrato')
         return
       }
+      const data = await res.json()
       const semValor = !form.valorTotal || parseFloat(form.valorTotal) <= 0
-      toast.success(semValor ? 'Contrato criado! ADM deverá definir o valor depois.' : 'Contrato criado com parcelas geradas!')
+      if (semValor && data.avancouPipeline) {
+        toast.success('Contrato criado! Projeto liberado para Operacional. Defina o valor depois.')
+      } else if (semValor) {
+        toast.success('Contrato criado! ADM deverá definir o valor depois.')
+      } else {
+        toast.success('Contrato criado com parcelas geradas!')
+      }
       onSalvo()
     } catch {
       toast.error('Erro ao salvar')
