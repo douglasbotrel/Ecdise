@@ -51,8 +51,8 @@ export default function ProjetoDetalhe() {
   const [expandido, setExpandido]                 = useState<Record<string, boolean>>({})
   // Filtro: mostrar apenas tarefas sem atribuição completa
   const [filtroPendentes, setFiltroPendentes]     = useState(false)
-  // Painel de atribuição aberto/fechado (aberto por padrão só em OPERACIONAL)
-  const [painelAberto, setPainelAberto]           = useState(false)
+  // Painel de atribuição aberto/fechado — começa sempre fechado
+  const [painelAberto, setPainelAberto]           = useState<boolean | null>(null)
   // Modal de credenciais (SIGLA / CTF)
   const [modalCredencial, setModalCredencial]     = useState<{ sistema: string } | null>(null)
   const [credForm, setCredForm]                   = useState({ login: '', senha: '' })
@@ -93,12 +93,6 @@ export default function ProjetoDetalhe() {
       .then(r => r.json())
       .then(d => setCurrentUser(d.usuario || null))
   }, [loadProjeto])
-
-  // Abre o painel automaticamente só quando o projeto está em planejamento (OPERACIONAL)
-  useEffect(() => {
-    if (!projeto) return
-    setPainelAberto(projeto.etapaPipeline === 'OPERACIONAL')
-  }, [projeto?.id]) // só na primeira carga do projeto
 
   // Inicializa estado de edição quando projeto carrega (qualquer etapa)
   useEffect(() => {
@@ -487,12 +481,12 @@ export default function ProjetoDetalhe() {
                 <span className="text-xs font-bold text-gray-600">{pctAtribuido}%</span>
               </div>
               <span className="text-xs font-bold text-gray-600 sm:hidden">{pctAtribuido}%</span>
-              <span className="text-gray-400 text-sm">{painelAberto ? '▲' : '▼'}</span>
+              <span className="text-gray-400 text-sm">{painelAberto === true ? '▲' : '▼'}</span>
             </div>
           </button>
 
           {/* ── Conteúdo colapsável ─────────────────────────────────── */}
-          {painelAberto && (
+          {painelAberto === true && (
           <>
           {/* ── Sub-header: barra de progresso detalhada ───────────── */}
           <div className="px-4 sm:px-6 pb-3 pt-1 border-b border-gray-100">
