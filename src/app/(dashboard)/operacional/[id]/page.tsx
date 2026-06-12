@@ -437,8 +437,8 @@ export default function ProjetoDetalhe() {
         const prazoEstimado = !projeto.dataPrazo && !!prazoTarefas
 
         const cards = [
-          { Icon: User,       label: 'Cliente',      value: projeto.cliente?.nome,                       sub: null },
-          { Icon: User,       label: 'Responsável',  value: projeto.responsavel?.nome || 'Não atribuído', sub: null },
+          { Icon: User,       label: 'Cliente',      value: projeto.cliente?.nome,                        sub: null },
+          { Icon: User,       label: 'Responsável',  value: projeto.responsavel?.nome || 'Não atribuído',  sub: null },
           {
             Icon: Calendar,
             label: prazoEstimado ? 'Previsão de conclusão' : 'Prazo',
@@ -446,13 +446,6 @@ export default function ProjetoDetalhe() {
             sub: prazoEstimado ? '* baseado na última tarefa' : null,
           },
           { Icon: DollarSign, label: 'Valor',        value: formatCurrency(projeto.contrato?.valorTotal || projeto.valorProposto), sub: null },
-          ...(projeto.car ? [{
-            Icon: FileText,
-            label: 'CAR',
-            value: projeto.car,
-            sub: null,
-            fullWidth: true,
-          }] : []),
           ...(projeto.areaHectares ? [{
             Icon: BarChart2,
             label: 'Área',
@@ -462,24 +455,36 @@ export default function ProjetoDetalhe() {
         ]
 
         return (
-          <div className={`grid gap-3 ${
-            cards.length <= 4 ? 'grid-cols-2 lg:grid-cols-4'
-            : cards.length === 5 ? 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-5'
-            : 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-6'
-          }`}>
-            {cards.map(({ Icon, label, value, sub, fullWidth }: any) => (
-              <div
-                key={label}
-                className={`bg-white rounded-xl border border-gray-100 p-3 sm:p-4 ${fullWidth ? 'col-span-2 sm:col-span-3 lg:col-span-full' : ''}`}
-              >
-                <div className="flex items-center gap-1.5 text-gray-400 mb-1">
-                  <Icon className="w-3.5 h-3.5" />
-                  <span className="text-xs">{label}</span>
+          <div className="space-y-3">
+            {/* Grid de cards principais */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+              {cards.map(({ Icon, label, value, sub }: any) => (
+                <div key={label} className="bg-white rounded-xl border border-gray-100 p-3 sm:p-4">
+                  <div className="flex items-center gap-1.5 text-gray-400 mb-1">
+                    <Icon className="w-3.5 h-3.5" />
+                    <span className="text-xs">{label}</span>
+                  </div>
+                  <p className="font-semibold text-sm text-gray-900 truncate">{value}</p>
+                  {sub && <p className="text-xs text-amber-500 mt-0.5">{sub}</p>}
                 </div>
-                <p className={`font-semibold text-sm text-gray-900 ${fullWidth ? 'break-all font-mono' : 'truncate'}`}>{value}</p>
-                {sub && <p className="text-xs text-amber-500 mt-0.5">{sub}</p>}
+              ))}
+            </div>
+
+            {/* CAR — linha própria, texto completo */}
+            {projeto.car && (
+              <div className="bg-white rounded-xl border border-gray-100 p-3 sm:p-4">
+                <div className="flex items-center gap-1.5 text-gray-400 mb-1">
+                  <FileText className="w-3.5 h-3.5" />
+                  <span className="text-xs">CAR</span>
+                </div>
+                <p
+                  className="font-semibold text-sm text-gray-900 font-mono"
+                  style={{ wordBreak: 'break-all', whiteSpace: 'normal' }}
+                >
+                  {projeto.car}
+                </p>
               </div>
-            ))}
+            )}
           </div>
         )
       })()}
