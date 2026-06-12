@@ -2,9 +2,10 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { toast } from 'sonner'
-import { Plus, Search, Eye, Edit2, CheckCircle, ArrowRight, Clock, FileText } from 'lucide-react'
+import { Plus, Search, Eye, Edit2, CheckCircle, ArrowRight, Clock, FileText, FolderOpen } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
 import { ModalProjeto } from '@/components/modals/ModalProjeto'
+import { ModalDocumentos } from '@/components/modals/ModalDocumentos'
 
 const ETAPA_LABELS: Record<string, string> = {
   SOLICITACAO:         'Nova Solicitação',
@@ -96,6 +97,8 @@ export default function ComercialPage() {
   const [modalOpen, setModalOpen] = useState(false)
   const [projetoSelecionado, setProjetoSelecionado] = useState<any>(null)
   const [modoModal, setModoModal] = useState<string>('criar')
+  const [docModalOpen, setDocModalOpen] = useState(false)
+  const [projetoDocumentos, setProjetoDocumentos] = useState<any>(null)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -120,6 +123,7 @@ export default function ComercialPage() {
   function abrirNovo() { setProjetoSelecionado(null); setModoModal('criar'); setModalOpen(true) }
   function abrirAcao(projeto: any, modo: string) { setProjetoSelecionado(projeto); setModoModal(modo); setModalOpen(true) }
   function abrirEditar(projeto: any) { setProjetoSelecionado(projeto); setModoModal('editar'); setModalOpen(true) }
+  function abrirDocumentos(projeto: any) { setProjetoDocumentos(projeto); setDocModalOpen(true) }
 
   // Contadores por etapa (dos projetos carregados)
   const contadores: Record<string, number> = {}
@@ -233,6 +237,10 @@ export default function ComercialPage() {
                           className="p-1.5 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors" title="Ver detalhes">
                           <Eye className="w-4 h-4" />
                         </a>
+                        <button onClick={() => abrirDocumentos(p)}
+                          className="p-1.5 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors" title="Documentos">
+                          <FolderOpen className="w-4 h-4" />
+                        </button>
                         <button onClick={() => abrirEditar(p)}
                           className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="Editar">
                           <Edit2 className="w-4 h-4" />
@@ -253,6 +261,12 @@ export default function ComercialPage() {
         projeto={projetoSelecionado}
         modoAcao={modoModal as any}
         onSalvo={() => { setModalOpen(false); load() }}
+      />
+
+      <ModalDocumentos
+        open={docModalOpen}
+        onClose={() => setDocModalOpen(false)}
+        projeto={projetoDocumentos}
       />
     </div>
   )
