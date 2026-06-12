@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import {
-  ArrowLeft, Plus, Check, FileText,
+  ArrowLeft, Plus, Check, FileText, BarChart2,
   DollarSign, User, Calendar, Loader2,
   Edit2, Save, Clock, AlertCircle,
 } from 'lucide-react'
@@ -426,22 +426,60 @@ export default function ProjetoDetalhe() {
       </div>
 
       {/* ── Info Cards ──────────────────────────────────────── */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        {[
-          { Icon: User,       label: 'Cliente',     value: projeto.cliente?.nome },
-          { Icon: User,       label: 'Responsável',  value: projeto.responsavel?.nome || 'Não atribuído' },
-          { Icon: Calendar,   label: 'Prazo',        value: formatDate(projeto.dataPrazo) || '—' },
-          { Icon: DollarSign, label: 'Valor',        value: formatCurrency(projeto.contrato?.valorTotal || projeto.valorProposto) },
-        ].map(({ Icon, label, value }) => (
-          <div key={label} className="bg-white rounded-xl border border-gray-100 p-3 sm:p-4">
-            <div className="flex items-center gap-1.5 text-gray-400 mb-1">
-              <Icon className="w-3.5 h-3.5" />
-              <span className="text-xs">{label}</span>
-            </div>
-            <p className="font-semibold text-sm text-gray-900 truncate">{value}</p>
+      {(() => {
+        // Prazo: usa dataPrazo do projeto; se vazio, deriva da última tarefa com prazo
+        const prazoTarefas = tarefas
+          .filter((t: any) => t.prazo)
+          .map((t: any) => t.prazo)
+          .sort()
+          .pop() || null
+        const prazoRef      = projeto.dataPrazo || prazoTarefas
+        const prazoEstimado = !projeto.dataPrazo && !!prazoTarefas
+
+        const cards = [
+          { Icon: User,       label: 'Cliente',      value: projeto.cliente?.nome,                       sub: null },
+          { Icon: User,       label: 'Responsável',  value: projeto.responsavel?.nome || 'Não atribuído', sub: null },
+          {
+            Icon: Calendar,
+            label: prazoEstimado ? 'Previsão de conclusão' : 'Prazo',
+            value: formatDate(prazoRef) || '—',
+            sub: prazoEstimado ? '* baseado na última tarefa' : null,
+          },
+          { Icon: DollarSign, label: 'Valor',        value: formatCurrency(projeto.contrato?.valorTotal || projeto.valorProposto), sub: null },
+          ...(projeto.car ? [{
+            Icon: FileText,
+            label: 'CAR',
+            value: projeto.car.length > 20 ? projeto.car.slice(0, 20) + '…' : projeto.car,
+            sub: null,
+            title: projeto.car,
+          }] : []),
+          ...(projeto.areaHectares ? [{
+            Icon: BarChart2,
+            label: 'Área',
+            value: `${Number(projeto.areaHectares).toLocaleString('pt-BR')} ha`,
+            sub: null,
+          }] : []),
+        ]
+
+        return (
+          <div className={`grid gap-3 ${
+            cards.length <= 4 ? 'grid-cols-2 lg:grid-cols-4'
+            : cards.length === 5 ? 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-5'
+            : 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-6'
+          }`}>
+            {cards.map(({ Icon, label, value, sub, title }: any) => (
+              <div key={label} className="bg-white rounded-xl border border-gray-100 p-3 sm:p-4" title={title}>
+                <div className="flex items-center gap-1.5 text-gray-400 mb-1">
+                  <Icon className="w-3.5 h-3.5" />
+                  <span className="text-xs">{label}</span>
+                </div>
+                <p className="font-semibold text-sm text-gray-900 truncate">{value}</p>
+                {sub && <p className="text-xs text-amber-500 mt-0.5">{sub}</p>}
+              </div>
+            ))}
           </div>
-        ))}
-      </div>
+        )
+      })()}
 
       {/* ══════════════════════════════════════════════════════
           PAINEL DE ATRIBUIÇÃO — colapsável, aparece abaixo das abas
