@@ -1,38 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getCurrentUser } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import { writeFile, mkdir } from 'fs/promises'
-import { join } from 'path'
+import { uploadParaDrive, isDriveConfigurado } from '@/lib/gdrive'
 
-// ── Organização padrão de pastas ─────────────────────────────
-// tipo=pagamento  → /uploads/pagamentos/{projetoId}/
-// tipo=documento  → /uploads/projetos/{projetoId}/documentos/
-// tipo=vistoria   → /uploads/vistorias/{entidadeId}/
-// tipo=tarefa     → /uploads/tarefas/{entidadeId}/
-// (default)       → /uploads/geral/
-function resolverPasta(
-  tipo: string,
-  projetoId: string | null,
-  entidadeId: string | null,
-): string {
-  switch (tipo) {
-    case 'pagamento':
-      return projetoId ? `pagamentos/${projetoId}` : 'pagamentos/geral'
-    case 'vistoria':
-      return entidadeId ? `vistorias/${entidadeId}` : 'vistorias/geral'
-    case 'tarefa':
-      return entidadeId ? `tarefas/${entidadeId}` : 'tarefas/geral'
-    case 'documento':
-    case 'projeto':
-    default:
-      return projetoId ? `projetos/${projetoId}/documentos` : 'geral'
-  }
-}
+const EXTENSOES_PERMITIDAS = [
+  '.pdf', '.kml', '.kmz',
+  '.jpg', '.jpeg', '.png', '.tif', '.tiff',
+  '.zip', '.xlsx', '.xls', '.xml', '.docx', '.doc',
+]
 
 export async function POST(request: NextRequest) {
   try {
     const user = await getCurrentUser()
     if (!user) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
+
+    // Verifica se o Google Drive está configurado
+    if (!isDriveConfigurado()) {
+      return NextResponse.json({
+        error: 'Armazenamento em nuvem não configurado. Configure GOOGLE_SERVICE_ACCOUNT_JSON e GOOGLE_DRIVE_ROOT_FOLDER_ID no .env e reinicie o servidor.',
+      }, { status: 503 })
+    }
 
     const formData   = await request.formData()
     const arquivo    = formData.get('arquivo')   as File   | null
@@ -46,37 +33,50 @@ export async function POST(request: NextRequest) {
     }
 
     // Valida extensão
-    const extensoesPermitidas = ['.pdf', '.kml', '.kmz', '.jpg', '.jpeg', '.png', '.tif', '.tiff', '.zip', '.xlsx', '.xls', '.xml']
-    const nomeArquivo         = arquivo.name.toLowerCase()
-    if (!extensoesPermitidas.some(ext => nomeArquivo.endsWith(ext))) {
+    const nomeArquivo = arquivo.name.toLowerCase()
+    if (!EXTENSOES_PERMITIDAS.some(ext => nomeArquivo.endsWith(ext))) {
       return NextResponse.json({
-        error: 'Tipo de arquivo não permitido. Use: PDF, KML, KMZ, imagens, ZIP ou Excel',
+        error: `Tipo de arquivo não permitido. Use: ${EXTENSOES_PERMITIDAS.join(', ')}`,
       }, { status: 400 })
     }
 
-    // Limita a 50 MB
-    if (arquivo.size > 50 * 1024 * 1024) {
-      return NextResponse.json({ error: 'Arquivo muito grande. Máximo 50MB.' }, { status: 400 })
+    // Limita tamanho
+    const maxSize = parseInt(process.env.MAX_FILE_SIZE || '52428800')
+    if (arquivo.size > maxSize) {
+      return NextResponse.json({
+        error: `Arquivo muito grande. Máximo ${Math.round(maxSize / 1024 / 1024)} MB.`,
+      }, { status: 400 })
     }
 
-    // Resolve pasta e cria diretório
-    const subpasta        = resolverPasta(tipo, projetoId, entidadeId)
-    const dir             = join(process.cwd(), 'public', 'uploads', subpasta)
-    await mkdir(dir, { recursive: true })
+    // Busca código do projeto para nomear a pasta no Drive
+    let projetoCodigo = 'GERAL'
+    if (projetoId) {
+      const projeto = await prisma.projeto.findUnique({
+        where: { id: projetoId },
+        select: { codigo: true },
+      })
+      projetoCodigo = projeto?.codigo || 'GERAL'
+    }
 
-    // Nome único
-    const timestamp       = Date.now()
-    const nomeSeguro      = arquivo.name.replace(/[^a-zA-Z0-9._-]/g, '_')
-    const nomeArquivoFinal = `${timestamp}_${nomeSeguro}`
-    const caminho         = join(dir, nomeArquivoFinal)
+    // Nome único do arquivo (timestamp + nome sanitizado)
+    const timestamp      = Date.now()
+    const nomeSanitizado = arquivo.name.replace(/[^a-zA-Z0-9._\-()]/g, '_')
+    const nomeArquivoFinal = `${timestamp}_${nomeSanitizado}`
 
-    // Salva arquivo
-    const bytes = await arquivo.arrayBuffer()
-    await writeFile(caminho, Buffer.from(bytes))
+    // Converte para Buffer e faz upload no Drive
+    const bytes  = await arquivo.arrayBuffer()
+    const buffer = Buffer.from(bytes)
 
-    const url = `/uploads/${subpasta}/${nomeArquivoFinal}`
+    const resultado = await uploadParaDrive({
+      buffer,
+      nomeArquivo:   nomeArquivoFinal,
+      nomeOriginal:  arquivo.name,
+      mimeType:      arquivo.type || 'application/octet-stream',
+      projetoCodigo,
+      tipo,
+    })
 
-    // Registra documento no banco (quando vinculado a projeto)
+    // Registra no banco (quando vinculado a projeto/entidade)
     let documento = null
     if (projetoId || entidadeId) {
       const tarefaId   = tipo === 'tarefa'   ? (entidadeId ?? undefined) : undefined
@@ -84,11 +84,12 @@ export async function POST(request: NextRequest) {
 
       documento = await prisma.documento.create({
         data: {
-          nome: arquivo.name,
-          tipo: arquivo.type || 'application/octet-stream',
+          nome:      arquivo.name,
+          tipo:      arquivo.type || 'application/octet-stream',
           categoria,
-          url,
-          tamanho: arquivo.size,
+          url:       resultado.webViewLink,      // URL de visualização no Drive
+          tamanho:   arquivo.size,
+          driveFileId: resultado.fileId,         // ID do arquivo no Drive (para exclusão futura)
           ...(projetoId  && { projetoId }),
           ...(tarefaId   && { tarefaId }),
           ...(vistoriaId && { vistoriaId }),
@@ -98,13 +99,22 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json({
-      url,
-      nome: arquivo.name,
-      tamanho: arquivo.size,
-      documentoId: documento?.id,
+      url:             resultado.webViewLink,
+      downloadUrl:     resultado.webContentLink,
+      fileId:          resultado.fileId,
+      nome:            arquivo.name,
+      tamanho:         arquivo.size,
+      documentoId:     documento?.id,
     }, { status: 201 })
-  } catch (error) {
+
+  } catch (error: any) {
     console.error('Erro no upload:', error)
+    // Mostra mensagem mais específica para erros de credencial
+    if (error.message?.includes('GOOGLE_SERVICE_ACCOUNT_JSON') || error.message?.includes('credentials')) {
+      return NextResponse.json({
+        error: 'Erro de autenticação com Google Drive. Verifique as credenciais no .env.',
+      }, { status: 500 })
+    }
     return NextResponse.json({ error: 'Erro ao fazer upload do arquivo' }, { status: 500 })
   }
 }

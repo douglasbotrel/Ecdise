@@ -353,6 +353,7 @@ model Documento {
   tipo         String?
   categoria    String?
   url          String
+  driveFileId  String?
   tamanho      Int?
   projetoId    String?
   tarefaId     String?
