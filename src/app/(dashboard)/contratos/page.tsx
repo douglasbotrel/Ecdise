@@ -175,7 +175,11 @@ export default function ContratosPage() {
         body: JSON.stringify(body),
       })
       if (!res.ok) { toast.error('Erro ao salvar'); return }
-      toast.success('Dados do contrato atualizados!')
+      const resData = await res.json()
+      toast.success(resData.parcelasGeradas
+        ? 'Valor definido e parcelas geradas com sucesso!'
+        : 'Dados do contrato atualizados!'
+      )
       setEditandoDados(false)
       fecharPopup()
       load()

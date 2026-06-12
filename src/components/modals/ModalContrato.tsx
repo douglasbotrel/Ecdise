@@ -70,14 +70,15 @@ export function ModalContrato({ open, onClose, onSalvo }: ModalContratoProps) {
       novosErros.projetoId = 'Selecione um projeto'
     }
     const vTotal = parseFloat(form.valorTotal)
-    if (!form.valorTotal || isNaN(vTotal) || vTotal <= 0) {
-      novosErros.valorTotal = 'Valor total é obrigatório e deve ser maior que zero'
+    const temValor = form.valorTotal !== '' && !isNaN(vTotal)
+    if (temValor && vTotal <= 0) {
+      novosErros.valorTotal = 'Valor total deve ser maior que zero'
     }
     const vSinal = parseFloat(form.valorSinal || '0')
     if (vSinal < 0) {
       novosErros.valorSinal = 'Valor do sinal não pode ser negativo'
     }
-    if (!isNaN(vTotal) && vSinal > vTotal) {
+    if (temValor && vSinal > vTotal) {
       novosErros.valorSinal = 'Sinal não pode ser maior que o valor total'
     }
     const nParcelas = parseInt(form.numeroParcelas)
@@ -110,7 +111,8 @@ export function ModalContrato({ open, onClose, onSalvo }: ModalContratoProps) {
         toast.error(err.error || 'Erro ao criar contrato')
         return
       }
-      toast.success('Contrato criado com parcelas geradas!')
+      const semValor = !form.valorTotal || parseFloat(form.valorTotal) <= 0
+      toast.success(semValor ? 'Contrato criado! ADM deverá definir o valor depois.' : 'Contrato criado com parcelas geradas!')
       onSalvo()
     } catch {
       toast.error('Erro ao salvar')
@@ -229,10 +231,10 @@ export function ModalContrato({ open, onClose, onSalvo }: ModalContratoProps) {
                   min="0.01"
                   value={form.valorTotal}
                   onChange={e => handleChange('valorTotal', e.target.value)}
-                  placeholder="0,00"
+                  placeholder="Deixar em branco para definir depois"
                   className={inputClass(erros.valorTotal)}
                 />
-              ), erros.valorTotal, true)}
+              ), erros.valorTotal)}
 
               {campo('Valor do Sinal (R$)', (
                 <input
@@ -295,7 +297,7 @@ export function ModalContrato({ open, onClose, onSalvo }: ModalContratoProps) {
             {!form.valorTotal && (
               <div className="flex items-center gap-2 text-xs text-amber-600 bg-amber-50 rounded-lg px-3 py-2">
                 <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
-                O valor total é obrigatório para gerar as parcelas de pagamento
+                <span>Sem valor definido — o contrato será criado como <strong>Valor a Definir</strong>. Um ADM poderá preencher o valor depois para gerar as parcelas.</span>
               </div>
             )}
           </div>
@@ -315,7 +317,7 @@ export function ModalContrato({ open, onClose, onSalvo }: ModalContratoProps) {
               className="px-5 py-2.5 border border-gray-200 rounded-xl text-gray-700 hover:bg-gray-50 font-medium text-sm">
               Cancelar
             </button>
-            <button type="submit" disabled={loading || !form.valorTotal || parseFloat(form.valorTotal) <= 0}
+            <button type="submit" disabled={loading}
               className="px-5 py-2.5 bg-green-600 hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-semibold rounded-xl text-sm flex items-center gap-2 transition-colors">
               {loading && <Loader2 className="w-4 h-4 animate-spin" />}
               Criar Contrato

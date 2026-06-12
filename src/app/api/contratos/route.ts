@@ -81,17 +81,14 @@ export async function POST(request: NextRequest) {
     const vSinal    = Math.max(0, parseFloat(valorSinalBody ?? projeto.valorSinal ?? 0))
     const vParcela  = projeto.valorPrestacao || 0
     const nParcelas = Math.max(1, parseInt(numParcelasBody ?? projeto.numeroPrestacoes ?? 1))
-    const vTotal    = parseFloat(valorTotalBody ?? '') || (vSinal + vParcela * Math.max(nParcelas - 1, 0))
-    const vRestante = vTotal - vSinal
+    // vTotal pode ser 0/nulo quando o valor ainda não foi definido (será preenchido depois por ADM)
+    const vTotalRaw = parseFloat(valorTotalBody ?? '') || (vSinal + vParcela * Math.max(nParcelas - 1, 0))
+    const vTotal    = isNaN(vTotalRaw) ? 0 : vTotalRaw
+    const vRestante = Math.max(0, vTotal - vSinal)
+    const valorADefinir = vTotal <= 0
 
-    // ── Validações de negócio obrigatórias ────────────────────
-    if (!vTotal || vTotal <= 0) {
-      return NextResponse.json(
-        { error: 'O valor total do contrato é obrigatório e deve ser maior que zero.' },
-        { status: 400 }
-      )
-    }
-    if (vSinal < 0 || vSinal > vTotal) {
+    // ── Validações de negócio ─────────────────────────────────
+    if (!valorADefinir && (vSinal < 0 || vSinal > vTotal)) {
       return NextResponse.json(
         { error: 'O valor do sinal não pode ser negativo nem superior ao valor total.' },
         { status: 400 }
@@ -155,34 +152,36 @@ export async function POST(request: NextRequest) {
         },
       })
 
-      // Gera registros de pagamento automaticamente
-      if (vSinal > 0) {
-        await prisma.pagamento.create({
-          data: {
-            contratoId: contrato.id,
-            tipo: 'SINAL',
-            descricao: 'Sinal / Entrada',
-            valor: vSinal,
-            dataVencimento: dataAssinatura ? new Date(dataAssinatura) : new Date(),
-            numeroParcela: 0,
-            status: 'PENDENTE',
-          },
-        })
-      }
-      for (let i = 1; i <= nParcelas; i++) {
-        const venc = new Date(dataAssinatura || new Date())
-        venc.setMonth(venc.getMonth() + i)
-        await prisma.pagamento.create({
-          data: {
-            contratoId: contrato.id,
-            tipo: i === nParcelas ? 'PAGAMENTO_FINAL' : 'PARCELA',
-            descricao: i === nParcelas ? 'Pagamento Final' : `Parcela ${i}/${nParcelas}`,
-            valor: vParcela,
-            dataVencimento: venc,
-            numeroParcela: i,
-            status: 'PENDENTE',
-          },
-        })
+      // Gera registros de pagamento automaticamente (apenas quando valor está definido)
+      if (!valorADefinir) {
+        if (vSinal > 0) {
+          await prisma.pagamento.create({
+            data: {
+              contratoId: contrato.id,
+              tipo: 'SINAL',
+              descricao: 'Sinal / Entrada',
+              valor: vSinal,
+              dataVencimento: dataAssinatura ? new Date(dataAssinatura) : new Date(),
+              numeroParcela: 0,
+              status: 'PENDENTE',
+            },
+          })
+        }
+        for (let i = 1; i <= nParcelas; i++) {
+          const venc = new Date(dataAssinatura || new Date())
+          venc.setMonth(venc.getMonth() + i)
+          await prisma.pagamento.create({
+            data: {
+              contratoId: contrato.id,
+              tipo: i === nParcelas ? 'PAGAMENTO_FINAL' : 'PARCELA',
+              descricao: i === nParcelas ? 'Pagamento Final' : `Parcela ${i}/${nParcelas}`,
+              valor: vParcela,
+              dataVencimento: venc,
+              numeroParcela: i,
+              status: 'PENDENTE',
+            },
+          })
+        }
       }
     }
 

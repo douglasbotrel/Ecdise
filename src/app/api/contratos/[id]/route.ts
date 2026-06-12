@@ -33,8 +33,13 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
     if (valorTotal !== undefined || valorSinal !== undefined) {
       const vTotal = updateData.valorTotal ?? contrato.valorTotal ?? 0
       const vSinal = updateData.valorSinal ?? contrato.valorSinal ?? 0
-      updateData.valorRestante = vTotal - vSinal
+      updateData.valorRestante = Math.max(0, vTotal - vSinal)
     }
+
+    // Detecta se ADM está definindo valor pela primeira vez (contrato criado sem valor)
+    const eraSeValor = !contrato.valorTotal || contrato.valorTotal <= 0
+    const novoVTotal = updateData.valorTotal ?? 0
+    const gerarParcelas = eraSeValor && novoVTotal > 0
 
     // Se validando assinatura, avança para ASSINADO e notifica analistas
     if (statusContrato === 'ASSINADO') {
@@ -85,17 +90,54 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
       data: updateData,
     })
 
+    // Se está definindo valor pela primeira vez, gera os registros de pagamento
+    if (gerarParcelas) {
+      const vSinalFinal   = updateData.valorSinal     ?? contrato.valorSinal     ?? 0
+      const vParcelaFinal = updateData.valorParcela   ?? contrato.valorParcela   ?? 0
+      const nParcelasFinal= updateData.numeroParcelas ?? contrato.numeroParcelas ?? 1
+      const dataRef       = updateData.dataAssinatura ?? contrato.dataAssinatura ?? new Date()
+
+      if (vSinalFinal > 0) {
+        await prisma.pagamento.create({
+          data: {
+            contratoId: contrato.id,
+            tipo: 'SINAL',
+            descricao: 'Sinal / Entrada',
+            valor: vSinalFinal,
+            dataVencimento: dataRef,
+            numeroParcela: 0,
+            status: 'PENDENTE',
+          },
+        })
+      }
+      for (let i = 1; i <= nParcelasFinal; i++) {
+        const venc = new Date(dataRef)
+        venc.setMonth(venc.getMonth() + i)
+        await prisma.pagamento.create({
+          data: {
+            contratoId: contrato.id,
+            tipo: i === nParcelasFinal ? 'PAGAMENTO_FINAL' : 'PARCELA',
+            descricao: i === nParcelasFinal ? 'Pagamento Final' : `Parcela ${i}/${nParcelasFinal}`,
+            valor: vParcelaFinal,
+            dataVencimento: venc,
+            numeroParcela: i,
+            status: 'PENDENTE',
+          },
+        })
+      }
+    }
+
     await prisma.log.create({
       data: {
         usuarioId: user.id,
         acao: 'ATUALIZAR_CONTRATO',
         entidade: 'Contrato',
         entidadeId: params.id,
-        detalhes: JSON.stringify({ statusContrato, campos: Object.keys(updateData) }),
+        detalhes: JSON.stringify({ statusContrato, campos: Object.keys(updateData), parcelasGeradas: gerarParcelas }),
       },
     })
 
-    return NextResponse.json({ contrato: contratoAtualizado })
+    return NextResponse.json({ contrato: contratoAtualizado, parcelasGeradas: gerarParcelas })
   } catch (error) {
     console.error('Erro ao atualizar contrato:', error)
     return NextResponse.json({ error: 'Erro interno' }, { status: 500 })
