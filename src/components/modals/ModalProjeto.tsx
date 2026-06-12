@@ -350,11 +350,20 @@ export function ModalProjeto({ open, onClose, projeto, onSalvo, modoAcao = 'edit
           observacaoTransicao: 'Contrato elaborado — encaminhado ao financeiro para aguardar sinal',
         }
       } else if (modoReal === 'financeiro') {
-        if (!form.dataPagamento) { toast.error('Informe a data do pagamento'); setLoading(false); return }
-        payload = {
-          dataAprovacao: form.dataPagamento,
-          avancarPipeline: true,
-          observacaoTransicao: `Sinal recebido em ${form.dataPagamento} — projeto liberado para área técnica`,
+        const contratoSemValor = !projeto?.contrato?.valorTotal || Number(projeto.contrato.valorTotal) <= 0
+        if (contratoSemValor) {
+          // Contrato sem valor definido → libera direto para Operacional sem exigir data de pagamento
+          payload = {
+            avancarPipeline: true,
+            observacaoTransicao: 'Contrato sem valor definido — liberado diretamente para área técnica',
+          }
+        } else {
+          if (!form.dataPagamento) { toast.error('Informe a data do pagamento'); setLoading(false); return }
+          payload = {
+            dataAprovacao: form.dataPagamento,
+            avancarPipeline: true,
+            observacaoTransicao: `Sinal recebido em ${form.dataPagamento} — projeto liberado para área técnica`,
+          }
         }
       } else if (modoReal === 'operacional') {
         payload = {
@@ -390,7 +399,9 @@ export function ModalProjeto({ open, onClose, projeto, onSalvo, modoAcao = 'edit
         analise:       '✅ Análise concluída! ADM notificado para validação.',
         validacao:     '✅ Proposta validada! Setor de contratos notificado.',
         contrato_info: '✅ Contrato salvo! Financeiro notificado para aguardar sinal.',
-        financeiro:    '✅ Pagamento registrado! Área técnica notificada.',
+        financeiro:    !projeto?.contrato?.valorTotal || Number(projeto?.contrato?.valorTotal) <= 0
+          ? '✅ Projeto liberado para Operacional! Defina o valor do contrato depois.'
+          : '✅ Pagamento registrado! Área técnica notificada.',
         operacional:   '✅ Projeto atribuído! Analista notificado para execução.',
         editar:        'Projeto atualizado.',
       }
@@ -855,53 +866,69 @@ export function ModalProjeto({ open, onClose, projeto, onSalvo, modoAcao = 'edit
           </>)}
 
           {/* ── MODO FINANCEIRO (Registrar pagamento) ───────────── */}
-          {modoReal === 'financeiro' && (<>
-            <div className="bg-orange-50 border border-orange-200 rounded-xl p-4">
-              <p className="text-sm font-medium text-orange-800">💰 Registre a data em que o sinal foi recebido</p>
-              <p className="text-xs text-orange-600 mt-1">Ao confirmar, o projeto será liberado para a área técnica iniciar o trabalho.</p>
-            </div>
+          {modoReal === 'financeiro' && (() => {
+            const contratoSemValor = !projeto?.contrato?.valorTotal || Number(projeto?.contrato?.valorTotal) <= 0
+            return (<>
+              {contratoSemValor ? (
+                <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+                  <p className="text-sm font-medium text-blue-800">📋 Contrato sem valor definido</p>
+                  <p className="text-xs text-blue-600 mt-1">Este contrato ainda não tem valor estipulado. Você pode liberar o projeto para Operacional agora — o valor poderá ser definido depois no módulo de Contratos.</p>
+                </div>
+              ) : (
+                <div className="bg-orange-50 border border-orange-200 rounded-xl p-4">
+                  <p className="text-sm font-medium text-orange-800">💰 Registre a data em que o sinal foi recebido</p>
+                  <p className="text-xs text-orange-600 mt-1">Ao confirmar, o projeto será liberado para a área técnica iniciar o trabalho.</p>
+                </div>
+              )}
 
-            <div className="bg-gray-50 rounded-xl p-4 space-y-1.5">
-              <p className="text-sm font-semibold text-gray-700 mb-2">Dados financeiros</p>
-              <p className="text-sm"><span className="font-medium">Projeto:</span> {projeto?.codigo} — {projeto?.imovelNome}</p>
-              <p className="text-sm"><span className="font-medium">Cliente:</span> {projeto?.cliente?.nome}</p>
-              {projeto?.servicosContratados && (() => {
-                try {
-                  const s = JSON.parse(projeto.servicosContratados)
-                  return s.length > 0 ? <p className="text-sm"><span className="font-medium">Serviços:</span> {s.join(', ')}</p> : null
-                } catch { return null }
-              })()}
-              <div className="flex gap-4 pt-1 text-sm">
-                {projeto?.valorSinal > 0 && (
-                  <span className="font-semibold text-green-700">
-                    Sinal esperado: R$ {Number(projeto.valorSinal).toLocaleString('pt-BR', {minimumFractionDigits: 2})}
-                  </span>
+              <div className="bg-gray-50 rounded-xl p-4 space-y-1.5">
+                <p className="text-sm font-semibold text-gray-700 mb-2">Dados financeiros</p>
+                <p className="text-sm"><span className="font-medium">Projeto:</span> {projeto?.codigo} — {projeto?.imovelNome}</p>
+                <p className="text-sm"><span className="font-medium">Cliente:</span> {projeto?.cliente?.nome}</p>
+                {projeto?.servicosContratados && (() => {
+                  try {
+                    const s = JSON.parse(projeto.servicosContratados)
+                    return s.length > 0 ? <p className="text-sm"><span className="font-medium">Serviços:</span> {s.join(', ')}</p> : null
+                  } catch { return null }
+                })()}
+                <div className="flex gap-4 pt-1 text-sm">
+                  {projeto?.valorSinal > 0 && (
+                    <span className="font-semibold text-green-700">
+                      Sinal esperado: R$ {Number(projeto.valorSinal).toLocaleString('pt-BR', {minimumFractionDigits: 2})}
+                    </span>
+                  )}
+                  {contratoSemValor && (
+                    <span className="text-amber-600 font-medium text-xs bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200">
+                      Valor a definir
+                    </span>
+                  )}
+                </div>
+                {projeto?.contrato && (
+                  <p className="text-sm"><span className="font-medium">Contrato:</span> {projeto.contrato.tipoContrato} — {projeto.contrato.codigo}</p>
                 )}
               </div>
-              {projeto?.contrato && (
-                <p className="text-sm"><span className="font-medium">Contrato:</span> {projeto.contrato.tipoContrato} — {projeto.contrato.codigo}</p>
-              )}
-            </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">Data de recebimento do sinal *</label>
-              <input type="date" value={form.dataPagamento} onChange={e => set('dataPagamento', e.target.value)}
-                className="input-field" required />
-              <p className="text-xs text-gray-400 mt-1">Esta data será registrada no fluxo de caixa.</p>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">Forma de pagamento</label>
-              <select value={form.formaPagamento} onChange={e => set('formaPagamento', e.target.value)} className="input-field">
-                <option value="">Selecione...</option>
-                <option value="PIX">PIX</option>
-                <option value="TRANSFERENCIA">Transferência Bancária</option>
-                <option value="BOLETO">Boleto</option>
-                <option value="DINHEIRO">Dinheiro</option>
-                <option value="CHEQUE">Cheque</option>
-              </select>
-            </div>
-          </>)}
+              {!contratoSemValor && (<>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Data de recebimento do sinal *</label>
+                  <input type="date" value={form.dataPagamento} onChange={e => set('dataPagamento', e.target.value)}
+                    className="input-field" required />
+                  <p className="text-xs text-gray-400 mt-1">Esta data será registrada no fluxo de caixa.</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Forma de pagamento</label>
+                  <select value={form.formaPagamento} onChange={e => set('formaPagamento', e.target.value)} className="input-field">
+                    <option value="">Selecione...</option>
+                    <option value="PIX">PIX</option>
+                    <option value="TRANSFERENCIA">Transferência Bancária</option>
+                    <option value="BOLETO">Boleto</option>
+                    <option value="DINHEIRO">Dinheiro</option>
+                    <option value="CHEQUE">Cheque</option>
+                  </select>
+                </div>
+              </>)}
+            </>)
+          })()}
 
           {/* ── MODO OPERACIONAL (Gestor atribui analista) ──────── */}
           {modoReal === 'operacional' && (<>
@@ -986,7 +1013,11 @@ export function ModalProjeto({ open, onClose, projeto, onSalvo, modoAcao = 'edit
               {modoReal === 'analise'       && <><CheckCircle className="w-4 h-4" /> Concluir Análise</>}
               {modoReal === 'validacao'     && <><CheckCircle className="w-4 h-4" /> Validar e Encaminhar Contrato</>}
               {modoReal === 'contrato_info' && <><FileText className="w-4 h-4" /> Salvar Contrato e Notificar Financeiro</>}
-              {modoReal === 'financeiro'    && <><DollarSign className="w-4 h-4" /> Confirmar Recebimento</>}
+              {modoReal === 'financeiro'    && (
+                (!projeto?.contrato?.valorTotal || Number(projeto?.contrato?.valorTotal) <= 0)
+                  ? <><ArrowRight className="w-4 h-4" /> Liberar para Operacional</>
+                  : <><DollarSign className="w-4 h-4" /> Confirmar Recebimento</>
+              )}
               {modoReal === 'operacional'   && <><ArrowRight className="w-4 h-4" /> Atribuir e Iniciar</>}
               {modoReal === 'editar'        && 'Salvar Alterações'}
             </button>

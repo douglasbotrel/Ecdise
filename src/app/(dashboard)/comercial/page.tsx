@@ -59,12 +59,16 @@ function BotaoAcaoEtapa({ projeto, onAcao }: { projeto: any; onAcao: (p: any, mo
       <FileText className="w-3 h-3" /> Elaborar Contrato
     </button>
   )
-  if (etapa === 'AGUARDANDO_SINAL') return (
-    <button onClick={() => onAcao(projeto, 'financeiro')}
-      className="text-xs px-2.5 py-1 bg-orange-500 hover:bg-orange-600 text-white rounded-lg font-medium flex items-center gap-1 transition-colors">
-      <ArrowRight className="w-3 h-3" /> Registrar Pagamento
-    </button>
-  )
+  if (etapa === 'AGUARDANDO_SINAL') {
+    const semValor = !projeto?.contrato?.valorTotal || Number(projeto?.contrato?.valorTotal) <= 0
+    return (
+      <button onClick={() => onAcao(projeto, 'financeiro')}
+        className={`text-xs px-2.5 py-1 text-white rounded-lg font-medium flex items-center gap-1 transition-colors ${semValor ? 'bg-blue-500 hover:bg-blue-600' : 'bg-orange-500 hover:bg-orange-600'}`}>
+        <ArrowRight className="w-3 h-3" />
+        {semValor ? 'Liberar para Operacional' : 'Registrar Pagamento'}
+      </button>
+    )
+  }
   if (etapa === 'OPERACIONAL') return (
     <button onClick={() => onAcao(projeto, 'operacional')}
       className="text-xs px-2.5 py-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium flex items-center gap-1 transition-colors">

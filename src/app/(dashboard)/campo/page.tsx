@@ -241,80 +241,106 @@ export default function CampoPage() {
 
       {/* Solicitações do Operacional */}
       {solicitacoes.length > 0 && (
-        <div className="bg-blue-50 border border-blue-200 rounded-2xl overflow-hidden">
-          <div className="flex items-center gap-2 px-5 py-3 bg-blue-100/60 border-b border-blue-200">
+        <div className="space-y-3">
+          <div className="flex items-center gap-2">
             <AlertCircle className="w-4 h-4 text-blue-600 flex-shrink-0" />
             <h3 className="font-semibold text-blue-900 text-sm">Solicitações de Vistoria do Operacional</h3>
-            <span className="ml-auto bg-blue-600 text-white text-xs font-bold px-2 py-0.5 rounded-full">{solicitacoes.length}</span>
+            <span className="bg-blue-600 text-white text-xs font-bold px-2 py-0.5 rounded-full">{solicitacoes.length}</span>
           </div>
-          <div className="divide-y divide-blue-100">
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
             {solicitacoes.map(tarefa => {
               const f = formSol[tarefa.id] || { dataSaida: '', dataVolta: '', equipeId: '', frotaId: '', responsavelId: '' }
+              const pronto = !!f.dataSaida
               return (
-                <div key={tarefa.id} className="px-5 py-4 space-y-3">
-                  <div className="flex items-start gap-2">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-0.5">
-                        <span className="font-mono text-xs text-gray-400">{tarefa.projeto?.codigo}</span>
-                        <span className="text-xs text-gray-500">{tarefa.projeto?.imovelNome}</span>
-                      </div>
-                      <p className="text-sm font-semibold text-gray-900">{tarefa.titulo}</p>
-                      <p className="text-xs text-gray-400 mt-0.5">
-                        {tarefa.projeto?.municipio && `📍 ${tarefa.projeto.municipio}`}
-                      </p>
-                    </div>
+                <div key={tarefa.id} className="bg-white border border-blue-100 rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-shadow">
+                  {/* Card header */}
+                  <div className="bg-blue-600 px-4 py-2.5 flex items-center justify-between gap-2">
+                    <span className="font-mono text-xs text-blue-100 font-medium">{tarefa.projeto?.codigo}</span>
+                    <span className="text-xs text-blue-200 truncate flex-1 text-right">{tarefa.projeto?.imovelNome}</span>
                   </div>
 
-                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
-                    <div>
-                      <label className="block text-xs font-medium text-blue-700 mb-1">📅 Saída *</label>
-                      <input type="datetime-local"
-                        value={f.dataSaida}
-                        onChange={e => setSolField(tarefa.id, 'dataSaida', e.target.value)}
-                        min={new Date().toISOString().slice(0, 16)}
-                        className="w-full border border-blue-300 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white" />
+                  <div className="px-4 pt-3 pb-1">
+                    <p className="text-sm font-semibold text-gray-900 leading-tight">{tarefa.titulo}</p>
+                    {tarefa.projeto?.municipio && (
+                      <p className="text-xs text-gray-400 mt-0.5 flex items-center gap-1">
+                        <MapPin className="w-3 h-3" />{tarefa.projeto.municipio}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Form fields */}
+                  <div className="px-4 py-3 space-y-2">
+                    {/* Datas */}
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="block text-xs font-medium text-gray-500 mb-1">
+                          <span className="text-red-500">*</span> Saída
+                        </label>
+                        <input type="datetime-local"
+                          value={f.dataSaida}
+                          onChange={e => setSolField(tarefa.id, 'dataSaida', e.target.value)}
+                          min={new Date().toISOString().slice(0, 16)}
+                          className="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 focus:bg-white transition-colors" />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-500 mb-1">Volta</label>
+                        <input type="datetime-local"
+                          value={f.dataVolta}
+                          onChange={e => setSolField(tarefa.id, 'dataVolta', e.target.value)}
+                          min={f.dataSaida || new Date().toISOString().slice(0, 16)}
+                          className="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 focus:bg-white transition-colors" />
+                      </div>
                     </div>
+
+                    {/* Selects */}
                     <div>
-                      <label className="block text-xs font-medium text-blue-700 mb-1">🔙 Volta</label>
-                      <input type="datetime-local"
-                        value={f.dataVolta}
-                        onChange={e => setSolField(tarefa.id, 'dataVolta', e.target.value)}
-                        min={f.dataSaida || new Date().toISOString().slice(0, 16)}
-                        className="w-full border border-blue-300 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white" />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-medium text-blue-700 mb-1">👥 Equipe</label>
+                      <label className="block text-xs font-medium text-gray-500 mb-1 flex items-center gap-1">
+                        <Users className="w-3 h-3" /> Equipe
+                      </label>
                       <select value={f.equipeId} onChange={e => setSolField(tarefa.id, 'equipeId', e.target.value)}
-                        className="w-full border border-blue-300 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+                        className="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 focus:bg-white transition-colors">
                         <option value="">Sem equipe</option>
                         {equipes.map((eq: any) => <option key={eq.id} value={eq.id}>{eq.nome}</option>)}
                       </select>
                     </div>
-                    <div>
-                      <label className="block text-xs font-medium text-blue-700 mb-1">🚗 Frota</label>
-                      <select value={f.frotaId} onChange={e => setSolField(tarefa.id, 'frotaId', e.target.value)}
-                        className="w-full border border-blue-300 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
-                        <option value="">Sem veículo</option>
-                        {frota.filter((v: any) => v.ativa !== false).map((v: any) => (
-                          <option key={v.id} value={v.id}>{v.placa} {v.modelo}</option>
-                        ))}
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-xs font-medium text-blue-700 mb-1">👤 Técnico</label>
-                      <select value={f.responsavelId} onChange={e => setSolField(tarefa.id, 'responsavelId', e.target.value)}
-                        className="w-full border border-blue-300 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
-                        <option value="">Selecione</option>
-                        {usuarios.map((u: any) => <option key={u.id} value={u.id}>{u.nome}</option>)}
-                      </select>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="block text-xs font-medium text-gray-500 mb-1 flex items-center gap-1">
+                          <Car className="w-3 h-3" /> Frota
+                        </label>
+                        <select value={f.frotaId} onChange={e => setSolField(tarefa.id, 'frotaId', e.target.value)}
+                          className="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 focus:bg-white transition-colors">
+                          <option value="">Veículo</option>
+                          {frota.filter((v: any) => v.ativa !== false).map((v: any) => (
+                            <option key={v.id} value={v.id}>{v.placa}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-500 mb-1 flex items-center gap-1">
+                          <span className="w-3 h-3 inline-block text-center leading-none">👤</span> Técnico
+                        </label>
+                        <select value={f.responsavelId} onChange={e => setSolField(tarefa.id, 'responsavelId', e.target.value)}
+                          className="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 focus:bg-white transition-colors">
+                          <option value="">Técnico</option>
+                          {usuarios.map((u: any) => <option key={u.id} value={u.id}>{u.nome.split(' ')[0]}</option>)}
+                        </select>
+                      </div>
                     </div>
                   </div>
 
-                  <div className="flex justify-end">
+                  {/* Confirm button */}
+                  <div className="px-4 pb-4">
                     <button onClick={() => confirmarAgendamento(tarefa)}
-                      disabled={salvandoSol === tarefa.id || !f.dataSaida}
-                      className="flex items-center gap-1.5 px-4 py-1.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-sm font-semibold rounded-lg transition-colors">
-                      {salvandoSol === tarefa.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
+                      disabled={salvandoSol === tarefa.id || !pronto}
+                      className={`w-full flex items-center justify-center gap-1.5 py-2 text-sm font-semibold rounded-xl transition-all ${
+                        pronto
+                          ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-sm hover:shadow'
+                          : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                      }`}>
+                      {salvandoSol === tarefa.id
+                        ? <Loader2 className="w-4 h-4 animate-spin" />
+                        : <CheckCircle2 className="w-4 h-4" />}
                       Confirmar Agendamento
                     </button>
                   </div>
