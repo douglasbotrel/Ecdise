@@ -449,9 +449,9 @@ export default function ProjetoDetalhe() {
           ...(projeto.car ? [{
             Icon: FileText,
             label: 'CAR',
-            value: projeto.car.length > 20 ? projeto.car.slice(0, 20) + '…' : projeto.car,
+            value: projeto.car,
             sub: null,
-            title: projeto.car,
+            fullWidth: true,
           }] : []),
           ...(projeto.areaHectares ? [{
             Icon: BarChart2,
@@ -467,13 +467,16 @@ export default function ProjetoDetalhe() {
             : cards.length === 5 ? 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-5'
             : 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-6'
           }`}>
-            {cards.map(({ Icon, label, value, sub, title }: any) => (
-              <div key={label} className="bg-white rounded-xl border border-gray-100 p-3 sm:p-4" title={title}>
+            {cards.map(({ Icon, label, value, sub, fullWidth }: any) => (
+              <div
+                key={label}
+                className={`bg-white rounded-xl border border-gray-100 p-3 sm:p-4 ${fullWidth ? 'col-span-2 sm:col-span-3 lg:col-span-full' : ''}`}
+              >
                 <div className="flex items-center gap-1.5 text-gray-400 mb-1">
                   <Icon className="w-3.5 h-3.5" />
                   <span className="text-xs">{label}</span>
                 </div>
-                <p className="font-semibold text-sm text-gray-900 truncate">{value}</p>
+                <p className={`font-semibold text-sm text-gray-900 ${fullWidth ? 'break-all font-mono' : 'truncate'}`}>{value}</p>
                 {sub && <p className="text-xs text-amber-500 mt-0.5">{sub}</p>}
               </div>
             ))}
