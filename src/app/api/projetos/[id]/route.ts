@@ -221,12 +221,23 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
       }
     }
 
+    // Ao avançar de OPERACIONAL → EM_EXECUCAO, marca automaticamente como EM_ANDAMENTO
+    const autoStatusOperacional =
+      avancarPipeline &&
+      projeto.etapaPipeline === 'OPERACIONAL' &&
+      novaEtapa === 'EM_EXECUCAO' &&
+      !body.statusOperacional
+        ? 'EM_ANDAMENTO'
+        : null
+
     const projetoAtualizado = await prisma.projeto.update({
       where: { id: params.id },
       data: {
         etapaPipeline: novaEtapa,
         ...(body.statusComercial && { statusComercial: body.statusComercial }),
-        ...(body.statusOperacional && { statusOperacional: body.statusOperacional }),
+        ...((body.statusOperacional || autoStatusOperacional) && {
+          statusOperacional: body.statusOperacional || autoStatusOperacional,
+        }),
         ...(body.descricao !== undefined && { descricao: body.descricao }),
         ...(body.imovelNome !== undefined && { imovelNome: body.imovelNome }),
         ...(body.municipio !== undefined && { municipio: body.municipio }),

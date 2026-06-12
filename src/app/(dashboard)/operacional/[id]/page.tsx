@@ -26,7 +26,7 @@ export default function ProjetoDetalhe() {
 
   const [projeto, setProjeto]       = useState<any>(null)
   const [loading, setLoading]       = useState(true)
-  const [aba, setAba]               = useState<'timeline' | 'tarefas' | 'documentos' | 'historico'>('timeline')
+  const [aba, setAba]               = useState<'timeline' | 'tarefas' | 'documentos' | 'historico'>('tarefas')
   const [usuarios, setUsuarios]     = useState<any[]>([])
 
   // Edição inline de prazo/responsável (modo atribuição)
@@ -143,10 +143,14 @@ export default function ProjetoDetalhe() {
     const pendentes = (projeto?.tarefas || []).filter((t: any) =>
       (bulkResponsavelId && !t.responsavelId) || (bulkPrazo && !t.prazo)
     )
-    if (pendentes.length === 0) { toast.info('Todas as tarefas já estão preenchidas'); return }
+    const projetoSemResponsavel = bulkResponsavelId && !projeto?.responsavelId
+    if (pendentes.length === 0 && !projetoSemResponsavel) {
+      toast.info('Todas as tarefas já estão preenchidas')
+      return
+    }
     setSalvandoBulk(true)
     try {
-      await Promise.all(pendentes.map((t: any) =>
+      const promises: Promise<any>[] = pendentes.map((t: any) =>
         fetch('/api/tarefas', {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
@@ -156,8 +160,21 @@ export default function ProjetoDetalhe() {
             ...(!t.requerVistoriaCampo && bulkPrazo && !t.prazo && { prazo: bulkPrazo }),
           }),
         })
-      ))
-      toast.success(`Atribuição aplicada em ${pendentes.length} tarefa(s)!`)
+      )
+      // Se o projeto ainda não tem responsável, define o do bulk como responsável do projeto
+      if (projetoSemResponsavel) {
+        promises.push(
+          fetch(`/api/projetos/${id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ responsavelId: bulkResponsavelId }),
+          })
+        )
+      }
+      await Promise.all(promises)
+      toast.success(pendentes.length > 0
+        ? `Atribuição aplicada em ${pendentes.length} tarefa(s)!`
+        : 'Responsável do projeto atualizado!')
       // Fecha todas as linhas expandidas
       setExpandido({})
       loadProjeto()
