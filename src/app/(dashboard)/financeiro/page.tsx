@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { toast } from 'sonner'
 import {
   DollarSign, AlertTriangle, CheckCircle, Clock,
-  ChevronDown, ChevronRight, Upload, X, ArrowRight,
+  ChevronDown, ChevronRight, Upload, X, ArrowRight, ShieldAlert,
 } from 'lucide-react'
 import { formatDate, formatCurrency } from '@/lib/utils'
 
@@ -36,6 +36,12 @@ export default function FinanceiroPage() {
   const [loading, setLoading]         = useState(true)
   const [filtro, setFiltro]           = useState('')
   const [expandidos, setExpandidos]   = useState<Set<string>>(new Set())
+  const [currentUser, setCurrentUser] = useState<any>(null)
+
+  // Modal liberação sem pagamento (ADM)
+  const [modalLiberar, setModalLiberar] = useState<{ projetoId: string; codigo: string; clienteNome: string } | null>(null)
+  const [motivoLiberar, setMotivoLiberar] = useState('')
+  const [liberando, setLiberando]         = useState(false)
 
   // Modal
   const [modalPag, setModalPag]       = useState<ModalPagData | null>(null)
@@ -63,6 +69,11 @@ export default function FinanceiroPage() {
   }, [filtro])
 
   useEffect(() => { load() }, [load])
+  useEffect(() => {
+    fetch('/api/auth/me').then(r => r.json()).then(d => setCurrentUser(d.usuario || null))
+  }, [])
+
+  const isAdmin = ['ADMIN', 'GESTOR_GERAL'].includes(currentUser?.role)
 
   // ── Group by contrato ──────────────────────────────────────
   type GrupoContrato = { contrato: any; pagamentos: any[] }
@@ -131,6 +142,25 @@ export default function FinanceiroPage() {
       load()
     } catch { toast.error('Erro ao registrar pagamento') }
     finally { setSalvando(false) }
+  }
+
+  async function liberarSemPagamento() {
+    if (!modalLiberar) return
+    setLiberando(true)
+    try {
+      const res = await fetch(`/api/projetos/${modalLiberar.projetoId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ liberarSemPagamento: true, motivo: motivoLiberar }),
+      })
+      const data = await res.json()
+      if (!res.ok) { toast.error(data.error || 'Erro ao liberar'); return }
+      toast.success('Projeto liberado para Operacional!')
+      setModalLiberar(null)
+      setMotivoLiberar('')
+      load()
+    } catch { toast.error('Erro ao liberar projeto') }
+    finally { setLiberando(false) }
   }
 
   function grupoStatus(pags: any[]) {
@@ -249,6 +279,24 @@ export default function FinanceiroPage() {
                         <ArrowRight className="w-3.5 h-3.5" /> Registrar
                       </button>
                     )}
+                    {/* Botão ADM: liberar sem pagamento */}
+                    {isAdmin && contrato?.projeto?.etapaPipeline === 'AGUARDANDO_SINAL' && (
+                      <button
+                        onClick={e => {
+                          e.stopPropagation()
+                          setMotivoLiberar('')
+                          setModalLiberar({
+                            projetoId: contrato.projeto.id,
+                            codigo: contrato.projeto.codigo,
+                            clienteNome: contrato.cliente?.nome || '',
+                          })
+                        }}
+                        className="flex items-center gap-1.5 bg-orange-500 hover:bg-orange-600 text-white text-xs font-semibold px-3 py-2 rounded-xl transition-colors"
+                        title="Liberar para Operacional sem pagamento (apenas ADM)"
+                      >
+                        <ShieldAlert className="w-3.5 h-3.5" /> Liberar sem pgto.
+                      </button>
+                    )}
                   </div>
                 </div>
 
@@ -323,6 +371,76 @@ export default function FinanceiroPage() {
           })
         )}
       </div>
+
+      {/* ── Modal ADM: liberar sem pagamento ────────────────── */}
+      {modalLiberar && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-orange-100 bg-orange-50">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 bg-orange-100 rounded-xl flex items-center justify-center">
+                  <ShieldAlert className="w-5 h-5 text-orange-600" />
+                </div>
+                <div>
+                  <h2 className="text-base font-bold text-gray-900">Liberar sem Pagamento</h2>
+                  <p className="text-xs text-orange-700 font-medium">Ação exclusiva do ADM</p>
+                </div>
+              </div>
+              <button onClick={() => setModalLiberar(null)} className="text-gray-400 hover:text-gray-600">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="px-6 py-5 space-y-4">
+              <div className="bg-gray-50 rounded-xl p-3 text-sm">
+                <p className="text-gray-500 text-xs mb-1">Projeto</p>
+                <p className="font-semibold text-gray-900">
+                  <span className="font-mono text-gray-500 mr-2">{modalLiberar.codigo}</span>
+                  {modalLiberar.clienteNome}
+                </p>
+              </div>
+
+              <div className="bg-orange-50 border border-orange-200 rounded-xl p-3 text-xs text-orange-800 leading-relaxed">
+                ⚠️ Este projeto será <strong>liberado imediatamente para Operacional</strong> sem que o primeiro pagamento seja confirmado. O financeiro continuará com as parcelas pendentes.
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1.5">
+                  Motivo da liberação <span className="text-red-500">*</span>
+                </label>
+                <textarea
+                  value={motivoLiberar}
+                  onChange={e => setMotivoLiberar(e.target.value)}
+                  rows={3}
+                  placeholder="Ex: Cliente solicitou início imediato, pagamento pendente de compensação bancária..."
+                  className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-orange-400"
+                  autoFocus
+                />
+              </div>
+            </div>
+
+            <div className="px-6 py-4 border-t border-gray-100 flex gap-3 justify-end">
+              <button
+                onClick={() => setModalLiberar(null)}
+                className="px-4 py-2.5 text-sm font-medium text-gray-600 border border-gray-200 rounded-xl hover:bg-gray-50"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={liberarSemPagamento}
+                disabled={liberando || !motivoLiberar.trim()}
+                className="flex items-center gap-2 px-5 py-2.5 bg-orange-500 hover:bg-orange-600 disabled:opacity-50 text-white text-sm font-semibold rounded-xl transition-colors"
+              >
+                {liberando
+                  ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  : <ShieldAlert className="w-4 h-4" />
+                }
+                Confirmar Liberação
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── Modal de pagamento ───────────────────────────────── */}
       {modalPag && (

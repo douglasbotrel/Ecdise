@@ -157,8 +157,19 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
 
     // Avança pipeline quando o responsável da etapa atual confirma
     const avancarPipeline = body.avancarPipeline === true
+
+    // Liberação sem pagamento: apenas ADMIN pode avançar de AGUARDANDO_SINAL → OPERACIONAL sem pagamento
+    if (body.liberarSemPagamento === true) {
+      if (!['ADMIN', 'GESTOR_GERAL'].includes(user.role)) {
+        return NextResponse.json({ error: 'Sem permissão para liberar sem pagamento' }, { status: 403 })
+      }
+      if (projeto.etapaPipeline !== 'AGUARDANDO_SINAL') {
+        return NextResponse.json({ error: 'Projeto não está em Aguardando Sinal' }, { status: 400 })
+      }
+    }
+
     let novaEtapa = projeto.etapaPipeline
-    if (avancarPipeline && PROXIMA_ETAPA[projeto.etapaPipeline]) {
+    if ((avancarPipeline || body.liberarSemPagamento) && PROXIMA_ETAPA[projeto.etapaPipeline]) {
       novaEtapa = PROXIMA_ETAPA[projeto.etapaPipeline]
     } else if (body.etapaPipeline && body.etapaPipeline !== projeto.etapaPipeline) {
       novaEtapa = body.etapaPipeline
@@ -172,7 +183,9 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
           statusAnterior: projeto.etapaPipeline,
           statusNovo: novaEtapa,
           campo: 'etapaPipeline',
-          observacao: body.observacaoTransicao || null,
+          observacao: body.liberarSemPagamento
+            ? `Liberado para Operacional sem confirmação de pagamento pelo ADM (${user.nome || user.email}). Motivo: ${body.motivo || 'não informado'}`
+            : (body.observacaoTransicao || null),
           usuarioId: user.id,
         }
       }).catch(() => {})
