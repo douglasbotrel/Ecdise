@@ -310,6 +310,21 @@ export default function ProjetoDetalhe() {
     finally { setIniciandoExecucao(false) }
   }
 
+  // ── Agrupa tarefas por serviço (extrai "[NomeServico] título") ──
+  // DEVE ficar antes de qualquer early-return para não violar as Rules of Hooks
+  const gruposTarefas = useMemo(() => {
+    const lista: any[] = projeto?.tarefas || []
+    const grupos: Record<string, { servico: string; tarefas: any[] }> = {}
+    lista.forEach((t: any) => {
+      const m = t.titulo.match(/^\[([^\]]+)\]\s*(.+)$/)
+      const servico     = m ? m[1].trim() : 'Geral'
+      const tituloLimpo = m ? m[2].trim() : t.titulo
+      if (!grupos[servico]) grupos[servico] = { servico, tarefas: [] }
+      grupos[servico].tarefas.push({ ...t, _tituloLimpo: tituloLimpo })
+    })
+    return Object.values(grupos)
+  }, [projeto?.tarefas])
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -325,18 +340,6 @@ export default function ProjetoDetalhe() {
   const modoEdicao   = emOperacional || (modoGestor && ETAPAS_VALIDAS.includes(projeto.etapaPipeline))
   const tarefas       = projeto.tarefas || []
 
-  // ── Agrupa tarefas por serviço (extrai "[NomeServico] título") ──
-  const gruposTarefas = useMemo(() => {
-    const grupos: Record<string, { servico: string; tarefas: any[] }> = {}
-    tarefas.forEach((t: any) => {
-      const m = t.titulo.match(/^\[([^\]]+)\]\s*(.+)$/)
-      const servico     = m ? m[1].trim() : 'Geral'
-      const tituloLimpo = m ? m[2].trim() : t.titulo
-      if (!grupos[servico]) grupos[servico] = { servico, tarefas: [] }
-      grupos[servico].tarefas.push({ ...t, _tituloLimpo: tituloLimpo })
-    })
-    return Object.values(grupos)
-  }, [tarefas])
 
   // Helper para exibir nome completo no select de usuário
   function labelUsuario(u: any) {
