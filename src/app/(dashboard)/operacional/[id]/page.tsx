@@ -227,7 +227,6 @@ export default function ProjetoDetalhe() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: tarefaId, status: novoStatus }),
       })
-      loadProjeto()
       // ── Abre modal de credenciais ao concluir tarefas SIGLA/CTF ──
       if (novoStatus === 'CONCLUIDA' && tarefa) {
         const titulo = tarefa.titulo.toUpperCase()
