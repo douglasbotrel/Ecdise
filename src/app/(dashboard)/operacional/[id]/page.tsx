@@ -51,6 +51,8 @@ export default function ProjetoDetalhe() {
   const [expandido, setExpandido]                 = useState<Record<string, boolean>>({})
   // Filtro: mostrar apenas tarefas sem atribuição completa
   const [filtroPendentes, setFiltroPendentes]     = useState(false)
+  // Painel de atribuição aberto/fechado (aberto por padrão só em OPERACIONAL)
+  const [painelAberto, setPainelAberto]           = useState(false)
   // Modal de credenciais (SIGLA / CTF)
   const [modalCredencial, setModalCredencial]     = useState<{ sistema: string } | null>(null)
   const [credForm, setCredForm]                   = useState({ login: '', senha: '' })
@@ -91,6 +93,12 @@ export default function ProjetoDetalhe() {
       .then(r => r.json())
       .then(d => setCurrentUser(d.usuario || null))
   }, [loadProjeto])
+
+  // Abre o painel automaticamente só quando o projeto está em planejamento (OPERACIONAL)
+  useEffect(() => {
+    if (!projeto) return
+    setPainelAberto(projeto.etapaPipeline === 'OPERACIONAL')
+  }, [projeto?.id]) // só na primeira carga do projeto
 
   // Inicializa estado de edição quando projeto carrega (qualquer etapa)
   useEffect(() => {
@@ -377,7 +385,7 @@ export default function ProjetoDetalhe() {
   const pctAtribuido  = tarefas.length > 0 ? Math.round((comAtribuicao / tarefas.length) * 100) : 0
 
   return (
-    <div className="space-y-5">
+    <div className="flex flex-col gap-5">
 
       {/* ── Header ──────────────────────────────────────────── */}
       <div className="flex flex-col gap-3">
@@ -442,7 +450,7 @@ export default function ProjetoDetalhe() {
       </div>
 
       {/* ══════════════════════════════════════════════════════
-          PAINEL DE ATRIBUIÇÃO — aparece em OPERACIONAL e para gestores
+          PAINEL DE ATRIBUIÇÃO — colapsável, aparece abaixo das abas
           ══════════════════════════════════════════════════════ */}
       {modoEdicao && (() => {
         // Tarefas filtradas (pendentes = sem responsável ou sem prazo)
@@ -452,30 +460,65 @@ export default function ProjetoDetalhe() {
         const totalPendentes = tarefas.filter((t: any) => !t.responsavelId || !t.prazo).length
 
         return (
-        <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm">
+        <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm" style={{ order: 99 }}>
 
-          {/* ── Header: título + barra de progresso ────────────────── */}
-          <div className="px-4 sm:px-6 py-4 border-b border-gray-100">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2">
-                <AlertCircle className="w-4 h-4 text-amber-500" />
-                <h2 className="font-semibold text-gray-800 text-sm sm:text-base">
-                  {emOperacional ? 'Planejamento — Atribuir prazos e responsáveis' : 'Gerenciar Atividades'}
-                </h2>
+          {/* ── Header clicável: abre/fecha o painel ───────────────── */}
+          <button
+            onClick={() => setPainelAberto(a => !a)}
+            className="w-full px-4 sm:px-6 py-3 flex items-center justify-between hover:bg-gray-50 transition-colors"
+          >
+            <div className="flex items-center gap-2 min-w-0">
+              <AlertCircle className="w-4 h-4 text-amber-500 flex-shrink-0" />
+              <span className="font-semibold text-gray-800 text-sm sm:text-base truncate">
+                {emOperacional ? 'Planejamento — Atribuir prazos e responsáveis' : 'Gerenciar Atividades'}
+              </span>
+            </div>
+            <div className="flex items-center gap-3 flex-shrink-0 ml-3">
+              {/* Mini barra de progresso (sempre visível) */}
+              <div className="hidden sm:flex items-center gap-2">
+                <div className="w-24 bg-gray-100 rounded-full h-1.5 overflow-hidden">
+                  <div
+                    className={`h-1.5 rounded-full transition-all duration-500 ${
+                      pctAtribuido === 100 ? 'bg-green-500' : pctAtribuido > 50 ? 'bg-amber-400' : 'bg-amber-300'
+                    }`}
+                    style={{ width: `${pctAtribuido}%` }}
+                  />
+                </div>
+                <span className="text-xs font-bold text-gray-600">{pctAtribuido}%</span>
               </div>
+              <span className="text-xs font-bold text-gray-600 sm:hidden">{pctAtribuido}%</span>
+              <span className="text-gray-400 text-sm">{painelAberto ? '▲' : '▼'}</span>
+            </div>
+          </button>
+
+          {/* ── Conteúdo colapsável ─────────────────────────────────── */}
+          {painelAberto && (
+          <>
+          {/* ── Sub-header: barra de progresso detalhada ───────────── */}
+          <div className="px-4 sm:px-6 pb-3 pt-1 border-b border-gray-100">
+            <div className="flex items-center justify-between mb-1.5">
+              <span className="text-xs text-gray-400">{comAtribuicao} de {tarefas.length} atribuídas</span>
               <div className="flex items-center gap-2">
-                <span className="text-xs font-bold text-gray-700">{pctAtribuido}%</span>
                 {modoGestor && tarefas.length > 0 && (
                   <button
-                    onClick={() => setNovaT(true)}
+                    onClick={e => { e.stopPropagation(); setNovaT(true) }}
                     className="flex items-center gap-1 text-xs text-green-600 hover:text-green-700 font-medium px-2 py-1 rounded-lg hover:bg-green-50 transition-colors"
                   >
                     <Plus className="w-3.5 h-3.5" /> Tarefa
                   </button>
                 )}
+                {totalPendentes > 0 && (
+                  <button
+                    onClick={e => { e.stopPropagation(); setFiltroPendentes(f => !f) }}
+                    className={`text-xs font-medium transition-colors ${
+                      filtroPendentes ? 'text-amber-600 underline' : 'text-gray-400 hover:text-amber-600'
+                    }`}
+                  >
+                    {filtroPendentes ? `Ver todas (${tarefas.length})` : `Ver só pendentes (${totalPendentes})`}
+                  </button>
+                )}
               </div>
             </div>
-            {/* Barra de progresso */}
             <div className="w-full bg-gray-100 rounded-full h-2 overflow-hidden">
               <div
                 className={`h-2 rounded-full transition-all duration-500 ${
@@ -483,23 +526,6 @@ export default function ProjetoDetalhe() {
                 }`}
                 style={{ width: `${pctAtribuido}%` }}
               />
-            </div>
-            <div className="flex justify-between mt-1.5">
-              <span className="text-xs text-gray-400">
-                {comAtribuicao} de {tarefas.length} atribuídas
-              </span>
-              {totalPendentes > 0 && (
-                <button
-                  onClick={() => setFiltroPendentes(f => !f)}
-                  className={`text-xs font-medium transition-colors ${
-                    filtroPendentes
-                      ? 'text-amber-600 underline'
-                      : 'text-gray-400 hover:text-amber-600'
-                  }`}
-                >
-                  {filtroPendentes ? `Ver todas (${tarefas.length})` : `Ver só pendentes (${totalPendentes})`}
-                </button>
-              )}
             </div>
           </div>
 
@@ -815,6 +841,8 @@ export default function ProjetoDetalhe() {
                 Iniciar Execução
               </button>
             </div>
+          )}
+          </>
           )}
         </div>
         )
