@@ -263,40 +263,49 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
       await criarNotificacaoEtapa(novaEtapa, projetoAtualizado)
     }
 
-    // ── AUTO-CRIAR TAREFAS ao entrar em EM_EXECUCAO ─────────────
-    if (novaEtapa === 'EM_EXECUCAO' && projeto.etapaPipeline !== 'EM_EXECUCAO') {
+    // ── AUTO-CRIAR TAREFAS ao entrar em OPERACIONAL (ou forçado por gerarTarefas) ──
+    // Geração acontece ao chegar em OPERACIONAL (não em EM_EXECUCAO) porque:
+    //  - o gestor operacional precisa ver as tarefas para atribuir prazos/responsáveis
+    //  - EM_EXECUCAO é acionado via tarefas/route.ts (bypass do PATCH) ao 1º check
+    // body.gerarTarefas=true permite regenerar para projetos já em OPERACIONAL sem tarefas
+    const forcarGeracao = body.gerarTarefas === true && projeto.etapaPipeline === 'OPERACIONAL'
+    if ((novaEtapa === 'OPERACIONAL' && projeto.etapaPipeline !== 'OPERACIONAL') || forcarGeracao) {
       try {
-        const servicosRaw = projetoAtualizado.servicosContratados
-        if (servicosRaw) {
-          const nomesServicos: string[] = JSON.parse(servicosRaw)
-          const tiposServico = await prisma.tipoServico.findMany({
-            where: { nome: { in: nomesServicos }, ativo: true },
-            orderBy: { ordem: 'asc' },
-          })
-          const tarefasParaCriar: {
-            projetoId: string; titulo: string; etapa: string | null
-            ordem: number; responsavelId: string | null; status: string; obrigatorio: boolean
-          }[] = []
-          let ordemBase = 0
-          for (const tipo of tiposServico) {
-            if (tipo.tarefasPadrao) {
-              const tasks: { titulo: string; etapa: string; ordem: number }[] = JSON.parse(tipo.tarefasPadrao)
-              for (const t of tasks) {
-                tarefasParaCriar.push({
-                  projetoId: params.id,
-                  titulo: `[${tipo.nome}] ${t.titulo}`,
-                  etapa: t.etapa || null,
-                  ordem: ordemBase + t.ordem,
-                  responsavelId: projetoAtualizado.responsavelId || null,
-                  status: 'PENDENTE',
-                  obrigatorio: true,
-                })
+        // Só cria se o projeto ainda não tem tarefas (evita duplicatas em re-entradas)
+        const tarefasExistentes = await prisma.tarefa.count({ where: { projetoId: params.id } })
+        if (tarefasExistentes === 0) {
+          const servicosRaw = projetoAtualizado.servicosContratados
+          if (servicosRaw) {
+            const nomesServicos: string[] = JSON.parse(servicosRaw)
+            const tiposServico = await prisma.tipoServico.findMany({
+              where: { nome: { in: nomesServicos }, ativo: true },
+              orderBy: { ordem: 'asc' },
+            })
+            const tarefasParaCriar: {
+              projetoId: string; titulo: string; etapa: string | null
+              ordem: number; responsavelId: string | null; status: string; obrigatorio: boolean
+            }[] = []
+            let ordemBase = 0
+            for (const tipo of tiposServico) {
+              if (tipo.tarefasPadrao) {
+                const tasks: { titulo: string; etapa: string; ordem: number }[] = JSON.parse(tipo.tarefasPadrao)
+                for (const t of tasks) {
+                  tarefasParaCriar.push({
+                    projetoId: params.id,
+                    titulo: `[${tipo.nome}] ${t.titulo}`,
+                    etapa: t.etapa || null,
+                    ordem: ordemBase + t.ordem,
+                    responsavelId: projetoAtualizado.responsavelId || null,
+                    status: 'PENDENTE',
+                    obrigatorio: true,
+                  })
+                }
+                ordemBase += tasks.length
               }
-              ordemBase += tasks.length
             }
-          }
-          if (tarefasParaCriar.length > 0) {
-            await prisma.tarefa.createMany({ data: tarefasParaCriar })
+            if (tarefasParaCriar.length > 0) {
+              await prisma.tarefa.createMany({ data: tarefasParaCriar })
+            }
           }
         }
       } catch (e) {

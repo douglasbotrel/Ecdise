@@ -42,6 +42,10 @@ export default function ProjetoDetalhe() {
   // Responsável em lote
   const [bulkResponsavelId, setBulkResponsavelId] = useState('')
   const [salvandoBulk, setSalvandoBulk]           = useState(false)
+  // Gerar tarefas dos serviços contratados
+  const [gerandoTarefas, setGerandoTarefas]       = useState(false)
+  // Iniciar execução manualmente (avança de OPERACIONAL para EM_EXECUCAO)
+  const [iniciandoExecucao, setIniciandoExecucao] = useState(false)
 
   // Etapas que têm acesso ao módulo Operacional (após primeiro pagamento)
   const ETAPAS_VALIDAS    = ['OPERACIONAL', 'EM_EXECUCAO', 'CONCLUIDO']
@@ -224,6 +228,39 @@ export default function ProjetoDetalhe() {
     finally { setSalvandoT(false) }
   }
 
+  // ── Gerar tarefas dos tipos de serviço contratados ───────────
+  async function gerarTarefasServicos() {
+    setGerandoTarefas(true)
+    try {
+      const res = await fetch(`/api/projetos/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ gerarTarefas: true }),
+      })
+      const data = await res.json()
+      if (!res.ok) { toast.error(data.error || 'Erro ao gerar tarefas'); return }
+      toast.success('Tarefas geradas com sucesso!')
+      loadProjeto()
+    } catch { toast.error('Erro ao gerar tarefas') }
+    finally { setGerandoTarefas(false) }
+  }
+
+  // ── Avançar manualmente de OPERACIONAL para EM_EXECUCAO ──────
+  async function iniciarExecucao() {
+    setIniciandoExecucao(true)
+    try {
+      const res = await fetch(`/api/projetos/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ avancarPipeline: true }),
+      })
+      if (!res.ok) { toast.error('Erro ao iniciar execução'); return }
+      toast.success('Execução iniciada!')
+      loadProjeto()
+    } catch { toast.error('Erro') }
+    finally { setIniciandoExecucao(false) }
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -350,7 +387,7 @@ export default function ProjetoDetalhe() {
             </div>
           </div>
 
-          {/* Linha de responsável em lote */}
+          {/* Linha de responsável em lote + Iniciar Execução */}
           <div className="px-4 sm:px-6 py-3 bg-amber-100/40 border-b border-amber-200 flex flex-col sm:flex-row items-start sm:items-center gap-2">
             <span className="text-xs font-semibold text-amber-800 whitespace-nowrap">Definir para todas:</span>
             <select
@@ -375,9 +412,45 @@ export default function ProjetoDetalhe() {
 
           {/* Tarefas para atribuição — agrupadas por serviço */}
           {tarefas.length === 0 ? (
-            <div className="px-6 py-8 text-center text-amber-600">
-              <Clock className="w-8 h-8 mx-auto mb-2 opacity-50" />
-              <p className="text-sm">Nenhuma tarefa gerada. Verifique os serviços do contrato.</p>
+            <div className="px-6 py-8 text-center">
+              <Clock className="w-8 h-8 mx-auto mb-3 text-amber-400 opacity-60" />
+              <p className="text-sm font-semibold text-amber-700 mb-1">Nenhuma tarefa gerada ainda</p>
+              <p className="text-xs text-amber-600 mb-4">
+                As tarefas são geradas automaticamente a partir dos Tipos de Serviço cadastrados em{' '}
+                <strong>Configurações → Tipos de Serviço</strong>. Se ainda não configurou as tarefas padrão,
+                adicione-as manualmente ou use o botão abaixo.
+              </p>
+              <div className="flex flex-col sm:flex-row gap-2 justify-center">
+                {modoGestor && (
+                  <button
+                    onClick={gerarTarefasServicos}
+                    disabled={gerandoTarefas}
+                    className="flex items-center justify-center gap-2 px-4 py-2 bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white rounded-lg text-sm font-semibold transition-colors"
+                  >
+                    {gerandoTarefas ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+                    Gerar Tarefas dos Serviços
+                  </button>
+                )}
+                {modoGestor && (
+                  <button
+                    onClick={() => { setAba('timeline'); setNovaT(true) }}
+                    className="flex items-center justify-center gap-2 px-4 py-2 border border-amber-400 text-amber-700 hover:bg-amber-100 rounded-lg text-sm font-medium transition-colors"
+                  >
+                    <Plus className="w-4 h-4" />
+                    Adicionar Tarefa Manual
+                  </button>
+                )}
+                {modoGestor && (
+                  <button
+                    onClick={iniciarExecucao}
+                    disabled={iniciandoExecucao}
+                    className="flex items-center justify-center gap-2 px-4 py-2 border border-green-500 text-green-700 hover:bg-green-50 disabled:opacity-50 rounded-lg text-sm font-medium transition-colors"
+                  >
+                    {iniciandoExecucao ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                    Iniciar Execução Sem Tarefas
+                  </button>
+                )}
+              </div>
             </div>
           ) : (
             <div className="divide-y divide-amber-100">
@@ -520,6 +593,25 @@ export default function ProjetoDetalhe() {
                   })}
                 </div>
               ))}
+            </div>
+          )}
+
+          {/* Rodapé: Iniciar Execução manual quando há tarefas e está em OPERACIONAL */}
+          {emOperacional && modoGestor && tarefas.length > 0 && (
+            <div className="px-4 sm:px-6 py-3 bg-amber-50 border-t border-amber-200 flex flex-col sm:flex-row items-center justify-between gap-2">
+              <p className="text-xs text-amber-700">
+                {pctAtribuido === 100
+                  ? '✅ Todas as tarefas atribuídas — pronto para iniciar!'
+                  : `⏳ ${pctAtribuido}% atribuído — atribua prazos/responsáveis ou inicie mesmo assim`}
+              </p>
+              <button
+                onClick={iniciarExecucao}
+                disabled={iniciandoExecucao}
+                className="flex items-center gap-1.5 px-4 py-2 bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white rounded-lg text-sm font-semibold transition-colors flex-shrink-0"
+              >
+                {iniciandoExecucao ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                Iniciar Execução
+              </button>
             </div>
           )}
         </div>
