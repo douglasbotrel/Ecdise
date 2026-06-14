@@ -7,6 +7,8 @@ import {
   Search, ClipboardList, ChevronRight, MapPin, User, Calendar,
   CheckSquare, AlertCircle, Info, X, Phone, Mail, FileText,
   Layers, BarChart2, Loader2, ExternalLink, Lock,
+  LayoutDashboard, TrendingUp, Clock, AlertTriangle, CheckCircle2,
+  RefreshCw,
 } from 'lucide-react'
 import { formatDate, formatCurrency, STATUS_OPERACIONAL_LABELS, STATUS_COLORS } from '@/lib/utils'
 import Link from 'next/link'
@@ -23,16 +25,231 @@ const FILTROS = [
 // Etapas válidas: só após primeiro pagamento registrado pelo financeiro
 const ETAPAS_OPERACIONAL = 'OPERACIONAL,EM_EXECUCAO,CONCLUIDO'
 
+// Roles com acesso à visão de gestão
+const ROLES_GESTAO = ['ADMIN', 'GESTOR_GERAL', 'GESTOR_OPERACIONAL']
+
+// ─── Painel de Gestão ────────────────────────────────────────────────────────
+function PainelGestao({ data, loading, onRefresh }: { data: any; loading: boolean; onRefresh: () => void }) {
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-40 bg-white rounded-2xl border border-gray-100">
+        <Loader2 className="w-7 h-7 animate-spin text-indigo-500" />
+      </div>
+    )
+  }
+  if (!data) return null
+
+  const { stats, projetos } = data
+
+  const resumo = [
+    {
+      icon: <Layers className="w-5 h-5 text-indigo-500" />,
+      label: 'Projetos ativos',
+      value: stats.totalProjetos,
+      sub: `${stats.totalTarefas} tarefas no total`,
+      cor: 'border-indigo-100',
+      destaque: false,
+      alerta: false,
+    },
+    {
+      icon: <TrendingUp className="w-5 h-5 text-green-500" />,
+      label: 'Progresso médio',
+      value: `${stats.pctGlobal}%`,
+      sub: `${stats.totalConcluidas} de ${stats.totalTarefas} concluídas`,
+      cor: 'border-green-100',
+      destaque: stats.pctGlobal >= 75,
+      alerta: false,
+    },
+    {
+      icon: <AlertTriangle className="w-5 h-5 text-red-500" />,
+      label: 'Tarefas atrasadas',
+      value: stats.totalAtrasadas,
+      sub: 'prazo vencido, ainda pendentes',
+      cor: 'border-red-100',
+      destaque: false,
+      alerta: stats.totalAtrasadas > 0,
+    },
+    {
+      icon: <User className="w-5 h-5 text-amber-500" />,
+      label: 'Sem responsável',
+      value: stats.totalSemResponsavel,
+      sub: 'tarefas sem analista atribuído',
+      cor: 'border-amber-100',
+      destaque: false,
+      alerta: stats.totalSemResponsavel > 0,
+    },
+  ]
+
+  return (
+    <div className="space-y-4">
+      {/* Cards de resumo */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        {resumo.map((c, i) => (
+          <div key={i} className={`bg-white rounded-2xl border-2 ${c.cor} p-4 flex flex-col gap-1`}>
+            <div className="flex items-center gap-2">
+              {c.icon}
+              <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide leading-tight">{c.label}</span>
+            </div>
+            <p className={`text-3xl font-bold mt-1 ${c.alerta ? 'text-red-600' : c.destaque ? 'text-green-600' : 'text-gray-900'}`}>
+              {c.value}
+            </p>
+            <p className="text-xs text-gray-400">{c.sub}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* Barra de progresso global */}
+      <div className="bg-white rounded-2xl border border-gray-100 px-5 py-4">
+        <div className="flex items-center justify-between mb-2">
+          <span className="text-sm font-semibold text-gray-700">Progresso global das atividades</span>
+          <div className="flex items-center gap-3 text-xs text-gray-400 flex-wrap justify-end">
+            <span className="flex items-center gap-1">
+              <CheckCircle2 className="w-3.5 h-3.5 text-green-500" />
+              {stats.totalConcluidas} concluídas
+            </span>
+            <span className="flex items-center gap-1">
+              <Clock className="w-3.5 h-3.5 text-gray-400" />
+              {stats.totalTarefas - stats.totalConcluidas} pendentes
+            </span>
+            {stats.totalAtrasadas > 0 && (
+              <span className="flex items-center gap-1 text-red-500">
+                <AlertTriangle className="w-3.5 h-3.5" />
+                {stats.totalAtrasadas} atrasadas
+              </span>
+            )}
+            <button
+              onClick={onRefresh}
+              className="ml-1 p-1 hover:bg-gray-100 rounded-lg text-gray-400 hover:text-gray-600 transition-colors"
+              title="Atualizar dados"
+            >
+              <RefreshCw className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
+        <div className="w-full bg-gray-100 rounded-full h-3 overflow-hidden">
+          <div
+            className={`h-3 rounded-full transition-all duration-700 ${
+              stats.pctGlobal >= 75 ? 'bg-green-500' : stats.pctGlobal >= 40 ? 'bg-amber-400' : 'bg-red-400'
+            }`}
+            style={{ width: `${stats.pctGlobal}%` }}
+          />
+        </div>
+      </div>
+
+      {/* Tabela de projetos */}
+      <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
+        <div className="px-5 py-3 border-b border-gray-100 flex items-center justify-between">
+          <h3 className="font-semibold text-gray-800 text-sm">Análise por Projeto</h3>
+          <span className="text-xs text-gray-400">{projetos.length} projeto(s) em andamento</span>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="bg-gray-50 border-b border-gray-100 text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                <th className="text-left px-4 py-3">Projeto</th>
+                <th className="text-left px-4 py-3 hidden md:table-cell">Responsável</th>
+                <th className="text-left px-4 py-3 hidden lg:table-cell">Prazo</th>
+                <th className="text-left px-4 py-3">Progresso</th>
+                <th className="text-center px-3 py-3 text-green-600">✓</th>
+                <th className="text-center px-3 py-3">Pend.</th>
+                <th className="text-center px-3 py-3 text-red-500">Atras.</th>
+                <th className="text-center px-3 py-3 text-amber-500">S/R</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-50">
+              {[...projetos]
+                .sort((a: any, b: any) => a._stats.pct - b._stats.pct)
+                .map((p: any) => {
+                  const { pct, concluidas, pendentes, atrasadas, semResponsavel, total } = p._stats
+                  const prazoVencido = p.dataPrazo && new Date(p.dataPrazo) < new Date()
+                  return (
+                    <tr key={p.id} className="hover:bg-indigo-50/30 transition-colors">
+                      <td className="px-4 py-3">
+                        <Link href={`/operacional/${p.id}`} className="group block">
+                          <p className="font-semibold text-gray-900 group-hover:text-indigo-600 transition-colors leading-snug">
+                            {p.imovelNome || p.cliente?.nome}
+                          </p>
+                          <p className="text-xs text-gray-400 mt-0.5">{p.codigo} · {p.tipoServico}</p>
+                        </Link>
+                      </td>
+                      <td className="px-4 py-3 hidden md:table-cell">
+                        <span className={`text-xs ${p.responsavel ? 'text-gray-600' : 'text-amber-500 font-medium'}`}>
+                          {p.responsavel?.nome || '— sem responsável'}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 hidden lg:table-cell">
+                        <span className={`text-xs font-medium ${prazoVencido ? 'text-red-500' : 'text-gray-500'}`}>
+                          {p.dataPrazo ? formatDate(p.dataPrazo) : '—'}
+                          {prazoVencido && ' ⚠️'}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 min-w-[140px]">
+                        <div className="flex items-center gap-2">
+                          <div className="flex-1 bg-gray-100 rounded-full h-2 overflow-hidden">
+                            <div
+                              className={`h-2 rounded-full transition-all duration-500 ${
+                                pct === 100 ? 'bg-green-500'
+                                : atrasadas > 0 ? 'bg-red-400'
+                                : pct >= 50 ? 'bg-amber-400'
+                                : 'bg-indigo-400'
+                              }`}
+                              style={{ width: total > 0 ? `${pct}%` : '0%' }}
+                            />
+                          </div>
+                          <span className={`text-xs font-bold w-9 text-right shrink-0 ${pct === 100 ? 'text-green-600' : 'text-gray-600'}`}>
+                            {total > 0 ? `${pct}%` : '—'}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="px-3 py-3 text-center">
+                        <span className="text-xs font-semibold text-green-600">{concluidas}</span>
+                      </td>
+                      <td className="px-3 py-3 text-center">
+                        <span className="text-xs font-medium text-gray-500">{pendentes}</span>
+                      </td>
+                      <td className="px-3 py-3 text-center">
+                        <span className={`text-xs font-bold ${atrasadas > 0 ? 'text-red-500' : 'text-gray-300'}`}>
+                          {atrasadas > 0 ? atrasadas : '—'}
+                        </span>
+                      </td>
+                      <td className="px-3 py-3 text-center">
+                        <span className={`text-xs font-bold ${semResponsavel > 0 ? 'text-amber-500' : 'text-gray-300'}`}>
+                          {semResponsavel > 0 ? semResponsavel : '—'}
+                        </span>
+                      </td>
+                    </tr>
+                  )
+                })}
+            </tbody>
+          </table>
+          {projetos.length === 0 && (
+            <div className="py-12 text-center text-gray-400 text-sm">
+              <Layers className="w-8 h-8 mx-auto mb-2 opacity-30" />
+              Nenhum projeto operacional encontrado
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ─── Página Principal ─────────────────────────────────────────────────────────
 export default function OperacionalPage() {
   const router = useRouter()
-  const [projetos, setProjetos]         = useState<any[]>([])
-  const [loading, setLoading]           = useState(true)
-  const [search, setSearch]             = useState('')
-  const [filtro, setFiltro]             = useState('')
+  const [projetos, setProjetos]           = useState<any[]>([])
+  const [loading, setLoading]             = useState(true)
+  const [search, setSearch]               = useState('')
+  const [filtro, setFiltro]               = useState('')
   // Quick view drawer
-  const [quickView, setQuickView]       = useState<any | null>(null)
+  const [quickView, setQuickView]         = useState<any | null>(null)
   const [loadingDetail, setLoadingDetail] = useState(false)
   const drawerRef = useRef<HTMLDivElement>(null)
+  // Gestão de Projetos
+  const [currentUser, setCurrentUser]     = useState<any>(null)
+  const [modoGestao, setModoGestao]       = useState(false)
+  const [gestaoData, setGestaoData]       = useState<any>(null)
+  const [loadingGestao, setLoadingGestao] = useState(false)
 
   // Abre o drawer lateral com dados completos do projeto
   async function abrirQuickView(e: React.MouseEvent, projetoId: string) {
@@ -52,7 +269,7 @@ export default function OperacionalPage() {
     }
   }
 
-  // Fecha ao clicar fora do drawer
+  // Fecha drawer ao clicar fora
   useEffect(() => {
     function handleClick(e: MouseEvent) {
       if (drawerRef.current && !drawerRef.current.contains(e.target as Node)) {
@@ -88,15 +305,63 @@ export default function OperacionalPage() {
     return () => clearTimeout(t)
   }, [load])
 
+  // Carrega usuário atual
+  useEffect(() => {
+    fetch('/api/auth/me').then(r => r.json()).then(d => setCurrentUser(d.usuario || null))
+  }, [])
+
+  const loadGestao = useCallback(async () => {
+    setLoadingGestao(true)
+    try {
+      const res = await fetch('/api/projetos/gestao')
+      if (!res.ok) throw new Error()
+      const data = await res.json()
+      setGestaoData(data)
+    } catch {
+      toast.error('Erro ao carregar dados de gestão')
+    } finally {
+      setLoadingGestao(false)
+    }
+  }, [])
+
+  function toggleGestao() {
+    const abrir = !modoGestao
+    setModoGestao(abrir)
+    if (abrir && !gestaoData) loadGestao()
+  }
+
+  const podeVerGestao = currentUser && ROLES_GESTAO.includes(currentUser.role)
+
   return (
     <div className="space-y-6">
       {/* Título */}
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">Gerenciamento Operacional</h1>
-        <p className="text-gray-500 text-sm mt-1">
-          Projetos liberados pelo financeiro — clique em um projeto para ver detalhes e atribuir tarefas
-        </p>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Gerenciamento Operacional</h1>
+          <p className="text-gray-500 text-sm mt-1">
+            Projetos liberados pelo financeiro — clique em um projeto para ver detalhes e atribuir tarefas
+          </p>
+        </div>
+        {podeVerGestao && (
+          <button
+            onClick={toggleGestao}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all ${
+              modoGestao
+                ? 'bg-indigo-600 text-white shadow-md'
+                : 'bg-white border border-indigo-200 text-indigo-700 hover:bg-indigo-50'
+            }`}
+          >
+            <LayoutDashboard className="w-4 h-4" />
+            Gestão de Projetos
+          </button>
+        )}
       </div>
+
+      {/* Painel de Gestão */}
+      {modoGestao && podeVerGestao && (
+        <PainelGestao data={gestaoData} loading={loadingGestao} onRefresh={loadGestao} />
+      )}
+      {modoGestao && <div className="border-t border-gray-200" />}
 
       {/* Filtros */}
       <div className="flex flex-wrap gap-2">
@@ -133,7 +398,7 @@ export default function OperacionalPage() {
         />
       </div>
 
-      {/* Lista */}
+      {/* Lista de projetos */}
       {loading ? (
         <div className="flex items-center justify-center h-40">
           <div className="w-8 h-8 border-4 border-green-600 border-t-transparent rounded-full animate-spin" />
@@ -278,223 +543,99 @@ export default function OperacionalPage() {
               </button>
             </div>
 
-            {/* Corpo — rolável */}
-            <div className="flex-1 overflow-y-auto">
+            {/* Conteúdo do drawer */}
+            <div className="flex-1 overflow-y-auto p-5 space-y-4">
               {loadingDetail ? (
                 <div className="flex items-center justify-center h-40">
-                  <Loader2 className="w-6 h-6 text-green-600 animate-spin" />
+                  <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
                 </div>
               ) : (
-                <div className="px-5 py-4 space-y-5">
+                <>
+                  {/* Dados básicos */}
+                  <div className="space-y-2">
+                    {[
+                      { icon: <Layers className="w-4 h-4" />, label: 'Serviço', value: quickView.tipoServico },
+                      { icon: <MapPin className="w-4 h-4" />, label: 'Local', value: [quickView.municipio, quickView.estado].filter(Boolean).join(' / ') || '—' },
+                      { icon: <User className="w-4 h-4" />, label: 'Responsável', value: quickView.responsavel?.nome || 'Não atribuído' },
+                      { icon: <User className="w-4 h-4" />, label: 'Cliente', value: quickView.cliente?.nome || '—' },
+                      { icon: <Calendar className="w-4 h-4" />, label: 'Prazo', value: quickView.dataPrazo ? formatDate(quickView.dataPrazo) : '—' },
+                      { icon: <BarChart2 className="w-4 h-4" />, label: 'Área', value: quickView.areaHectares ? `${Number(quickView.areaHectares).toLocaleString('pt-BR')} ha` : '—' },
+                    ].map((item, i) => (
+                      <div key={i} className="flex items-start gap-3 text-sm">
+                        <span className="text-gray-300 mt-0.5 flex-shrink-0">{item.icon}</span>
+                        <div className="min-w-0">
+                          <span className="text-xs text-gray-400">{item.label}</span>
+                          <p className="font-medium text-gray-800 truncate">{item.value}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
 
-                  {/* CLIENTE */}
-                  <section>
-                    <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-1.5">
-                      <User className="w-3.5 h-3.5" /> Cliente
-                    </h3>
-                    <div className="bg-gray-50 rounded-xl p-3 space-y-2">
-                      <p className="font-semibold text-gray-900 text-sm">{quickView.cliente?.nome}</p>
-                      {quickView.cliente?.cpfCnpj && (
-                        <div className="flex items-center gap-2 text-xs text-gray-600">
-                          <FileText className="w-3.5 h-3.5 text-gray-400" />
-                          <span className="font-mono">{quickView.cliente.cpfCnpj}</span>
-                        </div>
-                      )}
-                      {quickView.cliente?.telefone && (
-                        <div className="flex items-center gap-2 text-xs text-gray-600">
-                          <Phone className="w-3.5 h-3.5 text-gray-400" />
-                          <span>{quickView.cliente.telefone}</span>
-                        </div>
-                      )}
-                      {quickView.cliente?.email && (
-                        <div className="flex items-center gap-2 text-xs text-gray-600">
-                          <Mail className="w-3.5 h-3.5 text-gray-400" />
-                          <span className="truncate">{quickView.cliente.email}</span>
-                        </div>
-                      )}
-                      {quickView.cliente?.endereco && (
-                        <div className="flex items-start gap-2 text-xs text-gray-600">
-                          <MapPin className="w-3.5 h-3.5 text-gray-400 flex-shrink-0 mt-0.5" />
-                          <span>{quickView.cliente.endereco}{quickView.cliente.municipio ? `, ${quickView.cliente.municipio}/${quickView.cliente.estado}` : ''}</span>
-                        </div>
-                      )}
+                  {/* Contrato */}
+                  {quickView.contrato && (
+                    <div className="bg-gray-50 rounded-xl p-3 space-y-1">
+                      <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Contrato</p>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-500">Valor total</span>
+                        <span className="font-semibold">{formatCurrency(quickView.contrato.valorTotal)}</span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-500">Status</span>
+                        <span className="font-medium text-gray-700">{quickView.contrato.statusContrato}</span>
+                      </div>
                     </div>
-                  </section>
+                  )}
 
-                  {/* IMÓVEL / PROPRIEDADE */}
-                  <section>
-                    <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-1.5">
-                      <MapPin className="w-3.5 h-3.5" /> Imóvel / Propriedade
-                    </h3>
-                    <div className="bg-gray-50 rounded-xl p-3 space-y-2">
-                      {quickView.imovelNome && (
-                        <p className="font-semibold text-gray-900 text-sm">{quickView.imovelNome}</p>
-                      )}
-                      {quickView.imovelEndereco && (
-                        <div className="flex items-start gap-2 text-xs text-gray-600">
-                          <MapPin className="w-3.5 h-3.5 text-gray-400 flex-shrink-0 mt-0.5" />
-                          <span>{quickView.imovelEndereco}</span>
-                        </div>
-                      )}
-                      {(quickView.municipio || quickView.estado) && (
-                        <div className="flex items-center gap-2 text-xs text-gray-600">
-                          <MapPin className="w-3.5 h-3.5 text-gray-400" />
-                          <span>{[quickView.municipio, quickView.estado].filter(Boolean).join(' / ')}</span>
-                        </div>
-                      )}
-                      {quickView.areaHectares && (
-                        <div className="flex items-center gap-2 text-xs text-gray-600">
-                          <BarChart2 className="w-3.5 h-3.5 text-gray-400" />
-                          <span><strong>{Number(quickView.areaHectares).toLocaleString('pt-BR')}</strong> hectares</span>
-                        </div>
-                      )}
-                      {quickView.car && (
-                        <div className="flex items-start gap-2 text-xs text-gray-600">
-                          <FileText className="w-3.5 h-3.5 text-gray-400 flex-shrink-0 mt-0.5" />
-                          <div>
-                            <span className="text-gray-400 font-medium">CAR: </span>
-                            <span className="font-mono break-all">{quickView.car}</span>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </section>
-
-                  {/* SERVIÇOS */}
-                  {quickView.servicosContratados && (
-                    <section>
-                      <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-1.5">
-                        <Layers className="w-3.5 h-3.5" /> Serviços Contratados
-                      </h3>
-                      <div className="flex flex-wrap gap-2">
+                  {/* Tarefas resumo */}
+                  {quickView.tarefas && quickView.tarefas.length > 0 && (
+                    <div>
+                      <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Tarefas</p>
+                      <div className="space-y-1">
                         {(() => {
-                          try {
-                            const lista: string[] = JSON.parse(quickView.servicosContratados)
-                            return lista.map((s, i) => (
-                              <span key={i} className="text-xs bg-green-50 text-green-700 border border-green-200 px-2.5 py-1 rounded-full font-medium">
-                                {s}
-                              </span>
-                            ))
-                          } catch { return null }
+                          const total     = quickView.tarefas.length
+                          const concluidas = quickView.tarefas.filter((t: any) => t.status === 'CONCLUIDA').length
+                          const pct       = Math.round((concluidas / total) * 100)
+                          return (
+                            <>
+                              <div className="flex justify-between text-sm mb-1">
+                                <span className="text-gray-500">{concluidas} de {total} concluídas</span>
+                                <span className="font-semibold text-gray-800">{pct}%</span>
+                              </div>
+                              <div className="w-full bg-gray-200 rounded-full h-2">
+                                <div
+                                  className={`h-2 rounded-full ${pct === 100 ? 'bg-green-500' : 'bg-green-400'}`}
+                                  style={{ width: `${pct}%` }}
+                                />
+                              </div>
+                            </>
+                          )
                         })()}
                       </div>
-                    </section>
-                  )}
-
-                  {/* EQUIPE & DATAS */}
-                  <section>
-                    <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-1.5">
-                      <Calendar className="w-3.5 h-3.5" /> Equipe & Prazos
-                    </h3>
-                    <div className="bg-gray-50 rounded-xl p-3 space-y-2">
-                      {quickView.responsavel && (
-                        <div className="flex items-center gap-2 text-xs text-gray-600">
-                          <User className="w-3.5 h-3.5 text-gray-400" />
-                          <span><strong>Responsável:</strong> {quickView.responsavel.nome}</span>
-                        </div>
-                      )}
-                      {quickView.supervisor && (
-                        <div className="flex items-center gap-2 text-xs text-gray-600">
-                          <User className="w-3.5 h-3.5 text-gray-400" />
-                          <span><strong>Supervisor:</strong> {quickView.supervisor.nome}</span>
-                        </div>
-                      )}
-                      {quickView.dataInicio && (
-                        <div className="flex items-center gap-2 text-xs text-gray-600">
-                          <Calendar className="w-3.5 h-3.5 text-gray-400" />
-                          <span><strong>Início:</strong> {formatDate(quickView.dataInicio)}</span>
-                        </div>
-                      )}
-                      {quickView.dataPrazo && (
-                        <div className="flex items-center gap-2 text-xs text-gray-600">
-                          <Calendar className="w-3.5 h-3.5 text-gray-400" />
-                          <span><strong>Prazo:</strong> {formatDate(quickView.dataPrazo)}</span>
-                        </div>
-                      )}
-                      {quickView.contrato?.valorTotal && (
-                        <div className="flex items-center gap-2 text-xs text-gray-600">
-                          <span>💰 <strong>Valor:</strong> {formatCurrency(quickView.contrato.valorTotal)}</span>
-                        </div>
-                      )}
                     </div>
-                  </section>
-
-                  {/* TAREFAS resumo */}
-                  {quickView.tarefas && quickView.tarefas.length > 0 && (
-                    <section>
-                      <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-1.5">
-                        <CheckSquare className="w-3.5 h-3.5" /> Tarefas ({quickView.tarefas.length})
-                      </h3>
-                      <div className="space-y-1.5">
-                        {quickView.tarefas.slice(0, 5).map((t: any) => (
-                          <div key={t.id} className="flex items-center gap-2 text-xs text-gray-600">
-                            <div className={`w-2 h-2 rounded-full flex-shrink-0 ${
-                              t.status === 'CONCLUIDA' ? 'bg-green-500' : 'bg-gray-300'
-                            }`} />
-                            <span className={`flex-1 truncate ${t.status === 'CONCLUIDA' ? 'line-through text-gray-400' : ''}`}>
-                              {t.titulo}
-                            </span>
-                            {t.responsavel && (
-                              <span className="text-gray-400 flex-shrink-0">{t.responsavel.nome.split(' ')[0]}</span>
-                            )}
-                          </div>
-                        ))}
-                        {quickView.tarefas.length > 5 && (
-                          <p className="text-xs text-gray-400 pl-4">+ {quickView.tarefas.length - 5} mais...</p>
-                        )}
-                      </div>
-                    </section>
                   )}
 
-                  {/* Credenciais de sistemas */}
-                  {quickView.credenciais && (() => {
-                    try {
-                      const creds = JSON.parse(quickView.credenciais)
-                      const sistemas = Object.keys(creds)
-                      if (sistemas.length === 0) return null
-                      return (
-                        <section>
-                          <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-1.5">
-                            🔑 Credenciais de Sistemas
-                          </h3>
-                          <div className="space-y-2">
-                            {sistemas.map(s => (
-                              <div key={s} className="bg-gray-50 rounded-xl p-3 border border-gray-100">
-                                <p className="text-xs font-bold text-gray-500 uppercase mb-1.5">{s}</p>
-                                <div className="space-y-0.5 text-xs font-mono">
-                                  <div><span className="text-gray-400">Login: </span><span className="text-gray-800">{creds[s].login || '—'}</span></div>
-                                  <div><span className="text-gray-400">Senha: </span><span className="text-gray-800">{creds[s].senha || '—'}</span></div>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </section>
-                      )
-                    } catch { return null }
-                  })()}
-
-                  {/* Observações */}
-                  {quickView.observacoes && (
-                    <section>
-                      <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Observações</h3>
-                      <p className="text-xs text-gray-600 bg-gray-50 rounded-xl p-3 leading-relaxed">
-                        {quickView.observacoes}
+                  {/* Credenciais (bloqueadas) */}
+                  {quickView.credenciais && (
+                    <div className="bg-amber-50 rounded-xl p-3">
+                      <p className="text-xs font-semibold text-amber-600 flex items-center gap-1 mb-1">
+                        <Lock className="w-3.5 h-3.5" /> Credenciais registradas
                       </p>
-                    </section>
+                      <p className="text-xs text-gray-500">
+                        {Object.keys(JSON.parse(quickView.credenciais)).join(', ')}
+                      </p>
+                    </div>
                   )}
-                </div>
+                </>
               )}
             </div>
 
-            {/* Rodapé: botão para abrir completo */}
-            <div className="px-5 py-4 border-t border-gray-100 bg-gray-50 flex-shrink-0">
+            {/* Footer do drawer */}
+            <div className="flex-shrink-0 p-4 border-t border-gray-100 bg-gray-50">
               <Link
                 href={`/operacional/${quickView.id}`}
-                onClick={() => setQuickView(null)}
-                className="flex items-center justify-center gap-2 w-full py-2.5 bg-green-600 hover:bg-green-700 text-white rounded-xl text-sm font-semibold transition-colors"
+                className="flex items-center justify-center gap-2 w-full py-2.5 bg-green-600 hover:bg-green-700 text-white rounded-xl font-semibold text-sm transition-colors"
               >
-                <ExternalLink className="w-4 h-4" />
-                Abrir projeto completo
+                Abrir projeto completo <ExternalLink className="w-4 h-4" />
               </Link>
             </div>
           </div>
