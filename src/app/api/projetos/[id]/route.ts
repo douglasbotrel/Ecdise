@@ -292,8 +292,9 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
     // Geração acontece ao chegar em OPERACIONAL (não em EM_EXECUCAO) porque:
     //  - o gestor operacional precisa ver as tarefas para atribuir prazos/responsáveis
     //  - EM_EXECUCAO é acionado via tarefas/route.ts (bypass do PATCH) ao 1º check
-    // body.gerarTarefas=true permite regenerar para projetos já em OPERACIONAL sem tarefas
-    const forcarGeracao = body.gerarTarefas === true && projeto.etapaPipeline === 'OPERACIONAL'
+    // body.gerarTarefas=true permite regenerar para projetos em OPERACIONAL ou EM_EXECUCAO sem tarefas
+    const ETAPAS_PODE_GERAR = ['OPERACIONAL', 'EM_EXECUCAO']
+    const forcarGeracao = body.gerarTarefas === true && ETAPAS_PODE_GERAR.includes(projeto.etapaPipeline)
     if ((novaEtapa === 'OPERACIONAL' && projeto.etapaPipeline !== 'OPERACIONAL') || forcarGeracao) {
       try {
         // Só cria se o projeto ainda não tem tarefas (evita duplicatas em re-entradas)

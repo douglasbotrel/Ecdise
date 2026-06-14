@@ -1095,8 +1095,28 @@ export default function ProjetoDetalhe() {
           </div>
 
           {tarefas.length === 0 ? (
-            <div className="bg-white rounded-2xl border border-gray-100 p-8 text-center text-gray-400 text-sm">
-              Nenhuma tarefa cadastrada
+            <div className="bg-white rounded-2xl border border-gray-100 p-8 text-center">
+              <Clock className="w-9 h-9 mx-auto mb-3 text-amber-300" />
+              <p className="text-sm font-semibold text-gray-700 mb-1">Nenhuma tarefa gerada</p>
+              <p className="text-xs text-gray-400 mb-4 max-w-sm mx-auto">
+                As atividades deste projeto ainda não foram geradas a partir dos serviços contratados.
+              </p>
+              <div className="flex flex-col sm:flex-row gap-2 justify-center">
+                <button
+                  onClick={gerarTarefasServicos}
+                  disabled={gerandoTarefas}
+                  className="flex items-center justify-center gap-2 px-4 py-2 bg-amber-500 hover:bg-amber-600 disabled:opacity-50 text-white rounded-lg text-sm font-semibold"
+                >
+                  {gerandoTarefas ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+                  Gerar Atividades
+                </button>
+                <button
+                  onClick={() => setNovaT(true)}
+                  className="flex items-center justify-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-lg text-sm font-medium"
+                >
+                  <Plus className="w-4 h-4" /> Tarefa Manual
+                </button>
+              </div>
             </div>
           ) : (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
