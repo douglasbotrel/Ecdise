@@ -71,6 +71,7 @@ export default function BIPage() {
   const totaisFinanceiros   = dadosBi?.totais              ?? {}
   const pagamentosPorForma  = dadosBi?.pagamentosPorForma  ?? []
   const servicosContratados = dadosBi?.servicosContratados ?? []
+  const pendenciasPanorama  = dadosBi?.pendencias          ?? {}
 
   return (
     <div className="space-y-6">
@@ -121,6 +122,28 @@ export default function BIPage() {
           <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Vencido</p>
           <p className="text-2xl font-bold text-red-600">{formatCurrency(totaisFinanceiros.totalVencido ?? 0)}</p>
           <p className="text-xs text-gray-400 mt-1">{totaisFinanceiros.qtdVencido ?? 0} vencido(s) sem baixa</p>
+        </div>
+      </div>
+
+      {/* Panorama de Pendências (Acompanhamento de Processos) */}
+      <div>
+        <div className="mb-3">
+          <h3 className="font-semibold text-gray-900">Pendências de Processos</h3>
+          <p className="text-xs text-gray-400 mt-0.5">Panorama geral dos processos em acompanhamento ambiental</p>
+        </div>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {[
+            { label: 'Pendências Abertas',     value: pendenciasPanorama.abertas     ?? 0, color: 'bg-amber-500' },
+            { label: 'A Vencer (≤ 7 dias)',     value: pendenciasPanorama.aVencer     ?? 0, color: 'bg-orange-500' },
+            { label: 'Atrasadas',               value: pendenciasPanorama.atrasadas   ?? 0, color: 'bg-red-600' },
+            { label: 'Respondidas',             value: pendenciasPanorama.respondidas ?? 0, color: 'bg-green-600' },
+          ].map((kpi) => (
+            <div key={kpi.label} className="bg-white rounded-2xl border border-gray-100 p-5">
+              <div className={`w-1.5 h-8 ${kpi.color} rounded-full mb-3`} />
+              <p className="text-3xl font-bold text-gray-900">{kpi.value}</p>
+              <p className="text-xs text-gray-400 mt-1">{kpi.label}</p>
+            </div>
+          ))}
         </div>
       </div>
 

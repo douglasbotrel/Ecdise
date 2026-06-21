@@ -35,6 +35,7 @@ model Usuario {
   projetosSupervisor     Projeto[]   @relation("ProjetoSupervisor")
   projetosAnalistaRapido Projeto[]   @relation("ProjetoAnalistaRapido")
   tarefasResponsavel     Tarefa[]    @relation("TarefaResponsavel")
+  acoesPendenciaResponsavel AcaoPendencia[] @relation("AcaoPendenciaResponsavel")
   vistorias              Vistoria[]  @relation("VistoriaResponsavel")
   documentosUpload       Documento[]
   notificacoes           Notificacao[]
@@ -111,6 +112,10 @@ model Projeto {
   valorSinal           Float?
   valorPrestacao       Float?
   numeroPrestacoes     Int?
+  // Protocolo / Acompanhamento de Processos
+  protocoloData        DateTime?
+  protocoloCodigoOrgao String?
+  emAcompanhamento     Boolean  @default(false)
   criadoEm            DateTime @default(now())
   atualizadoEm        DateTime @updatedAt
 
@@ -124,6 +129,8 @@ model Projeto {
   documentos     Documento[]
   comentarios    Comentario[]
   historico      HistoricoStatus[]
+  pendencias     Pendencia[]
+  licenca        Licenca?
 
   @@map("projetos")
 }
@@ -190,6 +197,60 @@ model Tarefa {
   documentos  Documento[]
 
   @@map("tarefas")
+}
+
+// ============================================================
+// ACOMPANHAMENTO DE PROCESSOS (pós-protocolo, até a licença)
+// Pendencia.status: ABERTA | CONCLUIDA
+// ============================================================
+
+model Pendencia {
+  id            String    @id @default(cuid())
+  projetoId     String
+  numeroPedido  String
+  data          DateTime
+  prazoResposta DateTime
+  status        String    @default("ABERTA")
+  dataEntrega   DateTime?
+  criadoEm      DateTime  @default(now())
+  atualizadoEm  DateTime  @updatedAt
+
+  projeto Projeto         @relation(fields: [projetoId], references: [id])
+  acoes   AcaoPendencia[]
+
+  @@map("pendencias")
+}
+
+model AcaoPendencia {
+  id            String    @id @default(cuid())
+  pendenciaId   String
+  descricao     String
+  responsavelId String?
+  concluida     Boolean   @default(false)
+  dataConclusao DateTime?
+  criadoEm      DateTime  @default(now())
+  atualizadoEm  DateTime  @updatedAt
+
+  pendencia   Pendencia @relation(fields: [pendenciaId], references: [id])
+  responsavel Usuario?  @relation("AcaoPendenciaResponsavel", fields: [responsavelId], references: [id])
+
+  @@map("acoes_pendencia")
+}
+
+model Licenca {
+  id             String    @id @default(cuid())
+  projetoId      String    @unique
+  numero         String
+  dataEmissao    DateTime
+  dataValidade   DateTime?
+  condicionantes String?
+  documentoUrl   String?
+  criadoEm       DateTime  @default(now())
+  atualizadoEm   DateTime  @updatedAt
+
+  projeto Projeto @relation(fields: [projetoId], references: [id])
+
+  @@map("licencas")
 }
 
 // ============================================================

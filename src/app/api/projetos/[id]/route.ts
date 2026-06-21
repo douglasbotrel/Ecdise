@@ -132,7 +132,17 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
         historico: {
           orderBy: { criadoEm: 'desc' },
           take: 20,
-        }
+        },
+        pendencias: {
+          orderBy: { criadoEm: 'desc' },
+          include: {
+            acoes: {
+              orderBy: { criadoEm: 'asc' },
+              include: { responsavel: { select: { id: true, nome: true } } }
+            }
+          }
+        },
+        licenca: true,
       }
     })
 
@@ -274,6 +284,9 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
         ...(body.dataInicio !== undefined && { dataInicio: body.dataInicio ? new Date(body.dataInicio) : null }),
         ...(body.dataConclusao !== undefined && { dataConclusao: body.dataConclusao ? new Date(body.dataConclusao) : null }),
         ...(body.dataAprovacao !== undefined && { dataAprovacao: body.dataAprovacao ? new Date(body.dataAprovacao) : null }),
+        ...(body.protocoloData !== undefined && { protocoloData: body.protocoloData ? new Date(body.protocoloData) : null }),
+        ...(body.protocoloCodigoOrgao !== undefined && { protocoloCodigoOrgao: body.protocoloCodigoOrgao || null }),
+        ...(body.emAcompanhamento !== undefined && { emAcompanhamento: body.emAcompanhamento === true }),
       },
       include: {
         cliente: true,

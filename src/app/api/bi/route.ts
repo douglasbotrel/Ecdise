@@ -8,6 +8,10 @@ export async function GET(request: NextRequest) {
     if (!user) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
 
     const hoje = new Date()
+    const inicioHoje = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate())
+    const fimSeteDias = new Date(inicioHoje)
+    fimSeteDias.setDate(fimSeteDias.getDate() + 7)
+    fimSeteDias.setHours(23, 59, 59, 999)
 
     // ── Evolução financeira dos últimos 6 meses ─────────────────────────────
     const evolucaoFinanceira = []
@@ -105,6 +109,38 @@ export async function GET(request: NextRequest) {
       .map(([nome, { qtd, valor }]) => ({ nome, qtd, valor }))
       .sort((a, b) => b.qtd - a.qtd)
 
+    // ── Panorama de Pendências (Acompanhamento de Processos) ────────────────
+    // Considera apenas pendências de projetos atualmente em acompanhamento
+    const filtroProjetoAcompanhamento = { projeto: { emAcompanhamento: true } }
+
+    const [
+      pendenciasAbertas,
+      pendenciasAVencer,
+      pendenciasAtrasadas,
+      pendenciasRespondidas,
+    ] = await Promise.all([
+      prisma.pendencia.count({
+        where: { status: 'ABERTA', ...filtroProjetoAcompanhamento },
+      }),
+      prisma.pendencia.count({
+        where: {
+          status: 'ABERTA',
+          prazoResposta: { gte: inicioHoje, lte: fimSeteDias },
+          ...filtroProjetoAcompanhamento,
+        },
+      }),
+      prisma.pendencia.count({
+        where: {
+          status: 'ABERTA',
+          prazoResposta: { lt: inicioHoje },
+          ...filtroProjetoAcompanhamento,
+        },
+      }),
+      prisma.pendencia.count({
+        where: { status: 'CONCLUIDA', ...filtroProjetoAcompanhamento },
+      }),
+    ])
+
     return NextResponse.json({
       evolucaoFinanceira,
       totais: {
@@ -121,6 +157,12 @@ export async function GET(request: NextRequest) {
         qtd:    p._count,
       })),
       servicosContratados,
+      pendencias: {
+        abertas:     pendenciasAbertas,
+        aVencer:     pendenciasAVencer,
+        atrasadas:   pendenciasAtrasadas,
+        respondidas: pendenciasRespondidas,
+      },
     })
   } catch (error) {
     console.error('Erro na API BI:', error)

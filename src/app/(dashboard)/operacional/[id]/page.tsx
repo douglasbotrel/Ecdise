@@ -57,6 +57,10 @@ export default function ProjetoDetalhe() {
   const [modalCredencial, setModalCredencial]     = useState<{ sistema: string } | null>(null)
   const [credForm, setCredForm]                   = useState({ login: '', senha: '' })
   const [salvandoCred, setSalvandoCred]           = useState(false)
+  // Modal de Protocolo (data + código do processo no órgão)
+  const [modalProtocolo, setModalProtocolo]       = useState(false)
+  const [protocoloForm, setProtocoloForm]         = useState({ data: '', codigoOrgao: '' })
+  const [salvandoProtocolo, setSalvandoProtocolo] = useState(false)
 
   // Etapas que têm acesso ao módulo Operacional (após primeiro pagamento)
   const ETAPAS_VALIDAS    = ['OPERACIONAL', 'EM_EXECUCAO', 'CONCLUIDO']
@@ -240,6 +244,12 @@ export default function ProjetoDetalhe() {
           const creds = projeto?.credenciais ? JSON.parse(projeto.credenciais) : {}
           setCredForm({ login: creds.CTF?.login || '', senha: creds.CTF?.senha || '' })
           setModalCredencial({ sistema: 'CTF' })
+        } else if (titulo.includes('PROTOCOLO')) {
+          setProtocoloForm({
+            data: projeto?.protocoloData ? projeto.protocoloData.split('T')[0] : HOJE_STR,
+            codigoOrgao: projeto?.protocoloCodigoOrgao || '',
+          })
+          setModalProtocolo(true)
         }
       }
     } catch {
@@ -268,6 +278,30 @@ export default function ProjetoDetalhe() {
       loadProjeto()
     } catch { toast.error('Erro ao salvar credenciais') }
     finally { setSalvandoCred(false) }
+  }
+
+  // ── Salvar dados do Protocolo e mover projeto para Acompanhamento ──
+  async function salvarProtocolo() {
+    if (!protocoloForm.data || !protocoloForm.codigoOrgao.trim()) {
+      toast.error('Informe a data e o código do processo no órgão')
+      return
+    }
+    setSalvandoProtocolo(true)
+    try {
+      await fetch(`/api/projetos/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          protocoloData: protocoloForm.data,
+          protocoloCodigoOrgao: protocoloForm.codigoOrgao.trim(),
+          emAcompanhamento: true,
+        }),
+      })
+      toast.success('Protocolo registrado! Projeto movido para Acompanhamento de Processos.')
+      setModalProtocolo(false)
+      router.push(`/acompanhamento/${id}`)
+    } catch { toast.error('Erro ao salvar protocolo') }
+    finally { setSalvandoProtocolo(false) }
   }
 
   // ── Nova tarefa avulsa ─────────────────────────────────────
@@ -1398,6 +1432,77 @@ export default function ProjetoDetalhe() {
               </button>
               <button
                 onClick={() => setModalCredencial(null)}
+                className="px-5 py-2.5 border border-gray-200 text-gray-600 hover:bg-gray-50 rounded-xl text-sm font-medium"
+              >
+                Pular
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ══════════════════════════════════════════════════════
+          MODAL DE PROTOCOLO — aparece ao concluir a tarefa "Protocolo"
+          ══════════════════════════════════════════════════════ */}
+      {modalProtocolo && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+            {/* Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+              <div>
+                <h2 className="font-bold text-gray-900">📋 Protocolo do Processo</h2>
+                <p className="text-xs text-gray-500 mt-0.5">
+                  Registre a data e o código do processo no órgão ambiental
+                </p>
+              </div>
+              <button
+                onClick={() => setModalProtocolo(false)}
+                className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Formulário */}
+            <div className="px-6 py-5 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Data do Protocolo</label>
+                <input
+                  type="date"
+                  value={protocoloForm.data}
+                  max={HOJE_STR}
+                  onChange={e => setProtocoloForm(p => ({ ...p, data: e.target.value }))}
+                  className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                  autoFocus
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Código do Processo no Órgão</label>
+                <input
+                  type="text"
+                  value={protocoloForm.codigoOrgao}
+                  onChange={e => setProtocoloForm(p => ({ ...p, codigoOrgao: e.target.value }))}
+                  placeholder="Ex: 2026.001234/SEMA"
+                  className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                />
+              </div>
+              <p className="text-xs text-green-700 bg-green-50 rounded-lg px-3 py-2">
+                ✅ Após salvar, este projeto passará a aparecer em <strong>Acompanhamento de Processos</strong>.
+              </p>
+            </div>
+
+            {/* Ações */}
+            <div className="px-6 pb-5 flex gap-2">
+              <button
+                onClick={salvarProtocolo}
+                disabled={salvandoProtocolo}
+                className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white rounded-xl text-sm font-semibold transition-colors"
+              >
+                {salvandoProtocolo ? <Loader2 className="w-4 h-4 animate-spin" /> : '💾'}
+                Salvar e Acompanhar
+              </button>
+              <button
+                onClick={() => setModalProtocolo(false)}
                 className="px-5 py-2.5 border border-gray-200 text-gray-600 hover:bg-gray-50 rounded-xl text-sm font-medium"
               >
                 Pular

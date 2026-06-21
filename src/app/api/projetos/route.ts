@@ -14,6 +14,7 @@ export async function GET(request: NextRequest) {
     const analistaRapidoId = searchParams.get('analistaRapidoId')
     const responsavelId = searchParams.get('responsavelId')
     const search = searchParams.get('search')
+    const emAcompanhamento = searchParams.get('emAcompanhamento')
     const limit = parseInt(searchParams.get('limit') || '50')
     const page = parseInt(searchParams.get('page') || '1')
 
@@ -27,6 +28,7 @@ export async function GET(request: NextRequest) {
     if (clienteId) where.clienteId = clienteId
     if (analistaRapidoId) where.analistaRapidoId = analistaRapidoId
     if (responsavelId) where.responsavelId = responsavelId
+    if (emAcompanhamento === 'true') where.emAcompanhamento = true
     if (search) {
       where.OR = [
         { codigo: { contains: search } },
@@ -52,6 +54,8 @@ export async function GET(request: NextRequest) {
           supervisor: { select: { id: true, nome: true } },
           analistaRapido: { select: { id: true, nome: true } },
           contrato: { select: { id: true, statusContrato: true, valorTotal: true } },
+          licenca: { select: { id: true, numero: true, dataEmissao: true, dataValidade: true } },
+          pendencias: { select: { id: true, status: true } },
           _count: { select: { tarefas: true, vistorias: true, documentos: true } },
         },
         orderBy: { criadoEm: 'desc' },

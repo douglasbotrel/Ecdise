@@ -86,6 +86,11 @@ export const STATUS_TAREFA_LABELS: Record<string, string> = {
   AGUARDANDO: 'Aguardando',
 }
 
+export const STATUS_PENDENCIA_LABELS: Record<string, string> = {
+  ABERTA: 'Aberta',
+  CONCLUIDA: 'Concluída',
+}
+
 export const STATUS_COLORS: Record<string, string> = {
   // Comercial
   RECEBIDO: 'bg-blue-100 text-blue-800',
@@ -111,6 +116,8 @@ export const STATUS_COLORS: Record<string, string> = {
   PAGO: 'bg-green-100 text-green-800',
   VENCIDO: 'bg-red-100 text-red-800',
   PARCIAL: 'bg-orange-100 text-orange-800',
+  // Pendências (Acompanhamento de Processos)
+  ABERTA: 'bg-amber-100 text-amber-800',
 }
 
 export const ROLE_LABELS: Record<string, string> = {
@@ -146,10 +153,10 @@ export const MODULOS_POR_ROLE: Record<string, string[] | null> = {
   ADMIN:                  null,
   GESTOR_GERAL:           null,
   GESTOR_ADMINISTRATIVO:  ['dashboard', 'comercial', 'contratos', 'financeiro', 'encerramento', 'configuracoes'],
-  GESTOR_OPERACIONAL:     ['dashboard', 'comercial', 'operacional', 'campo', 'encerramento'],
+  GESTOR_OPERACIONAL:     ['dashboard', 'comercial', 'operacional', 'acompanhamento', 'campo', 'encerramento'],
   GESTOR_CAMPO:           ['dashboard', 'campo', 'tecnico'],
-  SUPERVISOR:             ['dashboard', 'comercial', 'operacional'],
-  ANALISTA:               ['dashboard', 'operacional'],
+  SUPERVISOR:             ['dashboard', 'comercial', 'operacional', 'acompanhamento'],
+  ANALISTA:               ['dashboard', 'operacional', 'acompanhamento'],
   ANALISTA_RAPIDO:        ['dashboard', 'comercial'],
   TECNICO_CAMPO:          ['dashboard', 'tecnico'],
 }
