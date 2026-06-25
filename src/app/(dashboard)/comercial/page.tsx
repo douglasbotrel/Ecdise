@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { toast } from 'sonner'
-import { Plus, Search, Eye, Edit2, CheckCircle, ArrowRight, Clock, FileText, FolderOpen } from 'lucide-react'
+import { Plus, Search, Eye, Edit2, CheckCircle, ArrowRight, Clock, FileText, FolderOpen, Trash2 } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
 import { ModalProjeto } from '@/components/modals/ModalProjeto'
 import { ModalDocumentos } from '@/components/modals/ModalDocumentos'
@@ -99,6 +99,14 @@ export default function ComercialPage() {
   const [modoModal, setModoModal] = useState<string>('criar')
   const [docModalOpen, setDocModalOpen] = useState(false)
   const [projetoDocumentos, setProjetoDocumentos] = useState<any>(null)
+  const [currentUser, setCurrentUser] = useState<any>(null)
+  const [excluindoId, setExcluindoId] = useState<string | null>(null)
+
+  const isAdmin = ['ADMIN', 'GESTOR_GERAL'].includes(currentUser?.role)
+
+  useEffect(() => {
+    fetch('/api/auth/me').then(r => r.json()).then(d => setCurrentUser(d.usuario || null))
+  }, [])
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -124,6 +132,21 @@ export default function ComercialPage() {
   function abrirAcao(projeto: any, modo: string) { setProjetoSelecionado(projeto); setModoModal(modo); setModalOpen(true) }
   function abrirEditar(projeto: any) { setProjetoSelecionado(projeto); setModoModal('editar'); setModalOpen(true) }
   function abrirDocumentos(projeto: any) { setProjetoDocumentos(projeto); setDocModalOpen(true) }
+
+  async function excluirProjeto(projeto: any) {
+    const confirmado = window.confirm(
+      `Excluir definitivamente a solicitação ${projeto.codigo} (${projeto.cliente?.nome || 'sem cliente'})? Esta ação não pode ser desfeita.`
+    )
+    if (!confirmado) return
+    setExcluindoId(projeto.id)
+    try {
+      const res = await fetch(`/api/projetos/${projeto.id}`, { method: 'DELETE' })
+      if (!res.ok) { const d = await res.json().catch(() => ({})); toast.error(d.error || 'Erro ao excluir'); return }
+      toast.success('Solicitação excluída')
+      load()
+    } catch { toast.error('Erro ao excluir') }
+    finally { setExcluindoId(null) }
+  }
 
   // Contadores por etapa (dos projetos carregados)
   const contadores: Record<string, number> = {}
@@ -245,6 +268,12 @@ export default function ComercialPage() {
                           className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="Editar">
                           <Edit2 className="w-4 h-4" />
                         </button>
+                        {isAdmin && (
+                          <button onClick={() => excluirProjeto(p)} disabled={excluindoId === p.id}
+                            className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50" title="Excluir solicitação">
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>

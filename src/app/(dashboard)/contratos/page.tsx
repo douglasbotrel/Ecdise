@@ -356,7 +356,9 @@ export default function ContratosPage() {
                       </span>
                     </td>
                     <td className="px-4 py-3 text-sm text-gray-600">
-                      {c.pagamentos?.filter((p: any) => p.status === 'PAGO').length || 0}/{c.numeroParcelas}
+                      {c.numeroParcelas === 1
+                        ? (c.pagamentos?.some((p: any) => p.status === 'PAGO') ? 'Pago' : 'Pagamento único')
+                        : `${c.pagamentos?.filter((p: any) => p.status === 'PAGO').length || 0}/${c.numeroParcelas}`}
                     </td>
                   </tr>
                 ))}

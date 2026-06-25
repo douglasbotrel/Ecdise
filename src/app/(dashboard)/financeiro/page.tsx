@@ -265,8 +265,10 @@ export default function FinanceiroPage() {
                       </p>
                     </div>
                     <div className="text-center hidden sm:block">
-                      <p className="text-xs text-gray-400">Parcelas</p>
-                      <p className="text-sm font-semibold text-gray-900">{pagos}/{pags.length}</p>
+                      <p className="text-xs text-gray-400">{pags.length === 1 ? 'Pagamento' : 'Parcelas'}</p>
+                      <p className="text-sm font-semibold text-gray-900">
+                        {pags.length === 1 ? (pagos === 1 ? 'Pago' : 'Único') : `${pagos}/${pags.length}`}
+                      </p>
                     </div>
                     <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${PAG_COLORS[status]}`}>
                       {STATUS_PAG[status]}

@@ -90,6 +90,7 @@ export function hasPermission(userRole: string, requiredRole: string): boolean {
 
 export const MODULE_ACCESS: Record<string, string[]> = {
   comercial: ['GESTAO_GERAL', 'COMERCIAL', 'CONTRATOS'],
+  clientes: ['GESTAO_GERAL', 'COMERCIAL', 'CONTRATOS'],
   contratos: ['GESTAO_GERAL', 'COMERCIAL', 'FINANCEIRO', 'CONTRATOS'],
   operacional: ['GESTAO_GERAL', 'OPERACIONAL_AMBIENTAL', 'OPERACIONAL_REGULARIZACAO'],
   acompanhamento: ['GESTAO_GERAL', 'OPERACIONAL_AMBIENTAL', 'OPERACIONAL_REGULARIZACAO'],

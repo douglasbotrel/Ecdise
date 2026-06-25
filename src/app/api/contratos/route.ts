@@ -82,7 +82,8 @@ export async function POST(request: NextRequest) {
     const vParcela  = projeto.valorPrestacao || 0
     const nParcelas = Math.max(1, parseInt(numParcelasBody ?? projeto.numeroPrestacoes ?? 1))
     // vTotal pode ser 0/nulo quando o valor ainda não foi definido (será preenchido depois por ADM)
-    const vTotalRaw = parseFloat(valorTotalBody ?? '') || (vSinal + vParcela * Math.max(nParcelas - 1, 0))
+    // Total = sinal + todas as parcelas (são geradas exatamente nParcelas parcelas abaixo, além do sinal)
+    const vTotalRaw = parseFloat(valorTotalBody ?? '') || (vSinal + vParcela * nParcelas)
     const vTotal    = isNaN(vTotalRaw) ? 0 : vTotalRaw
     const vRestante = Math.max(0, vTotal - vSinal)
     const valorADefinir = vTotal <= 0

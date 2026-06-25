@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation'
 import {
   LayoutDashboard, Briefcase, FileText, Settings,
   ClipboardList, MapPin, DollarSign, CheckSquare,
-  BarChart3, ChevronLeft, ChevronRight, X, FileSearch
+  BarChart3, ChevronLeft, ChevronRight, X, FileSearch, Users
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -22,6 +22,12 @@ const navItems = [
     label: 'Comercial',
     icon: Briefcase,
     modulo: 'comercial',
+  },
+  {
+    href: '/clientes',
+    label: 'Clientes',
+    icon: Users,
+    modulo: 'clientes',
   },
   {
     href: '/contratos',

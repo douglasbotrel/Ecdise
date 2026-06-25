@@ -68,8 +68,11 @@ export default function ProjetoDetalhe() {
   const HOJE_STR          = new Date().toISOString().split('T')[0]
   const MAX_DATE_STR      = `${new Date().getFullYear() + 5}-12-31`
 
-  const loadProjeto = useCallback(async () => {
-    setLoading(true)
+  // silent = true: re-busca os dados sem desmontar a tela (usado após salvar uma
+  // atribuição/edição), evitando o "pulo" de scroll para o topo que acontecia
+  // quando a tela inteira era trocada pelo spinner de carregamento a cada PATCH.
+  const loadProjeto = useCallback(async (opts?: { silent?: boolean }) => {
+    if (!opts?.silent) setLoading(true)
     try {
       const res = await fetch(`/api/projetos/${id}`)
       if (!res.ok) { router.push('/operacional'); return }
@@ -84,7 +87,7 @@ export default function ProjetoDetalhe() {
     } catch {
       toast.error('Erro ao carregar projeto')
     } finally {
-      setLoading(false)
+      if (!opts?.silent) setLoading(false)
     }
   }, [id, router])
 
@@ -135,7 +138,7 @@ export default function ProjetoDetalhe() {
       // Fecha a linha automaticamente após salvar
       setExpandido(prev => ({ ...prev, [tarefaId]: false }))
       toast.success('Atribuição salva!')
-      loadProjeto()
+      loadProjeto({ silent: true })
     } catch { toast.error('Erro ao salvar') }
     finally { setSalvandoId(null) }
   }
@@ -183,7 +186,7 @@ export default function ProjetoDetalhe() {
         : 'Responsável do projeto atualizado!')
       // Fecha todas as linhas expandidas
       setExpandido({})
-      loadProjeto()
+      loadProjeto({ silent: true })
     } catch { toast.error('Erro ao aplicar em massa') }
     finally { setSalvandoBulk(false) }
   }
@@ -199,7 +202,7 @@ export default function ProjetoDetalhe() {
       if (!res.ok) { const d = await res.json(); toast.error(d.error); return }
       if (!atual) toast.success('Solicitação enviada ao setor de campo!')
       else toast.success('Solicitação de campo removida')
-      loadProjeto()
+      loadProjeto({ silent: true })
     } catch { toast.error('Erro') }
   }
 
@@ -212,7 +215,7 @@ export default function ProjetoDetalhe() {
         body: JSON.stringify({ statusOperacional: novoStatus }),
       })
       toast.success('Status atualizado')
-      loadProjeto()
+      loadProjeto({ silent: true })
     } catch { toast.error('Erro') }
   }
 
@@ -254,7 +257,7 @@ export default function ProjetoDetalhe() {
       }
     } catch {
       toast.error('Erro ao atualizar tarefa')
-      loadProjeto()
+      loadProjeto({ silent: true })
     }
   }
 
@@ -275,7 +278,7 @@ export default function ProjetoDetalhe() {
       })
       toast.success(`Credenciais do ${modalCredencial.sistema} salvas!`)
       setModalCredencial(null)
-      loadProjeto()
+      loadProjeto({ silent: true })
     } catch { toast.error('Erro ao salvar credenciais') }
     finally { setSalvandoCred(false) }
   }
@@ -324,7 +327,7 @@ export default function ProjetoDetalhe() {
       toast.success('Tarefa criada')
       setNovaT(false)
       setFormTarefa({ titulo: '', etapa: '', prazo: '', responsavelId: '' })
-      loadProjeto()
+      loadProjeto({ silent: true })
     } catch { toast.error('Erro ao criar tarefa') }
     finally { setSalvandoT(false) }
   }
@@ -341,7 +344,7 @@ export default function ProjetoDetalhe() {
       const data = await res.json()
       if (!res.ok) { toast.error(data.error || 'Erro ao gerar tarefas'); return }
       toast.success('Tarefas geradas com sucesso!')
-      loadProjeto()
+      loadProjeto({ silent: true })
     } catch { toast.error('Erro ao gerar tarefas') }
     finally { setGerandoTarefas(false) }
   }
@@ -357,7 +360,7 @@ export default function ProjetoDetalhe() {
       })
       if (!res.ok) { toast.error('Erro ao iniciar execução'); return }
       toast.success('Execução iniciada!')
-      loadProjeto()
+      loadProjeto({ silent: true })
     } catch { toast.error('Erro') }
     finally { setIniciandoExecucao(false) }
   }
