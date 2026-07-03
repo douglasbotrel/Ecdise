@@ -178,6 +178,7 @@ model Tarefa {
   projetoId     String
   titulo        String
   descricao     String?
+  observacao    String?  // Nota de tentativa: motivo pelo qual a tarefa não pôde ser concluída
   tipo          String   @default("TAREFA")
   status        String   @default("PENDENTE")
   responsavelId String?

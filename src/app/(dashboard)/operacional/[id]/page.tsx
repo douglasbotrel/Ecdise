@@ -6,12 +6,13 @@ import { toast } from 'sonner'
 import {
   ArrowLeft, Plus, Check, FileText, BarChart2,
   DollarSign, User, Calendar, Loader2,
-  Edit2, Save, Clock, AlertCircle,
+  Edit2, Save, Clock, AlertCircle, MessageSquare,
 } from 'lucide-react'
 import {
   formatDate, formatCurrency,
   STATUS_OPERACIONAL_LABELS, STATUS_COLORS, STATUS_TAREFA_LABELS,
 } from '@/lib/utils'
+import NoteEditor from './NoteEditor'
 
 // Estado inline de edição por tarefa
 interface TarefaEdit {
@@ -53,6 +54,9 @@ export default function ProjetoDetalhe() {
   const [filtroPendentes, setFiltroPendentes]     = useState(false)
   // Painel de atribuição aberto/fechado — começa sempre fechado
   const [painelAberto, setPainelAberto]           = useState<boolean | null>(null)
+  // Observação / nota por tarefa
+  const [editandoNota, setEditandoNota]           = useState<Record<string, string>>({})
+  const [salvandoNota, setSalvandoNota]           = useState<string | null>(null)
   // Modal de credenciais (SIGLA / CTF)
   const [modalCredencial, setModalCredencial]     = useState<{ sistema: string } | null>(null)
   const [credForm, setCredForm]                   = useState({ login: '', senha: '' })
@@ -1014,7 +1018,7 @@ export default function ProjetoDetalhe() {
                     {tarefasPorEtapa[etapa].map((tarefa: any) => (
                       <div
                         key={tarefa.id}
-                        className={`flex items-center gap-3 p-3 rounded-xl border transition-colors ${
+                        className={`flex items-start gap-3 p-3 rounded-xl border transition-colors ${
                           tarefa.status === 'CONCLUIDA' ? 'bg-green-50 border-green-100'
                           : tarefa.status === 'ATRASADA' ? 'bg-red-50 border-red-100'
                           : 'bg-white border-gray-100'
@@ -1022,7 +1026,7 @@ export default function ProjetoDetalhe() {
                       >
                         <button
                           onClick={() => toggleTarefa(tarefa.id, tarefa.status)}
-                          className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
+                          className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 mt-0.5 transition-colors ${
                             tarefa.status === 'CONCLUIDA'
                               ? 'bg-green-600 border-green-600'
                               : 'border-gray-300 hover:border-green-500'
@@ -1045,6 +1049,7 @@ export default function ProjetoDetalhe() {
                               <span className="text-xs text-amber-500">Sem responsável</span>
                             )}
                           </div>
+                          <NoteEditor tarefaId={tarefa.id} currentNote={tarefa.observacao ?? null} onSaved={() => loadProjeto({ silent: true })} />
                         </div>
                         <span className={`text-xs px-2 py-0.5 rounded-full flex-shrink-0 ${STATUS_COLORS[tarefa.status] || 'bg-gray-100 text-gray-600'}`}>
                           {STATUS_TAREFA_LABELS[tarefa.status]}
@@ -1209,6 +1214,7 @@ export default function ProjetoDetalhe() {
                               {tarefa.prazo && <span>📅 {formatDate(tarefa.prazo)}</span>}
                               {!tarefa.responsavel && <span className="text-amber-400">Sem responsável</span>}
                             </div>
+                            <NoteEditor tarefaId={tarefa.id} currentNote={tarefa.observacao ?? null} onSaved={() => loadProjeto({ silent: true })} />
                           </div>
                         </div>
                       ))}
@@ -1246,6 +1252,7 @@ export default function ProjetoDetalhe() {
                                     {tarefa.responsavel && <span>{tarefa.responsavel.nome}</span>}
                                     {tarefa.prazo && <span>{formatDate(tarefa.prazo)}</span>}
                                   </div>
+                                  <NoteEditor tarefaId={tarefa.id} currentNote={tarefa.observacao ?? null} onSaved={() => loadProjeto({ silent: true })} />
                                 </div>
                               </div>
                             ))}

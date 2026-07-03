@@ -92,7 +92,7 @@ export async function PATCH(request: NextRequest) {
     if (!user) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
 
     const body = await request.json()
-    const { id, status, responsavelId, prazo, descricao, requerVistoriaCampo, dataCampo } = body
+    const { id, status, responsavelId, prazo, descricao, observacao, requerVistoriaCampo, dataCampo } = body
 
     if (!id) return NextResponse.json({ error: 'ID da tarefa é obrigatório' }, { status: 400 })
 
@@ -116,6 +116,7 @@ export async function PATCH(request: NextRequest) {
       ...(status           !== undefined && { status }),
       ...(responsavelId    !== undefined && { responsavelId }),
       ...(descricao        !== undefined && { descricao }),
+      ...(observacao       !== undefined && { observacao: observacao || null }),
       ...(status === 'CONCLUIDA'         && { dataConclusao: new Date() }),
     }
 
