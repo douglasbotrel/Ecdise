@@ -115,7 +115,7 @@ export default function LoginPage() {
         {/* Link de teste gratuito — fora do card */}
         <a
           href="/cadastro-teste"
-          className="mt-4 flex items-center justify-center gap-2 w-full py-3.5 px-6 rounded-xl border-2 border-green-600 text-green-700 font-semibold text-sm hover:bg-green-600 hover:text-white transition-all duration-200 shadow-sm"
+          className="mt-4 flex items-center justify-center gap-2 w-full py-3.5 px-6 rounded-xl border-2 border-red-500 text-red-600 font-semibold text-sm hover:bg-red-500 hover:text-white transition-all duration-200 shadow-sm"
         >
           📋 Questionário para acessar 3 meses de teste grátis
         </a>
