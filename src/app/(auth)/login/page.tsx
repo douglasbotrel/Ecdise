@@ -110,16 +110,15 @@ export default function LoginPage() {
               )}
             </button>
           </form>
-
-          <div className="mt-6 pt-5 border-t border-gray-100 text-center">
-            <a
-              href="/cadastro-teste"
-              className="text-sm text-green-700 hover:text-green-900 hover:underline transition-colors font-medium"
-            >
-              📋 Questionário para acessar 3 meses de teste grátis
-            </a>
-          </div>
         </div>
+
+        {/* Link de teste gratuito — fora do card */}
+        <a
+          href="/cadastro-teste"
+          className="mt-4 flex items-center justify-center gap-2 w-full py-3.5 px-6 rounded-xl border-2 border-green-600 text-green-700 font-semibold text-sm hover:bg-green-600 hover:text-white transition-all duration-200 shadow-sm"
+        >
+          📋 Questionário para acessar 3 meses de teste grátis
+        </a>
 
         <p className="text-center text-xs text-gray-400 mt-6">
           © {new Date().getFullYear()} Ecdise — Sistema de Gestão Ambiental
