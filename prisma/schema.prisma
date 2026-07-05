@@ -533,3 +533,17 @@ model ConfiguracaoDepartamento {
 
   @@map("configuracao_departamento")
 }
+
+model CadastroTeste {
+  id              String   @id @default(cuid())
+  nome            String
+  email           String
+  whatsapp        String
+  estado          String
+  qtdFuncionarios String
+  nomeEmpresa     String
+  usaSistema      String
+  criadoEm        DateTime @default(now())
+
+  @@map("cadastro_teste")
+}

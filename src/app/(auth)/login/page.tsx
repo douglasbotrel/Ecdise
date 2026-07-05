@@ -2,7 +2,8 @@
 
 import { useState } from 'react'
 import { toast } from 'sonner'
-import { Eye, EyeOff, Loader2, Leaf } from 'lucide-react'
+import Image from 'next/image'
+import { Eye, EyeOff, Loader2 } from 'lucide-react'
 
 export default function LoginPage() {
   const [email, setEmail]       = useState('')
@@ -43,10 +44,14 @@ export default function LoginPage() {
 
         {/* Logo */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-green-600 rounded-2xl mb-4 shadow-lg">
-            <Leaf className="w-9 h-9 text-white" />
-          </div>
-          <h1 className="text-3xl font-bold text-gray-900">Ecdise</h1>
+          <Image
+            src="/logo.png"
+            alt="Ecdise"
+            width={200}
+            height={120}
+            className="mx-auto mb-2 object-contain"
+            priority
+          />
           <p className="text-gray-500 mt-1">Gestão de Licenciamento Ambiental</p>
         </div>
 
@@ -105,6 +110,15 @@ export default function LoginPage() {
               )}
             </button>
           </form>
+
+          <div className="mt-6 pt-5 border-t border-gray-100 text-center">
+            <a
+              href="/cadastro-teste"
+              className="text-sm text-green-700 hover:text-green-900 hover:underline transition-colors font-medium"
+            >
+              📋 Questionário para acessar 3 meses de teste grátis
+            </a>
+          </div>
         </div>
 
         <p className="text-center text-xs text-gray-400 mt-6">
