@@ -390,6 +390,10 @@ model Pagamento {
   tipo           String   @default("PARCELA")
   descricao      String?
   valor          Float
+  valorRecebido  Float?   // valor efetivamente recebido (null = pagamento integral)
+  residual       Float?   // diferença: valor - valorRecebido (calculado automaticamente)
+  motivoAjuste   String?  // justificativa ADM para o pagamento parcial
+  aprovadoAdm    Boolean  @default(false) // ADM confirmou e registrou motivo
   dataVencimento DateTime
   dataPagamento  DateTime?
   status         String   @default("PENDENTE")

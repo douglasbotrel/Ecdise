@@ -30,8 +30,10 @@ export async function GET(request: NextRequest) {
 
     const totais = {
       totalPendente: pagamentos.filter(p => p.status === 'PENDENTE').reduce((s, p) => s + p.valor, 0),
-      totalPago:     pagamentos.filter(p => p.status === 'PAGO').reduce((s, p) => s + p.valor, 0),
+      totalPago:     pagamentos.filter(p => p.status === 'PAGO').reduce((s, p) => s + p.valor, 0)
+                   + pagamentos.filter(p => p.status === 'PARCIAL').reduce((s, p) => s + (p.valorRecebido ?? p.valor), 0),
       totalVencido:  pagamentos.filter(p => p.status === 'VENCIDO').reduce((s, p) => s + p.valor, 0),
+      totalResidual: pagamentos.filter(p => p.status === 'PARCIAL').reduce((s, p) => s + (p.residual ?? 0), 0),
     }
 
     return NextResponse.json({ pagamentos, totais })
@@ -46,7 +48,8 @@ export async function PATCH(request: NextRequest) {
     if (!user) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
 
     const body = await request.json()
-    const { id, status, dataPagamento, formaPagamento, comprovante, observacoes } = body
+    const { id, status, dataPagamento, formaPagamento, comprovante, observacoes,
+            valorRecebido, motivoAjuste, aprovadoAdm } = body
 
     if (!id) return NextResponse.json({ error: 'ID obrigatório' }, { status: 400 })
 
@@ -70,16 +73,44 @@ export async function PATCH(request: NextRequest) {
     })
     if (!pagamentoAtual) return NextResponse.json({ error: 'Pagamento não encontrado' }, { status: 404 })
 
+    // ── Calcular pagamento parcial ─────────────────────────────
+    let statusEfetivo = status
+    let valorRecebidoFinal: number | undefined
+    let residualCalc: number | undefined
+
+    if (valorRecebido !== undefined && valorRecebido !== null) {
+      valorRecebidoFinal = Number(valorRecebido)
+      if (valorRecebidoFinal < pagamentoAtual.valor) {
+        statusEfetivo  = 'PARCIAL'
+        residualCalc   = pagamentoAtual.valor - valorRecebidoFinal
+      } else {
+        statusEfetivo        = 'PAGO'
+        valorRecebidoFinal   = undefined // pagamento integral — não precisa armazenar
+        residualCalc         = undefined
+      }
+    }
+
+    // Apenas ADM pode aprovar ajuste
+    const isAdm = ['ADMIN', 'GESTOR_GERAL'].includes(user.role)
+    if (aprovadoAdm && !isAdm) {
+      return NextResponse.json({ error: 'Apenas ADM pode aprovar ajustes.' }, { status: 403 })
+    }
+
     // Atualiza pagamento
     const pagamento = await prisma.pagamento.update({
       where: { id },
       data: {
-        ...(status && { status }),
-        ...(dataPagamento  && { dataPagamento: new Date(dataPagamento) }),
+        ...(statusEfetivo && { status: statusEfetivo }),
+        ...(dataPagamento              && { dataPagamento: new Date(dataPagamento) }),
         ...(formaPagamento !== undefined && { formaPagamento }),
         ...(comprovante    !== undefined && { comprovante }),
         ...(observacoes    !== undefined && { observacoes }),
-        ...(status === 'PAGO' && !dataPagamento && { dataPagamento: new Date() }),
+        ...(statusEfetivo === 'PAGO' && !dataPagamento && { dataPagamento: new Date() }),
+        ...(statusEfetivo === 'PARCIAL' && !dataPagamento && { dataPagamento: new Date() }),
+        ...(valorRecebidoFinal !== undefined && { valorRecebido: valorRecebidoFinal }),
+        ...(residualCalc       !== undefined && { residual: residualCalc }),
+        ...(motivoAjuste       !== undefined && { motivoAjuste }),
+        ...(aprovadoAdm        !== undefined && { aprovadoAdm }),
       },
     })
 
@@ -96,7 +127,7 @@ export async function PATCH(request: NextRequest) {
     // Primeiro pagamento PAGO de um contrato cujo projeto está em AGUARDANDO_SINAL
     // → avança para OPERACIONAL e cria tarefas automaticamente
     if (
-      status === 'PAGO' &&
+      statusEfetivo === 'PAGO' &&
       pagamentoAtual.contrato?.projeto?.etapaPipeline === 'AGUARDANDO_SINAL'
     ) {
       const contrato  = pagamentoAtual.contrato

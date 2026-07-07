@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { toast } from 'sonner'
 import {
   DollarSign, AlertTriangle, CheckCircle, Clock,
-  ChevronDown, ChevronRight, Upload, X, ArrowRight, ShieldAlert,
+  ChevronDown, ChevronRight, Upload, X, ArrowRight, ShieldAlert, AlertCircle, Check,
 } from 'lucide-react'
 import { formatDate, formatCurrency } from '@/lib/utils'
 
@@ -43,13 +43,19 @@ export default function FinanceiroPage() {
   const [motivoLiberar, setMotivoLiberar] = useState('')
   const [liberando, setLiberando]         = useState(false)
 
-  // Modal
+  // Modal pagamento
   const [modalPag, setModalPag]       = useState<ModalPagData | null>(null)
   const [formPag, setFormPag]         = useState({
     dataPagamento: new Date().toISOString().split('T')[0],
     formaPagamento: 'PIX',
     observacoes: '',
+    valorRecebido: '',
   })
+
+  // Modal aprovação ADM
+  const [modalAprovar, setModalAprovar] = useState<{ id: string; valor: number; valorRecebido: number; residual: number } | null>(null)
+  const [motivoAprovar, setMotivoAprovar] = useState('')
+  const [aprovando, setAprovando]         = useState(false)
   const [comprovante, setComprovante] = useState<File | null>(null)
   const [salvando, setSalvando]       = useState(false)
   const inputFileRef                  = useRef<HTMLInputElement>(null)
@@ -104,8 +110,27 @@ export default function FinanceiroPage() {
       dataPagamento: new Date().toISOString().split('T')[0],
       formaPagamento: 'PIX',
       observacoes: '',
+      valorRecebido: String(p.valor),
     })
     setComprovante(null)
+  }
+
+  async function aprovarAjuste() {
+    if (!modalAprovar || !motivoAprovar.trim()) return
+    setAprovando(true)
+    try {
+      const res = await fetch('/api/pagamentos', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: modalAprovar.id, motivoAjuste: motivoAprovar, aprovadoAdm: true }),
+      })
+      if (!res.ok) throw new Error()
+      toast.success('Ajuste aprovado e registrado!')
+      setModalAprovar(null)
+      setMotivoAprovar('')
+      load()
+    } catch { toast.error('Erro ao aprovar ajuste') }
+    finally { setAprovando(false) }
   }
 
   async function registrarPagamento() {
@@ -130,6 +155,7 @@ export default function FinanceiroPage() {
         body: JSON.stringify({
           id: modalPag.id,
           status: 'PAGO',
+          valorRecebido: parseFloat(formPag.valorRecebido) || modalPag.valor,
           dataPagamento: formPag.dataPagamento,
           formaPagamento: formPag.formaPagamento,
           ...(formPag.observacoes && { observacoes: formPag.observacoes }),
@@ -343,6 +369,29 @@ export default function FinanceiroPage() {
                                     Registrar
                                   </button>
                                 )}
+                                {p.status === 'PARCIAL' && (
+                                  <div className="space-y-1">
+                                    <p className="text-xs text-orange-700">
+                                      Recebido: <strong>{formatCurrency(p.valorRecebido)}</strong>
+                                      {' · '}Residual: <strong>{formatCurrency(p.residual)}</strong>
+                                    </p>
+                                    {p.aprovadoAdm ? (
+                                      <div className="flex items-center gap-1 text-xs text-green-700">
+                                        <Check className="w-3 h-3" />
+                                        <span>ADM: {p.motivoAjuste}</span>
+                                      </div>
+                                    ) : isAdmin ? (
+                                      <button
+                                        onClick={() => { setModalAprovar({ id: p.id, valor: p.valor, valorRecebido: p.valorRecebido, residual: p.residual }); setMotivoAprovar('') }}
+                                        className="flex items-center gap-1 text-xs font-medium text-orange-600 hover:text-orange-800 px-2 py-1 border border-orange-200 rounded-lg hover:bg-orange-50 transition-colors"
+                                      >
+                                        <ShieldAlert className="w-3 h-3" /> Aprovar ajuste
+                                      </button>
+                                    ) : (
+                                      <span className="text-xs text-orange-500 italic">Aguardando aprovação ADM</span>
+                                    )}
+                                  </div>
+                                )}
                                 {p.status === 'PAGO' && (
                                   <div className="flex items-center gap-2 flex-wrap">
                                     <span className="text-xs text-gray-400">
@@ -444,6 +493,73 @@ export default function FinanceiroPage() {
         </div>
       )}
 
+      {/* ── Modal ADM: aprovar ajuste parcial ───────────────── */}
+      {modalAprovar && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-orange-100 bg-orange-50">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 bg-orange-100 rounded-xl flex items-center justify-center">
+                  <ShieldAlert className="w-5 h-5 text-orange-600" />
+                </div>
+                <div>
+                  <h2 className="text-base font-bold text-gray-900">Aprovar Ajuste de Pagamento</h2>
+                  <p className="text-xs text-orange-700 font-medium">Ação exclusiva do ADM</p>
+                </div>
+              </div>
+              <button onClick={() => setModalAprovar(null)} className="text-gray-400 hover:text-gray-600">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="px-6 py-5 space-y-4">
+              <div className="grid grid-cols-3 gap-3 text-center">
+                <div className="bg-gray-50 rounded-xl p-3">
+                  <p className="text-xs text-gray-400 mb-1">Valor esperado</p>
+                  <p className="text-sm font-bold text-gray-900">{formatCurrency(modalAprovar.valor)}</p>
+                </div>
+                <div className="bg-green-50 rounded-xl p-3">
+                  <p className="text-xs text-gray-400 mb-1">Recebido</p>
+                  <p className="text-sm font-bold text-green-700">{formatCurrency(modalAprovar.valorRecebido)}</p>
+                </div>
+                <div className="bg-orange-50 rounded-xl p-3">
+                  <p className="text-xs text-gray-400 mb-1">Residual</p>
+                  <p className="text-sm font-bold text-orange-600">{formatCurrency(modalAprovar.residual)}</p>
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1.5">
+                  Motivo do ajuste <span className="text-red-500">*</span>
+                </label>
+                <textarea
+                  value={motivoAprovar}
+                  onChange={e => setMotivoAprovar(e.target.value)}
+                  rows={3}
+                  placeholder="Ex: Cliente negociou desconto de R$500 por antecipação. Residual a acertar em 30 dias."
+                  className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-orange-400"
+                  autoFocus
+                />
+              </div>
+            </div>
+            <div className="px-6 py-4 border-t border-gray-100 flex gap-3 justify-end">
+              <button onClick={() => setModalAprovar(null)} className="px-4 py-2.5 text-sm font-medium text-gray-600 border border-gray-200 rounded-xl hover:bg-gray-50">
+                Cancelar
+              </button>
+              <button
+                onClick={aprovarAjuste}
+                disabled={aprovando || !motivoAprovar.trim()}
+                className="flex items-center gap-2 px-5 py-2.5 bg-orange-500 hover:bg-orange-600 disabled:opacity-50 text-white text-sm font-semibold rounded-xl transition-colors"
+              >
+                {aprovando
+                  ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  : <Check className="w-4 h-4" />
+                }
+                Confirmar Aprovação
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ── Modal de pagamento ───────────────────────────────── */}
       {modalPag && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
@@ -461,6 +577,37 @@ export default function FinanceiroPage() {
             </div>
 
             <div className="px-6 py-5 space-y-4">
+
+              {/* Valor recebido */}
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1.5">
+                  Valor recebido <span className="text-gray-400 font-normal">(esperado: {formatCurrency(modalPag.valor)})</span>
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={formPag.valorRecebido}
+                  onChange={e => setFormPag(f => ({ ...f, valorRecebido: e.target.value }))}
+                  className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                />
+                {(() => {
+                  const vr = parseFloat(formPag.valorRecebido)
+                  const residual = modalPag.valor - vr
+                  if (!isNaN(vr) && residual > 0.01) {
+                    return (
+                      <div className="mt-2 flex items-start gap-2 bg-orange-50 border border-orange-200 rounded-xl px-3 py-2.5">
+                        <AlertCircle className="w-4 h-4 text-orange-500 flex-shrink-0 mt-0.5" />
+                        <p className="text-xs text-orange-700">
+                          Pagamento <strong>parcial</strong>. Residual de <strong>{formatCurrency(residual)}</strong> ficará pendente e precisará de aprovação do ADM.
+                        </p>
+                      </div>
+                    )
+                  }
+                  return null
+                })()}
+              </div>
+
               <div>
                 <label className="block text-xs font-semibold text-gray-600 mb-1.5">Data do Pagamento</label>
                 <input
