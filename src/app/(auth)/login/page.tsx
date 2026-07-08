@@ -1,15 +1,31 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { toast } from 'sonner'
 import Image from 'next/image'
 import { Eye, EyeOff, Loader2 } from 'lucide-react'
 
+const STORAGE_KEY = 'ecdise_lembrar'
+
 export default function LoginPage() {
-  const [email, setEmail]       = useState('')
-  const [senha, setSenha]       = useState('')
+  const [email, setEmail]         = useState('')
+  const [senha, setSenha]         = useState('')
   const [showSenha, setShowSenha] = useState(false)
-  const [loading, setLoading]   = useState(false)
+  const [loading, setLoading]     = useState(false)
+  const [lembrar, setLembrar]     = useState(false)
+
+  // Carregar dados salvos ao abrir a página
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY)
+      if (saved) {
+        const { email: e, senha: s } = JSON.parse(saved)
+        if (e) setEmail(e)
+        if (s) setSenha(s)
+        setLembrar(true)
+      }
+    } catch {}
+  }, [])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -29,6 +45,14 @@ export default function LoginPage() {
         toast.error(data.error || 'Credenciais inválidas')
         return
       }
+
+      // Salvar ou limpar conforme opção
+      if (lembrar) {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify({ email, senha }))
+      } else {
+        localStorage.removeItem(STORAGE_KEY)
+      }
+
       toast.success(`Bem-vindo, ${data.usuario.nome}!`)
       window.location.href = '/dashboard'
     } catch {
@@ -76,7 +100,7 @@ export default function LoginPage() {
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="seu@email.com"
                 className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all text-gray-900 placeholder-gray-400"
-                autoComplete="off"
+                autoComplete="email"
                 disabled={loading}
               />
             </div>
@@ -90,7 +114,7 @@ export default function LoginPage() {
                   onChange={(e) => setSenha(e.target.value)}
                   placeholder="••••••••"
                   className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all text-gray-900 placeholder-gray-400 pr-12"
-                  autoComplete="off"
+                  autoComplete="current-password"
                   disabled={loading}
                 />
                 <button
@@ -102,6 +126,17 @@ export default function LoginPage() {
                 </button>
               </div>
             </div>
+
+            {/* Lembrar dados */}
+            <label className="flex items-center gap-2.5 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={lembrar}
+                onChange={e => setLembrar(e.target.checked)}
+                className="w-4 h-4 rounded border-gray-300 text-green-600 focus:ring-green-500 cursor-pointer"
+              />
+              <span className="text-sm text-gray-600">Lembrar meus dados</span>
+            </label>
 
             <button
               type="submit"
