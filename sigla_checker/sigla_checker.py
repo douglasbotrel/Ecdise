@@ -169,18 +169,8 @@ def extrair_status_da_lista(page, num_processo: str) -> str:
     except PlaywrightTimeout:
         raise Exception('Tabela de requerimentos não carregou — verifique se o login foi bem-sucedido')
 
-    # Tenta usar o campo "Localizar" para filtrar pelo Nº do processo
-    # (evita ter que paginar manualmente)
-    try:
-        localizar_input = page.locator('input[type="text"]').last
-        if localizar_input.is_visible(timeout=2_000):
-            localizar_input.fill(num_processo)
-            page.get_by_role('button', name='Localizar').click()
-            page.wait_for_load_state('domcontentloaded', timeout=10_000)
-            page.wait_for_selector('table tr td', timeout=10_000)
-    except Exception:
-        pass  # Sem campo de busca — lê a tabela completa
-
+    # Lê todas as linhas diretamente (cada CPF tem poucos processos,
+    # não há necessidade de usar o campo "Localizar" que causava filtros errados)
     rows = page.locator('table tr').all()
     log.info(f'  → {len(rows)} linha(s) encontradas. Procurando "{num_processo}"...')
 

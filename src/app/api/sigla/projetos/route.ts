@@ -30,6 +30,7 @@ export async function GET(req: NextRequest) {
       select: {
         id: true,
         codigo: true,
+        tipoServico: true,
         protocoloCodigoOrgao: true,
         credenciais: true,
         statusSIGLA: true,
@@ -50,6 +51,7 @@ export async function GET(req: NextRequest) {
         return {
           id:                  p.id,
           codigo:              p.codigo,
+          tipoServico:         p.tipoServico,      // ← necessário para detectar o menu correto no SIGLA
           cliente:             p.cliente.nome,
           protocolo:           p.protocoloCodigoOrgao,
           login:               sigla.login,

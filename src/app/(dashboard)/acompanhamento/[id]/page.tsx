@@ -7,7 +7,7 @@ import {
   ArrowLeft, Plus, Check, FileText, BarChart2, MapPin,
   Calendar, Loader2, Award, Clock, Trash2,
   X, Home, Hash, ChevronDown, ChevronUp, AlertTriangle,
-  Copy, Terminal,
+  Copy, Terminal, Pencil, Save,
 } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
 
@@ -57,6 +57,28 @@ export default function AcompanhamentoDetalhe() {
     acoes: [{ descricao: '', responsavelId: '' }] as { descricao: string; responsavelId: string }[],
   })
   const [salvandoPendencia, setSalvandoPendencia] = useState(false)
+
+  // Edição inline do tipo de serviço
+  const [editandoTipo, setEditandoTipo] = useState(false)
+  const [novoTipo, setNovoTipo]         = useState('')
+  const [salvandoTipo, setSalvandoTipo] = useState(false)
+
+  async function salvarTipoServico() {
+    if (!novoTipo.trim()) return
+    setSalvandoTipo(true)
+    try {
+      const res = await fetch(`/api/projetos/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tipoServico: novoTipo }),
+      })
+      if (!res.ok) { toast.error('Erro ao salvar'); return }
+      toast.success('Tipo de serviço atualizado!')
+      setEditandoTipo(false)
+      loadProjeto()
+    } catch { toast.error('Erro ao salvar') }
+    finally { setSalvandoTipo(false) }
+  }
 
   // Modal Verificar agora (instrução para rodar o script)
   const [modalRodar, setModalRodar] = useState(false)
@@ -312,7 +334,41 @@ export default function AcompanhamentoDetalhe() {
                   ⏳ Em processo
                 </span>
               )}
-              <span className="text-xs text-gray-500">{servicoPrestado(projeto)} • {projeto.municipio}</span>
+              {/* Tipo de serviço — editável inline */}
+              {editandoTipo ? (
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <select
+                    value={novoTipo}
+                    onChange={e => setNovoTipo(e.target.value)}
+                    className="text-xs border border-gray-300 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-green-500 bg-white"
+                    autoFocus
+                  >
+                    <option value="">Selecione...</option>
+                    <option value="Licenciamento Ambiental (LAU/LAR)">Licenciamento Ambiental (LAU/LAR)</option>
+                    <option value="LAUR - Licença Ambiental Única Rural">LAUR - Licença Ambiental Única Rural</option>
+                    <option value="Outorga / Recursos Hídricos (OSI)">Outorga / Recursos Hídricos (OSI)</option>
+                    <option value="Outros">Outros</option>
+                  </select>
+                  <button onClick={salvarTipoServico} disabled={salvandoTipo || !novoTipo}
+                    className="flex items-center gap-1 text-xs font-medium text-green-600 hover:text-green-700 disabled:opacity-40">
+                    {salvandoTipo ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+                    Salvar
+                  </button>
+                  <button onClick={() => setEditandoTipo(false)}
+                    className="text-xs text-gray-400 hover:text-gray-600">
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => { setNovoTipo(projeto.tipoServico || ''); setEditandoTipo(true) }}
+                  className="flex items-center gap-1 text-xs text-gray-500 hover:text-gray-700 group"
+                  title="Clique para alterar o tipo de serviço (define o caminho usado no SIGLA)"
+                >
+                  <span>{servicoPrestado(projeto)}{projeto.municipio ? ` • ${projeto.municipio}` : ''}</span>
+                  <Pencil className="w-3 h-3 opacity-0 group-hover:opacity-60 transition-opacity" />
+                </button>
+              )}
             </div>
           </div>
 
