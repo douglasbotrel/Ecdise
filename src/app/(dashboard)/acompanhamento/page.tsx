@@ -74,18 +74,18 @@ export default function AcompanhamentoPage() {
     )
   }
 
-  const visiveis      = projetos.filter(filtrar)
-  const pendentes     = visiveis.filter(p => categorizarSIGLA(p.statusSIGLA) === 'exigencia')
-  const licenciados   = visiveis.filter(p => !!p.licenca)
-  const okSemLicenca  = visiveis.filter(p => categorizarSIGLA(p.statusSIGLA) === 'ok' && !p.licenca)
-  const semConsulta   = visiveis.filter(p => categorizarSIGLA(p.statusSIGLA) === 'sem_consulta')
-  // Coluna direita: licenciados primeiro, depois ok, depois sem consulta
-  const regulares     = [...licenciados, ...okSemLicenca, ...semConsulta]
+  const visiveis     = projetos.filter(filtrar)
+  // Coluna 1 — processos com exigência aberta no SIGLA
+  const pendentes    = visiveis.filter(p => categorizarSIGLA(p.statusSIGLA) === 'exigencia')
+  // Coluna 2 — sem pendência no SIGLA, ainda sem licença emitida + aguardando consulta
+  const statusOk     = visiveis.filter(p => !p.licenca && categorizarSIGLA(p.statusSIGLA) !== 'exigencia')
+  // Coluna 3 — licença registrada no sistema
+  const licenciados  = visiveis.filter(p => !!p.licenca)
 
-  const total         = projetos.length
-  const emExigencia   = projetos.filter(p => categorizarSIGLA(p.statusSIGLA) === 'exigencia').length
-  const semPend       = projetos.filter(p => categorizarSIGLA(p.statusSIGLA) === 'ok').length
-  const totalLicenc   = projetos.filter(p => !!p.licenca).length
+  const total        = projetos.length
+  const emExigencia  = projetos.filter(p => categorizarSIGLA(p.statusSIGLA) === 'exigencia').length
+  const semPend      = projetos.filter(p => categorizarSIGLA(p.statusSIGLA) === 'ok' && !p.licenca).length
+  const totalLicenc  = projetos.filter(p => !!p.licenca).length
 
   return (
     <div className="space-y-5">
@@ -170,16 +170,14 @@ export default function AcompanhamentoPage() {
           <p className="text-sm mt-1">Use o botão <strong>Importar Processo</strong> para adicionar processos existentes</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-start">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 items-start">
 
-          {/* ── Coluna Esquerda: Pendências ──── */}
+          {/* ── Coluna 1: Pendência ────────────────── */}
           <div className="space-y-3">
-            <div className="flex items-center gap-2 px-1">
+            <div className="flex items-center gap-2 px-1 pb-1 border-b-2 border-red-200">
               <AlertTriangle className="w-4 h-4 text-red-500" />
-              <h2 className="font-bold text-gray-800 text-sm">
-                Requer Atenção
-              </h2>
-              <span className="ml-auto text-xs font-semibold bg-red-100 text-red-600 px-2 py-0.5 rounded-full">
+              <h2 className="font-bold text-red-700 text-sm uppercase tracking-wide">Pendência</h2>
+              <span className="ml-auto text-xs font-bold bg-red-500 text-white px-2 py-0.5 rounded-full">
                 {pendentes.length}
               </span>
             </div>
@@ -187,7 +185,7 @@ export default function AcompanhamentoPage() {
             {pendentes.length === 0 ? (
               <div className="bg-red-50 border border-red-100 rounded-2xl p-8 text-center">
                 <CheckCircle2 className="w-10 h-10 mx-auto mb-2 text-red-200" />
-                <p className="text-sm text-red-400 font-medium">Nenhuma pendência no momento</p>
+                <p className="text-sm text-red-400 font-medium">Nenhuma pendência</p>
               </div>
             ) : (
               pendentes.map(projeto => (
@@ -196,25 +194,45 @@ export default function AcompanhamentoPage() {
             )}
           </div>
 
-          {/* ── Coluna Direita: OK + Licenciados ── */}
+          {/* ── Coluna 2: Status OK ────────────────── */}
           <div className="space-y-3">
-            <div className="flex items-center gap-2 px-1">
+            <div className="flex items-center gap-2 px-1 pb-1 border-b-2 border-green-200">
               <CheckCircle2 className="w-4 h-4 text-green-500" />
-              <h2 className="font-bold text-gray-800 text-sm">
-                Status OK / Licença Emitida
-              </h2>
-              <span className="ml-auto text-xs font-semibold bg-green-100 text-green-600 px-2 py-0.5 rounded-full">
-                {regulares.length}
+              <h2 className="font-bold text-green-700 text-sm uppercase tracking-wide">Status OK</h2>
+              <span className="ml-auto text-xs font-bold bg-green-500 text-white px-2 py-0.5 rounded-full">
+                {statusOk.length}
               </span>
             </div>
 
-            {regulares.length === 0 ? (
-              <div className="bg-gray-50 border border-gray-100 rounded-2xl p-8 text-center">
-                <HelpCircle className="w-10 h-10 mx-auto mb-2 text-gray-200" />
-                <p className="text-sm text-gray-400 font-medium">Nenhum processo aqui ainda</p>
+            {statusOk.length === 0 ? (
+              <div className="bg-green-50 border border-green-100 rounded-2xl p-8 text-center">
+                <HelpCircle className="w-10 h-10 mx-auto mb-2 text-green-200" />
+                <p className="text-sm text-green-400 font-medium">Nenhum processo aqui</p>
               </div>
             ) : (
-              regulares.map(projeto => (
+              statusOk.map(projeto => (
+                <ProjetoCard key={projeto.id} projeto={projeto} servicoPrestado={servicoPrestado} formatDataConsulta={formatDataConsulta} />
+              ))
+            )}
+          </div>
+
+          {/* ── Coluna 3: Licença Emitida ──────────── */}
+          <div className="space-y-3">
+            <div className="flex items-center gap-2 px-1 pb-1 border-b-2 border-emerald-300">
+              <Award className="w-4 h-4 text-emerald-600" />
+              <h2 className="font-bold text-emerald-700 text-sm uppercase tracking-wide">Licença Emitida</h2>
+              <span className="ml-auto text-xs font-bold bg-emerald-500 text-white px-2 py-0.5 rounded-full">
+                {licenciados.length}
+              </span>
+            </div>
+
+            {licenciados.length === 0 ? (
+              <div className="bg-emerald-50 border border-emerald-100 rounded-2xl p-8 text-center">
+                <Award className="w-10 h-10 mx-auto mb-2 text-emerald-200" />
+                <p className="text-sm text-emerald-400 font-medium">Nenhuma licença emitida ainda</p>
+              </div>
+            ) : (
+              licenciados.map(projeto => (
                 <ProjetoCard key={projeto.id} projeto={projeto} servicoPrestado={servicoPrestado} formatDataConsulta={formatDataConsulta} />
               ))
             )}
