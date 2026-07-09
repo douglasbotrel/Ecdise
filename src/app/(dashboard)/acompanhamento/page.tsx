@@ -6,7 +6,7 @@ import Link from 'next/link'
 import {
   Search, FileSearch, ChevronRight, MapPin, FileText,
   Award, AlertCircle, Upload, RefreshCw, Clock,
-  Play, Copy, Terminal, X,
+  Play, Terminal, X,
 } from 'lucide-react'
 
 // ── Interpreta o statusSIGLA e retorna a categorização visual ──
@@ -32,14 +32,6 @@ export default function AcompanhamentoPage() {
   const [search, setSearch]     = useState('')
   const [filtro, setFiltro]     = useState<Filtro>('todos')
   const [modalRodar, setModalRodar] = useState(false)
-  const [copiado, setCopiado]       = useState(false)
-
-  function copiarCmd() {
-    navigator.clipboard.writeText('python sigla_checker.py').then(() => {
-      setCopiado(true)
-      setTimeout(() => setCopiado(false), 2000)
-    })
-  }
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -325,36 +317,35 @@ export default function AcompanhamentoPage() {
 
             <div className="px-6 py-5 space-y-4">
               <p className="text-sm text-gray-600">
-                Abra o PowerShell na pasta
-                <span className="font-mono text-xs bg-gray-100 px-1.5 py-0.5 rounded mx-1">sigla_checker</span>
-                do projeto e execute:
+                Não precisa abrir o VS Code nem digitar nada. Basta clicar duas vezes no arquivo abaixo:
               </p>
 
-              <div className="flex items-center gap-2 bg-gray-900 rounded-xl px-4 py-3">
-                <code className="flex-1 text-sm text-green-400 font-mono">python sigla_checker.py</code>
-                <button onClick={copiarCmd}
-                  className="flex items-center gap-1.5 text-xs font-medium text-gray-400 hover:text-white transition-colors flex-shrink-0">
-                  <Copy className="w-3.5 h-3.5" />
-                  {copiado ? '✓ Copiado' : 'Copiar'}
-                </button>
+              <div className="bg-gray-900 rounded-xl px-4 py-4 flex items-start gap-3">
+                <div className="text-2xl">📁</div>
+                <div>
+                  <p className="text-white text-sm font-semibold font-mono">verificar_agora.bat</p>
+                  <p className="text-gray-400 text-xs mt-1">
+                    Pasta: <span className="font-mono">Ecdise\sigla_checker\</span>
+                  </p>
+                </div>
               </div>
 
-              <div className="bg-blue-50 rounded-xl px-4 py-3 text-xs text-blue-700 space-y-1">
-                <p className="font-semibold">💡 Atalho mais rápido</p>
-                <p>Clique duas vezes no arquivo <span className="font-mono">rodar_sigla.bat</span> na pasta sigla_checker — abre e executa tudo automaticamente.</p>
+              <div className="bg-amber-50 border border-amber-100 rounded-xl px-4 py-3 text-xs text-amber-800 space-y-1">
+                <p className="font-semibold">📌 Como encontrar o arquivo</p>
+                <p>Abra o explorador de arquivos → vá até a pasta do projeto Ecdise → entre em <span className="font-mono">sigla_checker</span> → clique duas vezes em <span className="font-mono">verificar_agora.bat</span></p>
               </div>
 
               <p className="text-xs text-gray-400">
-                Após executar, clique em <strong>Atualizar</strong> nesta página para ver os status atualizados.
+                Uma janela vai abrir e mostrar o progresso. Ao terminar, clique em <strong>Atualizar</strong> nesta página.
               </p>
             </div>
 
             <div className="px-6 pb-5 flex gap-2">
               <button
-                onClick={() => { copiarCmd(); toast.success('Comando copiado!') }}
+                onClick={() => setModalRodar(false)}
                 className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-gray-900 hover:bg-gray-800 text-white rounded-xl text-sm font-semibold transition-colors"
               >
-                <Copy className="w-4 h-4" /> Copiar comando
+                Entendido
               </button>
               <button onClick={() => setModalRodar(false)}
                 className="px-5 py-2.5 border border-gray-200 text-gray-600 hover:bg-gray-50 rounded-xl text-sm font-medium">
