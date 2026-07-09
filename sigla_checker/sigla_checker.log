@@ -1,0 +1,29 @@
+2026-07-08 22:17:59,871 [INFO] === Início — 08/07/2026 22:17 ===
+2026-07-08 22:18:00,497 [INFO] 1 projeto(s) para verificar.
+2026-07-08 22:18:02,480 [INFO] --- [PRJ-0003] Jailson Lima Claro | Processo: 26070010650/2026 ---
+2026-07-08 22:18:03,452 [INFO]   → Abrindo SIGLA...
+2026-07-08 22:18:06,684 [INFO]   → Login OK.
+2026-07-08 22:18:06,684 [INFO]   → Navegação: licenciamento_ambiental
+2026-07-08 22:18:07,573 [ERROR]   ✖ Nº do processo "26070010650/2026" não encontrado na lista de requerimentos
+2026-07-08 22:18:08,469 [INFO]   ✔ Status inalterado: "None"
+2026-07-08 22:18:09,491 [INFO] === Fim — 0 OK, 1 erro(s), 9s ===
+2026-07-08 22:20:43,235 [INFO] === Início — 08/07/2026 22:20 ===
+2026-07-08 22:20:43,807 [INFO] 1 projeto(s) para verificar.
+2026-07-08 22:20:45,199 [INFO] --- [PRJ-0003] Jailson Lima Claro | Processo: 26070010650/2026 ---
+2026-07-08 22:20:45,997 [INFO]   → Abrindo SIGLA...
+2026-07-08 22:20:49,723 [INFO]   → Login OK.
+2026-07-08 22:20:49,724 [INFO]   → Navegação: licenciamento_ambiental
+2026-07-08 22:20:50,171 [INFO]   → 12 linha(s) na tabela. Procurando "26070010650/2026"...
+2026-07-08 22:20:50,177 [INFO]      Linha 0: Página inicial | 	Alterar senha | 	Cadastro | 	Requerimentos | 	Licenciamento ambiental | 	Licenciamento	 | 	Listar requ
+2026-07-08 22:20:50,183 [INFO]      Linha 1: Página inicial
+2026-07-08 22:20:50,188 [INFO]      Linha 2: Alterar senha
+2026-07-08 22:20:50,200 [INFO]      Linha 3: Cadastro
+2026-07-08 22:20:50,206 [INFO]      Linha 4: Requerimentos
+2026-07-08 22:20:50,213 [INFO]      Linha 5: Licenciamento ambiental
+2026-07-08 22:20:50,219 [INFO]      Linha 6: Licenciamento
+2026-07-08 22:20:50,590 [INFO]      Linha 7: Lista dos requerimentos cadastrados
+2026-07-08 22:20:50,595 [INFO]      Linha 8: Nº do requerimento	Tipo de licença	Empreendimento/Atividade - AE	Status	Nº do processo
+2026-07-08 22:20:50,601 [INFO]      Linha 9: «««««««»»»»»»»
+2026-07-08 22:20:50,708 [INFO]   → Resultado: Constituído processo | 🔴 Em exigência
+2026-07-08 22:20:51,588 [INFO]   ✔ Status mudou: "None" → "Constituído processo | 🔴 Em exigência"
+2026-07-08 22:20:53,202 [INFO] === Fim — 1 OK, 0 erro(s), 9s ===

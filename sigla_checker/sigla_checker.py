@@ -3,21 +3,21 @@
 sigla_checker.py
 ================
 Consulta automática de processos ambientais no SIGLA (SEMA-MA).
-Roda diariamente (via Agendador de Tarefas do Windows ou cron).
+Roda diariamente via Agendador de Tarefas do Windows.
 
 Fluxo:
   1. Busca na API Ecdise os projetos em acompanhamento com credenciais SIGLA
-  2. Para cada projeto: faz login no SIGLA, navega até o processo, extrai o status
+  2. Para cada projeto: faz login no SIGLA com o CPF do cliente,
+     navega até a lista de requerimentos, encontra a linha pelo Nº do processo
+     e lê o status + ícone (Em exigência ⚠️ ou Sem pendências ✅)
   3. Envia o resultado de volta para a API Ecdise
-  4. Se o status mudou, a API cria uma notificação automática no sistema
+  4. Se o status mudou, a API gera notificação automática no sistema
 
-Configuração:
-  Copie .env.example para .env e preencha as variáveis.
+Seletores validados em 2026-07 via playwright codegen (SIGLA — Módulo do Empreendedor).
 """
 
 import os
 import sys
-import json
 import logging
 import requests
 from datetime import datetime
@@ -31,7 +31,7 @@ load_dotenv()
 
 ECDISE_API_URL  = os.getenv('ECDISE_API_URL', 'https://ecdise.vercel.app')
 SIGLA_BOT_TOKEN = os.getenv('SIGLA_BOT_TOKEN', '')
-SIGLA_BASE_URL  = 'https://sigla.sema.ma.gov.br/sigla'
+SIGLA_BASE_URL  = 'https://sigla.sema.ma.gov.br/sigla/'
 HEADLESS        = os.getenv('HEADLESS', 'true').lower() == 'true'
 LOG_FILE        = os.getenv('LOG_FILE', 'sigla_checker.log')
 
@@ -45,8 +45,41 @@ logging.basicConfig(
 )
 log = logging.getLogger(__name__)
 
+
 # ──────────────────────────────────────────────
-# Helpers de API Ecdise
+# Mapeamento tipo de serviço → função de navegação
+# Chave: substring do tipoServico no Ecdise (lower-case)
+# ──────────────────────────────────────────────
+TIPO_SERVICO_MAP = {
+    # Requerimentos → Licenciamento ambiental → Listar requerimentos
+    'licenciamento': 'licenciamento_ambiental',
+    'lar':           'licenciamento_ambiental',
+    'lau':           'licenciamento_ambiental',   # ✅ confirmado
+    'urbana':        'licenciamento_ambiental',   # ✅ confirmado
+    # Requerimentos → Recursos florestais → Listar
+    'laur':          'recursos_florestais',       # ✅ confirmado
+    'florestal':     'recursos_florestais',
+    'floresta':      'recursos_florestais',
+    # Requerimentos → Recursos hídricos → Listar
+    'hidrico':       'recursos_hidricos',         # ✅ confirmado
+    'hídrico':       'recursos_hidricos',
+    'hidrica':       'recursos_hidricos',
+    'hídrica':       'recursos_hidricos',
+    'outorga':       'recursos_hidricos',         # Outorga também fica em Recursos hídricos
+    'osi':           'recursos_hidricos',
+    'inexigibilidade': 'recursos_hidricos',
+}
+
+def detectar_tipo(tipo_servico: str) -> str:
+    ts = (tipo_servico or '').lower()
+    for chave, funcao in TIPO_SERVICO_MAP.items():
+        if chave in ts:
+            return funcao
+    return 'licenciamento_ambiental'  # fallback
+
+
+# ──────────────────────────────────────────────
+# API Ecdise
 # ──────────────────────────────────────────────
 
 def _headers():
@@ -55,157 +88,212 @@ def _headers():
         'Content-Type':  'application/json',
     }
 
-
-def buscar_projetos() -> list[dict]:
-    """Busca projetos em acompanhamento com credenciais SIGLA."""
+def buscar_projetos() -> list:
     url = f'{ECDISE_API_URL}/api/sigla/projetos'
     try:
         resp = requests.get(url, headers=_headers(), timeout=30)
         resp.raise_for_status()
-        data = resp.json()
-        projetos = data.get('projetos', [])
+        projetos = resp.json().get('projetos', [])
         log.info(f'{len(projetos)} projeto(s) para verificar.')
         return projetos
     except Exception as e:
         log.error(f'Erro ao buscar projetos da API Ecdise: {e}')
         return []
 
-
 def enviar_status(projeto_id: str, protocolo: str, status_novo: str | None, erro: str | None = None):
-    """Envia o resultado da consulta para a API Ecdise."""
     url  = f'{ECDISE_API_URL}/api/sigla/status'
-    body = {
-        'projetoId': projeto_id,
-        'protocolo': protocolo,
-        'statusNovo': status_novo,
-        'erro': erro,
-    }
+    body = {'projetoId': projeto_id, 'protocolo': protocolo, 'statusNovo': status_novo, 'erro': erro}
     try:
         resp = requests.post(url, headers=_headers(), json=body, timeout=30)
         resp.raise_for_status()
-        resultado = resp.json()
-        if resultado.get('mudou'):
-            log.info(f'  ✔ Status mudou: "{resultado["statusAnterior"]}" → "{resultado["statusNovo"]}"')
+        r = resp.json()
+        if r.get('mudou'):
+            log.info(f'  ✔ Status mudou: "{r["statusAnterior"]}" → "{r["statusNovo"]}"')
         else:
             log.info(f'  ✔ Status inalterado: "{status_novo}"')
     except Exception as e:
         log.error(f'  ✖ Erro ao enviar status para Ecdise: {e}')
 
+
 # ──────────────────────────────────────────────
-# Consulta no SIGLA via Playwright
+# Login / Logout
 # ──────────────────────────────────────────────
 
-def consultar_sigla(page, login: str, senha: str, protocolo: str) -> str:
+def fazer_login(page, login: str, senha: str):
     """
-    Faz login no SIGLA e retorna o status do processo.
-
-    ⚠️  Os seletores abaixo foram definidos com base na estrutura comum de sistemas SEMA.
-        Se o SIGLA mudar a interface, ajuste os seletores aqui.
-        Use o Playwright Inspector para inspecionar: playwright codegen https://sigla.sema.ma.gov.br/sigla/
+    Navega para o SIGLA — Módulo do Empreendedor e faz login com CPF + senha.
+    Seletores validados em 2026-07.
     """
-
-    # ── 1. Página de login ──────────────────────────────────────
-    log.info(f'  → Navegando para o SIGLA...')
+    log.info('  → Abrindo SIGLA...')
     page.goto(SIGLA_BASE_URL, wait_until='domcontentloaded', timeout=60_000)
 
-    # Aguarda campo de login aparecer
-    # Tenta o seletor mais comum primeiro; ajuste se necessário
-    try:
-        page.wait_for_selector('input[name="username"], input[name="cpf"], #username, #cpf', timeout=15_000)
-    except PlaywrightTimeout:
-        raise Exception('Página de login não carregou — verifique a URL do SIGLA')
+    # Seleciona o Módulo Empreendedor
+    page.get_by_role('cell', name='Módulo Empreendedor', exact=True).click()
+    page.wait_for_load_state('domcontentloaded', timeout=30_000)
 
-    # Preenche CPF/login
-    login_input = page.locator('input[name="username"], input[name="cpf"], #username, #cpf').first
-    login_input.fill(login)
-
-    # Preenche senha
-    senha_input = page.locator('input[type="password"], input[name="password"], #password, #senha').first
-    senha_input.fill(senha)
-
-    # Clica em entrar
-    page.locator('button[type="submit"], input[type="submit"], button:has-text("Entrar"), button:has-text("Acessar")').first.click()
-
-    # Aguarda redirecionamento pós-login
-    try:
-        page.wait_for_url(lambda url: '/sigla/' in url and 'login' not in url.lower(), timeout=20_000)
-    except PlaywrightTimeout:
-        # Verifica se há mensagem de erro na página
-        page_text = page.inner_text('body')
-        if 'inválid' in page_text.lower() or 'incorret' in page_text.lower():
-            raise Exception(f'Credenciais inválidas para login "{login}"')
-        raise Exception('Timeout após tentativa de login')
-
-    log.info(f'  → Login OK. Buscando protocolo {protocolo}...')
-
-    # ── 2. Navegação para consulta de processo ───────────────────
-    # Tenta navegar diretamente para a URL de consulta (padrão SEMA-MA)
-    # Se não funcionar, faça a navegação pelo menu
-    try:
-        # Tenta URL direta de consulta por número de processo
-        page.goto(f'{SIGLA_BASE_URL}/consultarProcesso', wait_until='domcontentloaded', timeout=15_000)
-    except Exception:
-        # Alternativa: menu lateral
-        page.locator('a:has-text("Consultar"), a:has-text("Processo"), a:has-text("Acompanhar")').first.click()
-        page.wait_for_load_state('domcontentloaded', timeout=15_000)
-
-    # ── 3. Preenche número do processo ───────────────────────────
-    try:
-        page.wait_for_selector('input[name*="processo"], input[name*="protocolo"], input[placeholder*="processo"], input[placeholder*="protocolo"]', timeout=15_000)
-    except PlaywrightTimeout:
-        raise Exception('Campo de busca de processo não encontrado')
-
-    campo_processo = page.locator(
-        'input[name*="processo"], input[name*="protocolo"], input[placeholder*="processo"], input[placeholder*="protocolo"]'
-    ).first
-    campo_processo.fill(protocolo)
-
-    # Clica em pesquisar/consultar
-    page.locator(
-        'button:has-text("Pesquisar"), button:has-text("Consultar"), button:has-text("Buscar"), button[type="submit"]'
-    ).first.click()
-
-    # Aguarda resultado
-    page.wait_for_load_state('domcontentloaded', timeout=20_000)
-
-    # ── 4. Extrai o status/situação ───────────────────────────────
-    # Tenta encontrar células de "Situação" / "Status" na tabela de resultados
-    status_texto = None
-
-    # Padrão 1: tabela com cabeçalho "Situação"
-    situacao_cell = page.locator('td:near(:text("Situação")), td:near(:text("Status")), td:near(:text("Situacao"))').first
-    if situacao_cell.is_visible():
-        status_texto = situacao_cell.inner_text().strip()
-
-    # Padrão 2: label + valor (formulário de detalhe)
-    if not status_texto:
-        status_cell = page.locator('span:near(:text("Situação")), span:near(:text("Status"))').first
-        if status_cell.is_visible():
-            status_texto = status_cell.inner_text().strip()
-
-    # Padrão 3: busca por texto que inclua "Em Análise", "Deferido", etc.
-    if not status_texto:
-        # Pega o texto completo da página e extrai status por heurística
-        body = page.inner_text('body')
-        for keyword in ['Em Análise', 'Deferido', 'Indeferido', 'Arquivado', 'Em Vistoria',
-                        'Aguardando', 'Complementação', 'Emitido', 'Cancelado', 'Pendente']:
-            if keyword.lower() in body.lower():
-                status_texto = keyword
-                break
-
-    if not status_texto:
-        raise Exception('Não foi possível extrair o status do processo na página do SIGLA')
-
-    return status_texto
-
+    # Preenche CPF e senha
+    page.locator('input[name="j_idt35:cpf"]').fill(login)
+    page.locator('[id="j_idt35:senha"]').fill(senha)
+    page.get_by_role('button', name='Acessar').click()
+    page.wait_for_load_state('domcontentloaded', timeout=30_000)
+    log.info('  → Login OK.')
 
 def fazer_logout(page):
-    """Faz logout do SIGLA para não deixar sessão aberta."""
     try:
-        page.locator('a:has-text("Sair"), a:has-text("Logout"), button:has-text("Sair")').first.click(timeout=5_000)
+        page.get_by_role('cell', name='Sair', exact=True).click()
         page.wait_for_load_state('domcontentloaded', timeout=10_000)
     except Exception:
-        pass  # Logout opcional — não interrompe o fluxo
+        pass  # Logout é opcional
+
+
+# ──────────────────────────────────────────────
+# Leitura da tabela de requerimentos
+# ──────────────────────────────────────────────
+
+def extrair_status_da_lista(page, num_processo: str) -> str:
+    """
+    Lê a tabela de requerimentos e encontra a linha pelo Nº do processo.
+
+    Lógica de ícone (validada em 2026-07):
+      - Ícone vermelho, alt="Em exigência" → pendência aberta
+      - Ícone verde (qualquer outro alt)   → sem pendências
+
+    Retorna ex:
+      "Constituído processo | 🔴 Em exigência"
+      "Em tramitação | ✅ Sem pendências"
+    """
+    # Aguarda pelo menos uma linha de dados aparecer na tabela
+    try:
+        page.wait_for_selector('table tr td', timeout=15_000)
+    except PlaywrightTimeout:
+        raise Exception('Tabela de requerimentos não carregou — verifique se o login foi bem-sucedido')
+
+    # Tenta usar o campo "Localizar" para filtrar pelo Nº do processo
+    # (evita ter que paginar manualmente)
+    try:
+        localizar_input = page.locator('input[type="text"]').last
+        if localizar_input.is_visible(timeout=2_000):
+            localizar_input.fill(num_processo)
+            page.get_by_role('button', name='Localizar').click()
+            page.wait_for_load_state('domcontentloaded', timeout=10_000)
+            page.wait_for_selector('table tr td', timeout=10_000)
+    except Exception:
+        pass  # Sem campo de busca — lê a tabela completa
+
+    rows = page.locator('table tr').all()
+    log.info(f'  → {len(rows)} linha(s) encontradas. Procurando "{num_processo}"...')
+
+    for row in rows:
+        row_text = row.inner_text()
+
+        if num_processo.strip() not in row_text:
+            continue
+
+        cells = row.locator('td').all()
+        if len(cells) < 2:
+            continue
+
+        # Encontra a coluna com o Nº do processo e pega o status (coluna anterior)
+        status_texto = ''
+        for i, cell in enumerate(cells):
+            if num_processo.strip() in cell.inner_text().strip():
+                if i >= 1:
+                    status_texto = cells[i - 1].inner_text().strip()
+                break
+
+        # Fallback: 4ª coluna (posição mais comum do Status)
+        if not status_texto and len(cells) > 3:
+            status_texto = cells[3].inner_text().strip()
+
+        # Ícone vermelho = "Em exigência" (pendência aberta)
+        em_exigencia = row.get_by_role('img', name='Em exigência').count() > 0
+
+        resultado = f'{status_texto} | {"🔴 Em exigência" if em_exigencia else "✅ Sem pendências"}'
+        log.info(f'  → Resultado: {resultado}')
+        return resultado
+
+    raise Exception(f'Nº do processo "{num_processo}" não encontrado na lista de requerimentos')
+
+
+# ──────────────────────────────────────────────
+# Caminhos de navegação por tipo de serviço
+# ──────────────────────────────────────────────
+
+def clicar_menu(page, nome: str):
+    """
+    Clica em item do menu SIGLA.
+    O codegen ora grava como 'cell' ora como 'row' dependendo do clique —
+    esta função tenta cell primeiro e cai para row se não encontrar.
+    """
+    try:
+        locator = page.get_by_role('cell', name=nome, exact=True)
+        locator.wait_for(timeout=5_000)
+        locator.click()
+    except Exception:
+        page.get_by_role('row', name=nome, exact=True).click()
+    page.wait_for_load_state('domcontentloaded', timeout=15_000)
+
+
+def navegar_licenciamento_ambiental(page, num_processo: str) -> str:
+    """
+    Requerimentos → Licenciamento ambiental → Listar requerimentos
+    ✅ Validado 2026-07 — cobre LAU, LAR e demais licenças ambientais.
+    """
+    clicar_menu(page, 'Requerimentos')
+    clicar_menu(page, 'Licenciamento ambiental')
+    clicar_menu(page, 'Listar requerimentos')
+    return extrair_status_da_lista(page, num_processo)
+
+
+def navegar_recursos_florestais(page, num_processo: str) -> str:
+    """
+    Requerimentos → Recursos florestais → Listar
+    ✅ Validado 2026-07 — cobre LAUR.
+    """
+    clicar_menu(page, 'Requerimentos')
+    clicar_menu(page, 'Recursos florestais')
+    clicar_menu(page, 'Listar')
+    return extrair_status_da_lista(page, num_processo)
+
+
+def navegar_recursos_hidricos(page, num_processo: str) -> str:
+    """
+    Requerimentos → Recursos hídricos → Listar
+    ✅ Validado 2026-07 — cobre Outorga, OSI e Inexigibilidade.
+    """
+    clicar_menu(page, 'Requerimentos')
+    clicar_menu(page, 'Recursos hídricos')
+    clicar_menu(page, 'Listar')
+    return extrair_status_da_lista(page, num_processo)
+
+
+NAVEGADORES = {
+    'licenciamento_ambiental': navegar_licenciamento_ambiental,
+    'recursos_florestais':     navegar_recursos_florestais,
+    'recursos_hidricos':       navegar_recursos_hidricos,
+}
+
+
+# ──────────────────────────────────────────────
+# Consulta completa de um projeto
+# ──────────────────────────────────────────────
+
+def consultar_projeto(page, projeto: dict) -> str:
+    login        = projeto['login']
+    senha        = projeto['senha']
+    num_processo = projeto['protocolo']       # ex: "26070010650/2026"
+    tipo_servico = projeto.get('tipoServico', '')
+
+    fazer_login(page, login, senha)
+
+    tipo_nav = detectar_tipo(tipo_servico)
+    log.info(f'  → Navegação: {tipo_nav}')
+
+    fn = NAVEGADORES.get(tipo_nav, navegar_licenciamento_ambiental)
+    status = fn(page, num_processo)
+
+    fazer_logout(page)
+    return status
 
 
 # ──────────────────────────────────────────────
@@ -218,11 +306,11 @@ def main():
         sys.exit(1)
 
     inicio = datetime.now()
-    log.info(f'=== Início da consulta SIGLA — {inicio.strftime("%d/%m/%Y %H:%M")} ===')
+    log.info(f'=== Início — {inicio.strftime("%d/%m/%Y %H:%M")} ===')
 
     projetos = buscar_projetos()
     if not projetos:
-        log.info('Nenhum projeto para consultar.')
+        log.info('Nenhum projeto para consultar. Verifique se há projetos com emAcompanhamento=true e credenciais SIGLA preenchidas.')
         return
 
     sucesso = 0
@@ -230,44 +318,38 @@ def main():
 
     with sync_playwright() as pw:
         browser = pw.chromium.launch(headless=HEADLESS)
-        context = browser.new_context(
-            user_agent='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-            locale='pt-BR',
-            timezone_id='America/Fortaleza',
-        )
 
         for proj in projetos:
             projeto_id = proj['id']
             protocolo  = proj['protocolo']
-            login      = proj['login']
-            senha      = proj['senha']
             codigo     = proj['codigo']
+            cliente    = proj.get('cliente', '')
 
-            log.info(f'--- Projeto {codigo} | Protocolo: {protocolo} ---')
+            log.info(f'--- [{codigo}] {cliente} | Processo: {protocolo} ---')
 
+            # Cada projeto usa credenciais próprias → browser context isolado
+            context = browser.new_context(
+                user_agent='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                locale='pt-BR',
+                timezone_id='America/Fortaleza',
+            )
             page = context.new_page()
+
             try:
-                status = consultar_sigla(page, login, senha, protocolo)
-                log.info(f'  ✔ Status obtido: "{status}"')
+                status = consultar_projeto(page, proj)
                 enviar_status(projeto_id, protocolo, status)
                 sucesso += 1
-
-                # Logout antes de fechar (libera sessão no SIGLA)
-                fazer_logout(page)
-
             except Exception as e:
                 erro_msg = str(e)
-                log.error(f'  ✖ Erro: {erro_msg}')
+                log.error(f'  ✖ {erro_msg}')
                 enviar_status(projeto_id, protocolo, None, erro=erro_msg)
                 falha += 1
-
             finally:
-                page.close()
+                context.close()
 
         browser.close()
 
-    fim = datetime.now()
-    duracao = (fim - inicio).seconds
+    duracao = (datetime.now() - inicio).seconds
     log.info(f'=== Fim — {sucesso} OK, {falha} erro(s), {duracao}s ===')
 
 
