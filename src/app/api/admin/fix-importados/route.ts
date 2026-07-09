@@ -21,12 +21,13 @@ export async function GET() {
     }
 
     // Identifica projetos importados: emAcompanhamento=true, sem tarefas, sem contrato,
-    // e ainda com etapaPipeline=OPERACIONAL (o bug)
+    // e ainda com etapaPipeline=OPERACIONAL (o bug).
+    // Nota: contrato é relação reversa (sem campo contratoId no Projeto), usa `is: null`.
     const candidatos = await prisma.projeto.findMany({
       where: {
         emAcompanhamento: true,
         etapaPipeline:    'OPERACIONAL',
-        contratoId:       null,
+        contrato:         { is: null },
       },
       include: {
         tarefas: { take: 1 },
