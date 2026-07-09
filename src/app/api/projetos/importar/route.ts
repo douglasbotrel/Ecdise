@@ -87,10 +87,10 @@ export async function POST(req: NextRequest) {
         protocoloData:        protocoloData ? new Date(protocoloData) : null,
         credenciais,
         emAcompanhamento:     true,
-        // Pipeline: pula todas as etapas comerciais
-        etapaPipeline:        'OPERACIONAL',
+        // Pipeline: trabalho de campo já concluído fora do app — aguarda licença do órgão
+        etapaPipeline:        'CONCLUIDO',
         statusComercial:      'ACEITO',
-        statusOperacional:    'EM_ANDAMENTO',
+        statusOperacional:    'CONCLUIDO',
       },
     })
 

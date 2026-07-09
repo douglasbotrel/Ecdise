@@ -7,6 +7,7 @@ import {
   ArrowLeft, Plus, Check, FileText, BarChart2, MapPin,
   Calendar, Loader2, Award, Clock, Trash2,
   X, Home, Hash, ChevronDown, ChevronUp, AlertTriangle,
+  Play, Copy, Terminal,
 } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
 
@@ -56,6 +57,20 @@ export default function AcompanhamentoDetalhe() {
     acoes: [{ descricao: '', responsavelId: '' }] as { descricao: string; responsavelId: string }[],
   })
   const [salvandoPendencia, setSalvandoPendencia] = useState(false)
+
+  // Modal Verificar agora (instrução para rodar o script)
+  const [modalRodar, setModalRodar] = useState(false)
+  const [copiado, setCopiado]       = useState(false)
+
+  const cmdSoEste = `python sigla_checker.py --id ${id}`
+  const cmdTodos  = 'python sigla_checker.py'
+
+  function copiarComando() {
+    navigator.clipboard.writeText(cmdSoEste).then(() => {
+      setCopiado(true)
+      setTimeout(() => setCopiado(false), 2000)
+    })
+  }
 
   // Modal Licença Concedida
   const [modalLicenca, setModalLicenca]   = useState(false)
@@ -367,17 +382,25 @@ export default function AcompanhamentoDetalhe() {
         projeto.statusSIGLA ? 'border-blue-100' : 'border-gray-100'
       }`}>
         <div className="flex items-center justify-between flex-wrap gap-2">
-          <div className="flex items-center gap-1.5 text-gray-400">
+          <div className="flex items-center gap-1.5">
             <span className="text-xs font-medium text-gray-500">🤖 Status SIGLA (automático)</span>
+            {projeto.ultimaConsultaSIGLA && (
+              <span className="text-xs text-gray-400">
+                · Última consulta: {formatDate(projeto.ultimaConsultaSIGLA)}
+              </span>
+            )}
           </div>
-          {projeto.ultimaConsultaSIGLA && (
-            <span className="text-xs text-gray-400">
-              Última consulta: {formatDate(projeto.ultimaConsultaSIGLA)}
-            </span>
-          )}
+          <button
+            onClick={() => setModalRodar(true)}
+            className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-600 transition-colors"
+            title="Verificar agora sem esperar o agendamento diário"
+          >
+            <Play className="w-3.5 h-3.5" />
+            Verificar agora
+          </button>
         </div>
         {projeto.statusSIGLA ? (
-          <p className="mt-1 font-semibold text-sm text-blue-700 bg-blue-50 rounded-lg px-3 py-1.5 inline-block">
+          <p className="mt-2 font-semibold text-sm text-blue-700 bg-blue-50 rounded-lg px-3 py-1.5 inline-block">
             {projeto.statusSIGLA}
           </p>
         ) : (
@@ -573,6 +596,93 @@ export default function AcompanhamentoDetalhe() {
           </div>
         )}
       </div>
+
+      {/* ══════════════════════════════════════════════════════
+          MODAL VERIFICAR AGORA
+          ══════════════════════════════════════════════════════ */}
+      {modalRodar && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+            {/* Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-gray-100 rounded-xl">
+                  <Terminal className="w-4 h-4 text-gray-600" />
+                </div>
+                <div>
+                  <h2 className="font-bold text-gray-900">Verificar agora</h2>
+                  <p className="text-xs text-gray-500 mt-0.5">O robô SIGLA roda localmente no seu computador</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setModalRodar(false)}
+                className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Conteúdo */}
+            <div className="px-6 py-5 space-y-4">
+              <p className="text-sm text-gray-600">
+                Abra o PowerShell na pasta
+                <span className="font-mono text-xs bg-gray-100 px-1.5 py-0.5 rounded mx-1">sigla_checker</span>
+                e execute um dos comandos abaixo:
+              </p>
+
+              {/* Só este processo */}
+              <div>
+                <p className="text-xs text-gray-500 mb-1.5 font-medium">Verificar só este processo (mais rápido)</p>
+                <div className="flex items-center gap-2 bg-gray-900 rounded-xl px-4 py-3">
+                  <code className="flex-1 text-sm text-green-400 font-mono overflow-x-auto">{cmdSoEste}</code>
+                  <button
+                    onClick={copiarComando}
+                    className="flex items-center gap-1.5 text-xs font-medium text-gray-400 hover:text-white transition-colors flex-shrink-0"
+                  >
+                    <Copy className="w-3.5 h-3.5" />
+                    {copiado ? '✓' : 'Copiar'}
+                  </button>
+                </div>
+              </div>
+
+              {/* Todos os processos */}
+              <div>
+                <p className="text-xs text-gray-500 mb-1.5 font-medium">Verificar todos os processos</p>
+                <div className="flex items-center gap-2 bg-gray-800 rounded-xl px-4 py-3">
+                  <code className="flex-1 text-sm text-gray-300 font-mono">{cmdTodos}</code>
+                  <button
+                    onClick={() => navigator.clipboard.writeText(cmdTodos)}
+                    className="flex items-center gap-1.5 text-xs font-medium text-gray-500 hover:text-white transition-colors flex-shrink-0"
+                  >
+                    <Copy className="w-3.5 h-3.5" />
+                    Copiar
+                  </button>
+                </div>
+              </div>
+
+              <p className="text-xs text-gray-400">
+                Após executar, recarregue esta página para ver o status atualizado.
+              </p>
+            </div>
+
+            {/* Rodapé */}
+            <div className="px-6 pb-5 flex gap-2">
+              <button
+                onClick={() => { copiarComando(); toast.success('Comando copiado!') }}
+                className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-gray-900 hover:bg-gray-800 text-white rounded-xl text-sm font-semibold transition-colors"
+              >
+                <Copy className="w-4 h-4" /> Copiar (só este)
+              </button>
+              <button
+                onClick={() => setModalRodar(false)}
+                className="px-5 py-2.5 border border-gray-200 text-gray-600 hover:bg-gray-50 rounded-xl text-sm font-medium"
+              >
+                Fechar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ══════════════════════════════════════════════════════
           MODAL NOVA PENDÊNCIA

@@ -19,6 +19,7 @@ Seletores validados em 2026-07 via playwright codegen (SIGLA — Módulo do Empr
 import os
 import sys
 import logging
+import argparse
 import requests
 from datetime import datetime
 from dotenv import load_dotenv
@@ -301,17 +302,33 @@ def consultar_projeto(page, projeto: dict) -> str:
 # ──────────────────────────────────────────────
 
 def main():
+    # Argumentos opcionais de linha de comando
+    parser = argparse.ArgumentParser(description='Consulta automática de processos no SIGLA-SEMA/MA')
+    parser.add_argument('--id', metavar='PROJETO_ID',
+                        help='Verifica apenas o projeto com este ID (ex: --id cm5abc123). '
+                             'Omita para verificar todos os projetos em acompanhamento.')
+    args = parser.parse_args()
+
     if not SIGLA_BOT_TOKEN:
         log.error('SIGLA_BOT_TOKEN não definido no .env — abortando.')
         sys.exit(1)
 
     inicio = datetime.now()
     log.info(f'=== Início — {inicio.strftime("%d/%m/%Y %H:%M")} ===')
+    if args.id:
+        log.info(f'  → Modo pontual: verificando apenas projeto {args.id}')
 
     projetos = buscar_projetos()
     if not projetos:
         log.info('Nenhum projeto para consultar. Verifique se há projetos com emAcompanhamento=true e credenciais SIGLA preenchidas.')
         return
+
+    # Filtra para um projeto específico se --id foi passado
+    if args.id:
+        projetos = [p for p in projetos if p['id'] == args.id]
+        if not projetos:
+            log.error(f'Projeto {args.id} não encontrado ou não está em acompanhamento.')
+            sys.exit(1)
 
     sucesso = 0
     falha   = 0
