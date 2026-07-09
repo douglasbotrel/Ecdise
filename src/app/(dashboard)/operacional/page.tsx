@@ -287,6 +287,7 @@ export default function OperacionalPage() {
     try {
       const params = new URLSearchParams()
       params.set('etapas', ETAPAS_OPERACIONAL)
+      params.set('emAcompanhamento', 'false')   // exclui projetos importados só para monitoramento
       if (filtro) params.set('statusOperacional', filtro)
       if (search)  params.set('search', search)
       const res = await fetch(`/api/projetos?${params}`)

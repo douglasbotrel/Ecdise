@@ -6,6 +6,7 @@ import Link from 'next/link'
 import {
   Search, FileSearch, ChevronRight, MapPin, FileText,
   Award, AlertCircle, Upload, RefreshCw, Clock,
+  Play, Copy, Terminal, X,
 } from 'lucide-react'
 
 // ── Interpreta o statusSIGLA e retorna a categorização visual ──
@@ -30,6 +31,15 @@ export default function AcompanhamentoPage() {
   const [loading, setLoading]   = useState(true)
   const [search, setSearch]     = useState('')
   const [filtro, setFiltro]     = useState<Filtro>('todos')
+  const [modalRodar, setModalRodar] = useState(false)
+  const [copiado, setCopiado]       = useState(false)
+
+  function copiarCmd() {
+    navigator.clipboard.writeText('python sigla_checker.py').then(() => {
+      setCopiado(true)
+      setTimeout(() => setCopiado(false), 2000)
+    })
+  }
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -99,13 +109,23 @@ export default function AcompanhamentoPage() {
             Monitoramento automático via SIGLA — status atualizado diariamente
           </p>
         </div>
-        <Link
-          href="/acompanhamento/importar"
-          className="flex items-center gap-2 px-4 py-2.5 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold rounded-xl transition-colors w-full sm:w-auto justify-center"
-        >
-          <Upload className="w-4 h-4" />
-          Importar Processo
-        </Link>
+        <div className="flex gap-2 w-full sm:w-auto">
+          <button
+            onClick={() => setModalRodar(true)}
+            className="flex items-center gap-2 px-4 py-2.5 bg-gray-800 hover:bg-gray-900 text-white text-sm font-semibold rounded-xl transition-colors flex-1 sm:flex-none justify-center"
+            title="Rodar o robô SIGLA agora, sem esperar o agendamento"
+          >
+            <Play className="w-4 h-4" />
+            Verificar agora
+          </button>
+          <Link
+            href="/acompanhamento/importar"
+            className="flex items-center gap-2 px-4 py-2.5 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold rounded-xl transition-colors flex-1 sm:flex-none justify-center"
+          >
+            <Upload className="w-4 h-4" />
+            Importar
+          </Link>
+        </div>
       </div>
 
       {/* ── Painel de resumo ──────────────────────────── */}
@@ -278,6 +298,70 @@ export default function AcompanhamentoPage() {
               </Link>
             )
           })}
+        </div>
+      )}
+
+      {/* ══════════════════════════════════════════════════════
+          MODAL VERIFICAR AGORA (todos os processos)
+          ══════════════════════════════════════════════════════ */}
+      {modalRodar && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-gray-100 rounded-xl">
+                  <Terminal className="w-4 h-4 text-gray-600" />
+                </div>
+                <div>
+                  <h2 className="font-bold text-gray-900">Verificar todos agora</h2>
+                  <p className="text-xs text-gray-500 mt-0.5">O robô SIGLA roda no seu computador</p>
+                </div>
+              </div>
+              <button onClick={() => setModalRodar(false)}
+                className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="px-6 py-5 space-y-4">
+              <p className="text-sm text-gray-600">
+                Abra o PowerShell na pasta
+                <span className="font-mono text-xs bg-gray-100 px-1.5 py-0.5 rounded mx-1">sigla_checker</span>
+                do projeto e execute:
+              </p>
+
+              <div className="flex items-center gap-2 bg-gray-900 rounded-xl px-4 py-3">
+                <code className="flex-1 text-sm text-green-400 font-mono">python sigla_checker.py</code>
+                <button onClick={copiarCmd}
+                  className="flex items-center gap-1.5 text-xs font-medium text-gray-400 hover:text-white transition-colors flex-shrink-0">
+                  <Copy className="w-3.5 h-3.5" />
+                  {copiado ? '✓ Copiado' : 'Copiar'}
+                </button>
+              </div>
+
+              <div className="bg-blue-50 rounded-xl px-4 py-3 text-xs text-blue-700 space-y-1">
+                <p className="font-semibold">💡 Atalho mais rápido</p>
+                <p>Clique duas vezes no arquivo <span className="font-mono">rodar_sigla.bat</span> na pasta sigla_checker — abre e executa tudo automaticamente.</p>
+              </div>
+
+              <p className="text-xs text-gray-400">
+                Após executar, clique em <strong>Atualizar</strong> nesta página para ver os status atualizados.
+              </p>
+            </div>
+
+            <div className="px-6 pb-5 flex gap-2">
+              <button
+                onClick={() => { copiarCmd(); toast.success('Comando copiado!') }}
+                className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-gray-900 hover:bg-gray-800 text-white rounded-xl text-sm font-semibold transition-colors"
+              >
+                <Copy className="w-4 h-4" /> Copiar comando
+              </button>
+              <button onClick={() => setModalRodar(false)}
+                className="px-5 py-2.5 border border-gray-200 text-gray-600 hover:bg-gray-50 rounded-xl text-sm font-medium">
+                Fechar
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

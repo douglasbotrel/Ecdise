@@ -28,7 +28,8 @@ export async function GET(request: NextRequest) {
     if (clienteId) where.clienteId = clienteId
     if (analistaRapidoId) where.analistaRapidoId = analistaRapidoId
     if (responsavelId) where.responsavelId = responsavelId
-    if (emAcompanhamento === 'true') where.emAcompanhamento = true
+    if (emAcompanhamento === 'true')  where.emAcompanhamento = true
+    if (emAcompanhamento === 'false') where.emAcompanhamento = false
     if (search) {
       where.OR = [
         { codigo: { contains: search } },

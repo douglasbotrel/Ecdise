@@ -7,7 +7,7 @@ import {
   ArrowLeft, Plus, Check, FileText, BarChart2, MapPin,
   Calendar, Loader2, Award, Clock, Trash2,
   X, Home, Hash, ChevronDown, ChevronUp, AlertTriangle,
-  Play, Copy, Terminal,
+  Copy, Terminal,
 } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
 
@@ -390,14 +390,6 @@ export default function AcompanhamentoDetalhe() {
               </span>
             )}
           </div>
-          <button
-            onClick={() => setModalRodar(true)}
-            className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-600 transition-colors"
-            title="Verificar agora sem esperar o agendamento diário"
-          >
-            <Play className="w-3.5 h-3.5" />
-            Verificar agora
-          </button>
         </div>
         {projeto.statusSIGLA ? (
           <p className="mt-2 font-semibold text-sm text-blue-700 bg-blue-50 rounded-lg px-3 py-1.5 inline-block">
