@@ -116,6 +116,9 @@ model Projeto {
   protocoloData        DateTime?
   protocoloCodigoOrgao String?
   emAcompanhamento     Boolean  @default(false)
+  // Consulta automática SIGLA
+  statusSIGLA          String?   // Última situação extraída automaticamente do SIGLA
+  ultimaConsultaSIGLA  DateTime? // Quando foi feita a última consulta automática
   criadoEm            DateTime @default(now())
   atualizadoEm        DateTime @updatedAt
 
@@ -131,6 +134,7 @@ model Projeto {
   historico      HistoricoStatus[]
   pendencias     Pendencia[]
   licenca        Licenca?
+  logsSigla      LogSIGLA[]
 
   @@map("projetos")
 }
@@ -495,6 +499,24 @@ model HistoricoStatus {
   projeto Projeto @relation(fields: [projetoId], references: [id])
 
   @@map("historico_status")
+}
+
+// ============================================================
+// SIGLA — LOG DE CONSULTAS AUTOMÁTICAS
+// ============================================================
+
+model LogSIGLA {
+  id             String   @id @default(cuid())
+  projetoId      String
+  protocolo      String
+  statusAnterior String?
+  statusNovo     String
+  erro           String?  // null = sucesso; string = mensagem de erro
+  consultadoEm   DateTime @default(now())
+
+  projeto Projeto @relation(fields: [projetoId], references: [id])
+
+  @@map("logs_sigla")
 }
 
 // ============================================================

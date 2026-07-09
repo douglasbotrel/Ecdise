@@ -362,6 +362,33 @@ export default function AcompanhamentoDetalhe() {
         </div>
       )}
 
+      {/* ── Status SIGLA (consulta automática) ─────────────────── */}
+      <div className={`bg-white rounded-xl border p-3 sm:p-4 ${
+        projeto.statusSIGLA ? 'border-blue-100' : 'border-gray-100'
+      }`}>
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          <div className="flex items-center gap-1.5 text-gray-400">
+            <span className="text-xs font-medium text-gray-500">🤖 Status SIGLA (automático)</span>
+          </div>
+          {projeto.ultimaConsultaSIGLA && (
+            <span className="text-xs text-gray-400">
+              Última consulta: {formatDate(projeto.ultimaConsultaSIGLA)}
+            </span>
+          )}
+        </div>
+        {projeto.statusSIGLA ? (
+          <p className="mt-1 font-semibold text-sm text-blue-700 bg-blue-50 rounded-lg px-3 py-1.5 inline-block">
+            {projeto.statusSIGLA}
+          </p>
+        ) : (
+          <p className="mt-1 text-sm text-gray-400 italic">
+            {projeto.emAcompanhamento
+              ? 'Aguardando primeira consulta automática do script SIGLA'
+              : 'Ative "Em acompanhamento" para iniciar as consultas automáticas'}
+          </p>
+        )}
+      </div>
+
       {/* ── Licença concedida (se existir) ─────────────────────── */}
       {licenciado && (
         <div className="bg-white rounded-2xl border border-green-100 p-4 sm:p-6">
