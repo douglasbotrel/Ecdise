@@ -52,23 +52,28 @@ log = logging.getLogger(__name__)
 # Chave: substring do tipoServico no Ecdise (lower-case)
 # ──────────────────────────────────────────────
 TIPO_SERVICO_MAP = {
-    # Requerimentos → Licenciamento ambiental → Listar requerimentos
-    'licenciamento': 'licenciamento_ambiental',
-    'lar':           'licenciamento_ambiental',
-    'lau':           'licenciamento_ambiental',   # ✅ confirmado
-    'urbana':        'licenciamento_ambiental',   # ✅ confirmado
+    # ⚠️ ORDEM IMPORTA: chaves mais específicas primeiro para evitar
+    # que 'lau' (substring de 'laur') seja detectada antes de 'laur'.
+
     # Requerimentos → Recursos florestais → Listar
-    'laur':          'recursos_florestais',       # ✅ confirmado
+    'laur':          'recursos_florestais',       # ✅ confirmado — DEVE vir antes de 'lau'
     'florestal':     'recursos_florestais',
     'floresta':      'recursos_florestais',
+
     # Requerimentos → Recursos hídricos → Listar
     'hidrico':       'recursos_hidricos',         # ✅ confirmado
     'hídrico':       'recursos_hidricos',
     'hidrica':       'recursos_hidricos',
     'hídrica':       'recursos_hidricos',
-    'outorga':       'recursos_hidricos',         # Outorga também fica em Recursos hídricos
+    'outorga':       'recursos_hidricos',         # ✅ confirmado
     'osi':           'recursos_hidricos',
     'inexigibilidade': 'recursos_hidricos',
+
+    # Requerimentos → Licenciamento ambiental → Listar requerimentos
+    'licenciamento': 'licenciamento_ambiental',
+    'lar':           'licenciamento_ambiental',
+    'lau':           'licenciamento_ambiental',   # ✅ confirmado — vem DEPOIS de 'laur'
+    'urbana':        'licenciamento_ambiental',
 }
 
 def detectar_tipo(tipo_servico: str) -> str:
@@ -151,9 +156,42 @@ def fazer_logout(page):
 # Leitura da tabela de requerimentos
 # ──────────────────────────────────────────────
 
+def extrair_status_da_linha(row, termo: str) -> str | None:
+    """
+    Dado um elemento <tr> e o termo buscado, extrai o texto de status e o ícone.
+    Retorna a string de resultado ou None se a linha não contiver o termo.
+    """
+    row_text = row.inner_text()
+    if termo not in row_text:
+        return None
+
+    cells = row.locator('td').all()
+    if len(cells) < 2:
+        return None
+
+    # Procura a célula com o número do processo e pega o status (coluna anterior)
+    status_texto = ''
+    for i, cell in enumerate(cells):
+        if termo in cell.inner_text().strip():
+            if i >= 1:
+                status_texto = cells[i - 1].inner_text().strip()
+            break
+
+    # Fallback: 4ª coluna (posição mais comum do Status)
+    if not status_texto and len(cells) > 3:
+        status_texto = cells[3].inner_text().strip()
+
+    em_exigencia = row.get_by_role('img', name='Em exigência').count() > 0
+    return f'{status_texto} | {"🔴 Em exigência" if em_exigencia else "✅ Sem pendências"}'
+
+
 def extrair_status_da_lista(page, num_processo: str) -> str:
     """
     Lê a tabela de requerimentos e encontra a linha pelo Nº do processo.
+
+    Estratégia de busca (em ordem):
+      1. Número completo: ex "25110049202/2025"
+      2. Sem sufixo /ANO: ex "25110049202"  (fallback se SIGLA omite o ano)
 
     Lógica de ícone (validada em 2026-07):
       - Ícone vermelho, alt="Em exigência" → pendência aberta
@@ -169,41 +207,38 @@ def extrair_status_da_lista(page, num_processo: str) -> str:
     except PlaywrightTimeout:
         raise Exception('Tabela de requerimentos não carregou — verifique se o login foi bem-sucedido')
 
-    # Lê todas as linhas diretamente (cada CPF tem poucos processos,
-    # não há necessidade de usar o campo "Localizar" que causava filtros errados)
     rows = page.locator('table tr').all()
     log.info(f'  → {len(rows)} linha(s) encontradas. Procurando "{num_processo}"...')
 
+    # Termo primário (completo) e fallback sem "/ANO"
+    num_completo = num_processo.strip()
+    num_base     = num_completo.split('/')[0].strip()  # ex: "25110049202"
+    termos       = [num_completo]
+    if num_base and num_base != num_completo:
+        termos.append(num_base)
+
+    for termo in termos:
+        for row in rows:
+            resultado = extrair_status_da_linha(row, termo)
+            if resultado is not None:
+                if termo != num_completo:
+                    log.info(f'  → Encontrado via busca parcial ("{termo}")')
+                log.info(f'  → Resultado: {resultado}')
+                return resultado
+
+    # Nenhum termo funcionou — loga o conteúdo da tabela para diagnóstico
+    log.warning('  → Processo não encontrado. Conteúdo da tabela (primeiras linhas com dados):')
+    contagem = 0
     for row in rows:
-        row_text = row.inner_text()
+        texto = row.inner_text().strip().replace('\n', ' | ').replace('\t', ' ')
+        if texto and contagem < 8:
+            log.warning(f'      {texto[:120]}')
+            contagem += 1
 
-        if num_processo.strip() not in row_text:
-            continue
-
-        cells = row.locator('td').all()
-        if len(cells) < 2:
-            continue
-
-        # Encontra a coluna com o Nº do processo e pega o status (coluna anterior)
-        status_texto = ''
-        for i, cell in enumerate(cells):
-            if num_processo.strip() in cell.inner_text().strip():
-                if i >= 1:
-                    status_texto = cells[i - 1].inner_text().strip()
-                break
-
-        # Fallback: 4ª coluna (posição mais comum do Status)
-        if not status_texto and len(cells) > 3:
-            status_texto = cells[3].inner_text().strip()
-
-        # Ícone vermelho = "Em exigência" (pendência aberta)
-        em_exigencia = row.get_by_role('img', name='Em exigência').count() > 0
-
-        resultado = f'{status_texto} | {"🔴 Em exigência" if em_exigencia else "✅ Sem pendências"}'
-        log.info(f'  → Resultado: {resultado}')
-        return resultado
-
-    raise Exception(f'Nº do processo "{num_processo}" não encontrado na lista de requerimentos')
+    raise Exception(
+        f'Nº do processo "{num_processo}" não encontrado na lista de requerimentos. '
+        f'Verifique o número cadastrado no Ecdise (veja o log acima para ver o que aparece no SIGLA).'
+    )
 
 
 # ──────────────────────────────────────────────
