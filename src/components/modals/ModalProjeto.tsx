@@ -320,9 +320,7 @@ export function ModalProjeto({ open, onClose, projeto, onSalvo, modoAcao = 'edit
       } else if (modoReal === 'validacao') {
         payload = {
           servicosContratados: JSON.stringify(form.servicosContratados),
-          valorSinal: form.valorSinal,
-          valorPrestacao: form.valorPrestacao,
-          numeroPrestacoes: form.numeroPrestacoes,
+          valorProposto: calcularValorTotal(form.servicosContratados),
           gestorResponsavelId: form.gestorResponsavelId || null,
           supervisorId: form.supervisorId || null,
           avancarPipeline: true,
@@ -435,6 +433,12 @@ export function ModalProjeto({ open, onClose, projeto, onSalvo, modoAcao = 'edit
     .normalize('NFD').replace(/[̀-ͯ]/g, '')
   const servicosAmbiental    = servicos.filter(s => normalizeCateg(s.categoria) === 'ambiental')
   const servicosRegularizacao = servicos.filter(s => ['regularizacao', 'regularização'].includes(normalizeCateg(s.categoria)))
+
+  function calcularValorTotal(nomes: string[]): number {
+    return servicos
+      .filter(s => nomes.includes(s.nome))
+      .reduce((acc, s) => acc + (Number(s.valor) || 0), 0)
+  }
 
   function ServiceCheckList({ lista }: { lista: 'servicosRecomendados' | 'servicosContratados' }) {
     return (
@@ -772,23 +776,20 @@ export function ModalProjeto({ open, onClose, projeto, onSalvo, modoAcao = 'edit
               <ServiceCheckList lista="servicosContratados" />
             </div>
 
-            <div className="grid grid-cols-3 gap-3">
+            <div className="bg-green-50 border border-green-200 rounded-xl p-4 flex items-center justify-between">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">Valor do Sinal (R$)</label>
-                <input type="number" step="0.01" value={form.valorSinal} onChange={e => set('valorSinal', e.target.value)}
-                  placeholder="0,00" className="input-field" />
+                <p className="text-sm font-medium text-green-800">Valor total do serviço</p>
+                <p className="text-xs text-green-600 mt-0.5">
+                  Soma automática dos serviços selecionados acima — apresentado ao cliente nesta etapa, sem parcelamento.
+                </p>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">Valor da Parcela (R$)</label>
-                <input type="number" step="0.01" value={form.valorPrestacao} onChange={e => set('valorPrestacao', e.target.value)}
-                  placeholder="0,00" className="input-field" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">Nº de Parcelas</label>
-                <input type="number" value={form.numeroPrestacoes} onChange={e => set('numeroPrestacoes', e.target.value)}
-                  placeholder="1" className="input-field" />
-              </div>
+              <p className="text-xl font-bold text-green-800">
+                {calcularValorTotal(form.servicosContratados).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+              </p>
             </div>
+            <p className="text-xs text-gray-400 -mt-2 pl-1">
+              O parcelamento (sinal + parcelas) será definido depois, na elaboração do contrato — podendo ficar igual, maior ou menor que este valor.
+            </p>
 
             <div className="grid grid-cols-2 gap-3">
               <div>
@@ -830,9 +831,11 @@ export function ModalProjeto({ open, onClose, projeto, onSalvo, modoAcao = 'edit
                 } catch { return null }
               })()}
               <div className="flex gap-4 pt-1 text-sm">
-                {projeto?.valorSinal > 0 && <span><span className="font-medium">Sinal:</span> R$ {Number(projeto.valorSinal).toLocaleString('pt-BR', {minimumFractionDigits: 2})}</span>}
-                {projeto?.valorPrestacao > 0 && <span><span className="font-medium">Parcelas:</span> {projeto.numeroPrestacoes}× R$ {Number(projeto.valorPrestacao).toLocaleString('pt-BR', {minimumFractionDigits: 2})}</span>}
+                {projeto?.valorProposto > 0 && (
+                  <span><span className="font-medium">Valor total do serviço (comercial):</span> {Number(projeto.valorProposto).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
+                )}
               </div>
+              <p className="text-xs text-gray-400">Defina abaixo o valor final do contrato (pode ser igual, maior ou menor) e a forma de pagamento.</p>
             </div>
 
             <div>
@@ -892,9 +895,9 @@ export function ModalProjeto({ open, onClose, projeto, onSalvo, modoAcao = 'edit
                   } catch { return null }
                 })()}
                 <div className="flex gap-4 pt-1 text-sm">
-                  {projeto?.valorSinal > 0 && (
+                  {projeto?.contrato?.valorSinal > 0 && (
                     <span className="font-semibold text-green-700">
-                      Sinal esperado: R$ {Number(projeto.valorSinal).toLocaleString('pt-BR', {minimumFractionDigits: 2})}
+                      Sinal esperado: {Number(projeto.contrato.valorSinal).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                     </span>
                   )}
                   {contratoSemValor && (

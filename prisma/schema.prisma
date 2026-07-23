@@ -527,6 +527,7 @@ model TipoServico {
   id                   String   @id @default(cuid())
   nome                 String   @unique
   categoria            String
+  valor                Float    @default(0) // Valor do serviço, usado para somar o valor total apresentado ao cliente na etapa comercial
   descricao            String?
   documentosRequeridos String?
   tarefasPadrao        String?

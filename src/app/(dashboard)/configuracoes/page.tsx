@@ -74,6 +74,7 @@ export default function ConfiguracoesPage() {
   const [novoServico, setNovoServico]   = useState(false)
   const [novaServNome, setNovaServNome] = useState('')
   const [novaServCateg, setNovaServCateg] = useState('')
+  const [novaServValor, setNovaServValor] = useState('')
   const [salvando, setSalvando]   = useState(false)
 
   // Tarefas padrão por serviço
@@ -83,7 +84,7 @@ export default function ConfiguracoesPage() {
 
   // Edição de serviço
   const [servicoEditando, setServicoEditando] = useState<any | null>(null)
-  const [formServico, setFormServico] = useState({ nome: '', categoria: '' })
+  const [formServico, setFormServico] = useState({ nome: '', categoria: '', valor: '' })
 
   // Confirmação de exclusão
   const [confirmandoExclusao, setConfirmandoExclusao] = useState<string | null>(null)
@@ -263,11 +264,11 @@ export default function ConfiguracoesPage() {
       const res = await fetch('/api/pre-cadastros', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tipo: 'servico', nome: novaServNome, categoria: novaServCateg }),
+        body: JSON.stringify({ tipo: 'servico', nome: novaServNome, categoria: novaServCateg, valor: parseFloat(novaServValor.replace(',', '.')) || 0 }),
       })
       if (!res.ok) throw new Error()
       toast.success('Serviço adicionado!')
-      setNovoServico(false); setNovaServNome(''); setNovaServCateg('')
+      setNovoServico(false); setNovaServNome(''); setNovaServCateg(''); setNovaServValor('')
       loadDados()
     } finally { setSalvando(false) }
   }
@@ -302,7 +303,7 @@ export default function ConfiguracoesPage() {
   }
 
   function abrirEdicaoServico(s: any) {
-    setFormServico({ nome: s.nome, categoria: s.categoria || '' })
+    setFormServico({ nome: s.nome, categoria: s.categoria || '', valor: s.valor != null ? String(s.valor) : '' })
     setServicoEditando(s)
   }
 
@@ -313,7 +314,10 @@ export default function ConfiguracoesPage() {
       const res = await fetch('/api/pre-cadastros', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tipo: 'servico', id: servicoEditando.id, nome: formServico.nome, categoria: formServico.categoria }),
+        body: JSON.stringify({
+          tipo: 'servico', id: servicoEditando.id, nome: formServico.nome, categoria: formServico.categoria,
+          valor: parseFloat(String(formServico.valor).replace(',', '.')) || 0,
+        }),
       })
       if (!res.ok) { const err = await res.json(); toast.error(err.error || 'Erro ao salvar'); return }
       toast.success('Serviço atualizado!')
@@ -603,6 +607,9 @@ export default function ConfiguracoesPage() {
                 <option value="ambiental">Licenciamento Ambiental</option>
                 <option value="regularizacao">Regularização</option>
               </select>
+              <input type="number" step="0.01" min="0" value={novaServValor} onChange={e => setNovaServValor(e.target.value)}
+                placeholder="Valor (R$)"
+                className="w-36 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500" />
               <button onClick={criarServico} disabled={salvando}
                 className="px-3 py-2 bg-green-600 text-white rounded-lg">
                 {salvando ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
@@ -632,6 +639,9 @@ export default function ConfiguracoesPage() {
                     </div>
                     <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${s.ativo ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-500'}`}>
                       {s.ativo ? 'Ativo' : 'Inativo'}
+                    </span>
+                    <span className="text-xs font-semibold text-gray-700 bg-gray-50 border border-gray-200 px-2 py-0.5 rounded-full">
+                      {Number(s.valor || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                     </span>
                     {s.tarefasPadrao && (
                       <span className="text-xs text-blue-500 font-medium">
@@ -794,6 +804,14 @@ export default function ConfiguracoesPage() {
                   <option value="ambiental">Licenciamento Ambiental</option>
                   <option value="regularizacao">Regularização</option>
                 </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Valor do serviço (R$)</label>
+                <input type="number" step="0.01" min="0" value={formServico.valor}
+                  onChange={e => setFormServico(p => ({ ...p, valor: e.target.value }))}
+                  placeholder="0,00"
+                  className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-green-500" />
+                <p className="text-xs text-gray-400 mt-1">Usado para somar automaticamente o valor total apresentado ao cliente na etapa comercial.</p>
               </div>
               <div className="flex justify-end gap-3 pt-2 border-t border-gray-100">
                 <button onClick={() => setServicoEditando(null)}
