@@ -127,20 +127,19 @@ def enviar_status(projeto_id: str, protocolo: str, status_novo: str | None, erro
 
 def fazer_login(page, login: str, senha: str):
     """
-    Navega para o SIGLA — Módulo do Empreendedor e faz login com CPF + senha.
-    Seletores validados em 2026-07.
+    Navega para o SIGLA e faz login com CPF + senha.
+    A partir de 2026-07, o formulário de login já aparece direto na primeira
+    tela (sem a etapa de clicar em "Módulo Empreendedor"), e os campos
+    passaram a usar o prefixo "loginForm" em vez de "j_idt35".
+    Botão de acesso também mudou de "Acessar" para "Entrar".
     """
     log.info('  → Abrindo SIGLA...')
     page.goto(SIGLA_BASE_URL, wait_until='domcontentloaded', timeout=60_000)
 
-    # Seleciona o Módulo Empreendedor
-    page.get_by_role('cell', name='Módulo Empreendedor', exact=True).click()
-    page.wait_for_load_state('domcontentloaded', timeout=30_000)
-
-    # Preenche CPF e senha
-    page.locator('input[name="j_idt35:cpf"]').fill(login)
-    page.locator('[id="j_idt35:senha"]').fill(senha)
-    page.get_by_role('button', name='Acessar').click()
+    # Preenche CPF e senha (já na primeira tela)
+    page.locator('input[name="loginForm:cpf"]').fill(login)
+    page.locator('[id="loginForm:senha"]').fill(senha)
+    page.get_by_role('button', name='Entrar').click()
     page.wait_for_load_state('domcontentloaded', timeout=30_000)
     log.info('  → Login OK.')
 
