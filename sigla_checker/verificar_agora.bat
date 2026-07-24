@@ -5,7 +5,7 @@ echo ================================================
 echo   Ecdise - Consulta SIGLA (SEMA-MA)
 echo ================================================
 echo.
-python sigla_checker.py
+py sigla_checker.py
 echo.
 echo ================================================
 echo   Concluido! Recarregue o Ecdise para ver

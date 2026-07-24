@@ -956,3 +956,105 @@ Call log:
 
 2026-07-22 22:04:03,500 [INFO]   ✔ Status inalterado: "None"
 2026-07-22 22:04:03,651 [INFO] === Fim — 0 OK, 11 erro(s), 469s ===
+2026-07-23 19:07:46,583 [INFO] === Início — 23/07/2026 19:07 ===
+2026-07-23 19:07:47,085 [INFO] 11 projeto(s) para verificar.
+2026-07-23 19:07:51,129 [INFO] --- [cmrcu84ov000igwnaioig3lgz] Maurilio | Processo: 25080037650/2025 ---
+2026-07-23 19:07:57,085 [INFO]   → Abrindo SIGLA...
+2026-07-23 19:08:01,449 [INFO]   → Login OK.
+2026-07-23 19:08:01,451 [INFO]   → Navegação: recursos_florestais
+2026-07-23 19:08:36,481 [ERROR]   ✖ Locator.click: Timeout 30000ms exceeded.
+Call log:
+  - waiting for get_by_role("row", name="Requerimentos", exact=True)
+
+2026-07-23 19:08:36,762 [INFO]   ✔ Status mudou: "Constituído processo | ✅ Sem pendências" → "None"
+2026-07-23 19:08:36,788 [INFO] --- [cmrcu7ffw000bgwnabngsgbaf] Isete Pereira | Processo: 26040053943/2026 ---
+2026-07-23 19:08:38,919 [INFO]   → Abrindo SIGLA...
+2026-07-23 19:08:40,345 [INFO]   → Login OK.
+2026-07-23 19:08:40,346 [INFO]   → Navegação: recursos_florestais
+2026-07-23 19:09:15,371 [ERROR]   ✖ Locator.click: Timeout 30000ms exceeded.
+Call log:
+  - waiting for get_by_role("row", name="Requerimentos", exact=True)
+
+2026-07-23 19:09:15,715 [INFO]   ✔ Status mudou: "Constituído processo | ✅ Sem pendências" → "None"
+2026-07-23 19:09:15,737 [INFO] --- [cmrcu4twd000410txncvzfghq] Raiton | Processo: 25110049770/2025 ---
+2026-07-23 19:09:17,658 [INFO]   → Abrindo SIGLA...
+2026-07-23 19:09:19,171 [INFO]   → Login OK.
+2026-07-23 19:09:19,174 [INFO]   → Navegação: recursos_florestais
+2026-07-23 19:09:54,186 [ERROR]   ✖ Locator.click: Timeout 30000ms exceeded.
+Call log:
+  - waiting for get_by_role("row", name="Requerimentos", exact=True)
+
+2026-07-23 19:09:54,430 [INFO]   ✔ Status mudou: "Constituído processo | ✅ Sem pendências" → "None"
+2026-07-23 19:09:54,446 [INFO] --- [PRJ-0003] Jailson Lima Claro | Processo: 26070010650/2026 ---
+2026-07-23 19:09:56,466 [INFO]   → Abrindo SIGLA...
+2026-07-23 19:09:57,787 [INFO]   → Login OK.
+2026-07-23 19:09:57,788 [INFO]   → Navegação: licenciamento_ambiental
+2026-07-23 19:10:32,800 [ERROR]   ✖ Locator.click: Timeout 30000ms exceeded.
+Call log:
+  - waiting for get_by_role("row", name="Requerimentos", exact=True)
+
+2026-07-23 19:10:33,080 [INFO]   ✔ Status mudou: "Constituído processo | 🔴 Em exigência" → "None"
+2026-07-23 19:10:33,096 [INFO] --- [cmrcudlxr000wgwnavt8x1pjk] Talvane | Processo: 26040034502/2026 ---
+2026-07-23 19:10:35,101 [INFO]   → Abrindo SIGLA...
+2026-07-23 19:10:36,610 [INFO]   → Login OK.
+2026-07-23 19:10:36,610 [INFO]   → Navegação: recursos_hidricos
+2026-07-23 19:11:11,633 [ERROR]   ✖ Locator.click: Timeout 30000ms exceeded.
+Call log:
+  - waiting for get_by_role("row", name="Requerimentos", exact=True)
+
+2026-07-23 19:11:11,936 [INFO]   ✔ Status mudou: "Constituído processo | 🔴 Em exigência" → "None"
+2026-07-23 19:11:11,954 [INFO] --- [cmrcu65de000b10txol49cypb] Roniel Barros | Processo: 26010021070/2026 ---
+2026-07-23 19:11:13,758 [INFO]   → Abrindo SIGLA...
+2026-07-23 19:11:15,059 [INFO]   → Login OK.
+2026-07-23 19:11:15,059 [INFO]   → Navegação: recursos_florestais
+2026-07-23 19:11:50,074 [ERROR]   ✖ Locator.click: Timeout 30000ms exceeded.
+Call log:
+  - waiting for get_by_role("row", name="Requerimentos", exact=True)
+
+2026-07-23 19:11:50,330 [INFO]   ✔ Status mudou: "Constituído processo | ✅ Sem pendências" → "None"
+2026-07-23 19:11:50,340 [INFO] --- [cmrcu6tst0004gwna08bo9bvb] Bianca Magalhaes | Processo: 25080037326/2025 ---
+2026-07-23 19:11:52,382 [INFO]   → Abrindo SIGLA...
+2026-07-23 19:11:53,889 [INFO]   → Login OK.
+2026-07-23 19:11:53,890 [INFO]   → Navegação: recursos_florestais
+2026-07-23 19:12:28,908 [ERROR]   ✖ Locator.click: Timeout 30000ms exceeded.
+Call log:
+  - waiting for get_by_role("row", name="Requerimentos", exact=True)
+
+2026-07-23 19:12:29,224 [INFO]   ✔ Status mudou: "Constituído processo | ✅ Sem pendências" → "None"
+2026-07-23 19:12:29,237 [INFO] --- [cmrcu8p13000pgwna48q4u5ep] Isaias | Processo: 25110049202/2025 ---
+2026-07-23 19:12:31,317 [INFO]   → Abrindo SIGLA...
+2026-07-23 19:12:32,720 [INFO]   → Login OK.
+2026-07-23 19:12:32,721 [INFO]   → Navegação: recursos_florestais
+2026-07-23 19:13:07,746 [ERROR]   ✖ Locator.click: Timeout 30000ms exceeded.
+Call log:
+  - waiting for get_by_role("row", name="Requerimentos", exact=True)
+
+2026-07-23 19:13:08,059 [INFO]   ✔ Status mudou: "Constituído processo | ✅ Sem pendências" → "None"
+2026-07-23 19:13:08,068 [INFO] --- [cmrcu9aka000i10txcee6xxr3] Eloi | Processo: 25080037570/2025 ---
+2026-07-23 19:13:10,231 [INFO]   → Abrindo SIGLA...
+2026-07-23 19:13:11,775 [INFO]   → Login OK.
+2026-07-23 19:13:11,775 [INFO]   → Navegação: recursos_florestais
+2026-07-23 19:13:46,807 [ERROR]   ✖ Locator.click: Timeout 30000ms exceeded.
+Call log:
+  - waiting for get_by_role("row", name="Requerimentos", exact=True)
+
+2026-07-23 19:13:47,089 [INFO]   ✔ Status mudou: "Constituído processo | ✅ Sem pendências" → "None"
+2026-07-23 19:13:47,099 [INFO] --- [PRJ-0016] Antônio Carlos Batista Muniz | Processo: 26070042160/2026 ---
+2026-07-23 19:13:49,389 [INFO]   → Abrindo SIGLA...
+2026-07-23 19:13:53,743 [INFO]   → Login OK.
+2026-07-23 19:13:53,744 [INFO]   → Navegação: licenciamento_ambiental
+2026-07-23 19:14:28,766 [ERROR]   ✖ Locator.click: Timeout 30000ms exceeded.
+Call log:
+  - waiting for get_by_role("row", name="Requerimentos", exact=True)
+
+2026-07-23 19:14:29,029 [INFO]   ✔ Status inalterado: "None"
+2026-07-23 19:14:29,045 [INFO] --- [cmrcucr1q000p10txqe83wo0k] Marcos Padrasto | Processo: 26050038165/2026 ---
+2026-07-23 19:14:30,484 [INFO]   → Abrindo SIGLA...
+2026-07-23 19:14:31,988 [INFO]   → Login OK.
+2026-07-23 19:14:31,988 [INFO]   → Navegação: recursos_florestais
+2026-07-23 19:15:07,007 [ERROR]   ✖ Locator.click: Timeout 30000ms exceeded.
+Call log:
+  - waiting for get_by_role("row", name="Requerimentos", exact=True)
+
+2026-07-23 19:15:08,105 [INFO]   ✔ Status mudou: "Constituído processo | 🔴 Em exigência" → "None"
+2026-07-23 19:15:08,391 [INFO] === Fim — 0 OK, 11 erro(s), 441s ===

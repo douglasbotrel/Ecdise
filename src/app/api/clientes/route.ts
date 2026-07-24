@@ -25,7 +25,16 @@ export async function GET(request: NextRequest) {
       where,
       orderBy: { nome: 'asc' },
       take: limit,
-      include: { _count: { select: { projetos: true } } }
+      include: {
+        _count: { select: { projetos: true } },
+        projetos: {
+          select: {
+            id: true, codigo: true, imovelNome: true, imovelEndereco: true,
+            municipio: true, estado: true, car: true, areaHectares: true,
+          },
+          orderBy: { criadoEm: 'desc' },
+        },
+      }
     })
 
     return NextResponse.json({ clientes })

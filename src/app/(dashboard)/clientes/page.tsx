@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, Fragment } from 'react'
 import { toast } from 'sonner'
-import { Plus, Search, Edit2, X, Users, Loader2 } from 'lucide-react'
+import { Plus, Search, Edit2, X, Users, Loader2, ChevronDown, ChevronUp, MapPin, Home } from 'lucide-react'
 
 interface ClienteForm {
   nome: string
@@ -44,6 +44,27 @@ export default function ClientesPage() {
   const [clienteSelecionado, setClienteSelecionado] = useState<any | null>(null)
   const [form, setForm]                       = useState<ClienteForm>(FORM_VAZIO)
   const [salvando, setSalvando]               = useState(false)
+  const [expandido, setExpandido]             = useState<Record<string, boolean>>({})
+
+  function fazendasDoCliente(c: any): { nome: string; municipio: string; estado: string; car: string; area: number | null; codigos: string[] }[] {
+    const mapa = new Map<string, { nome: string; municipio: string; estado: string; car: string; area: number | null; codigos: string[] }>()
+    for (const p of c.projetos || []) {
+      const chave = `${p.imovelNome || 'Sem nome do imóvel'}|${p.car || ''}`
+      if (!mapa.has(chave)) {
+        mapa.set(chave, {
+          nome: p.imovelNome || 'Sem nome do imóvel',
+          municipio: p.municipio || c.municipio || '',
+          estado: p.estado || c.estado || '',
+          car: p.car || '',
+          area: p.areaHectares ?? null,
+          codigos: [p.codigo],
+        })
+      } else {
+        mapa.get(chave)!.codigos.push(p.codigo)
+      }
+    }
+    return Array.from(mapa.values())
+  }
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -162,8 +183,12 @@ export default function ClientesPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
-                {clientes.map((c) => (
-                  <tr key={c.id} className="hover:bg-gray-50 transition-colors">
+                {clientes.map((c) => {
+                  const fazendas = fazendasDoCliente(c)
+                  const aberto = !!expandido[c.id]
+                  return (
+                  <Fragment key={c.id}>
+                  <tr className="hover:bg-gray-50 transition-colors">
                     <td className="px-4 py-3">
                       <p className="text-sm font-medium text-gray-900">{c.nome}</p>
                     </td>
@@ -180,7 +205,17 @@ export default function ClientesPage() {
                       </span>
                     </td>
                     <td className="px-4 py-3">
-                      <span className="text-sm text-gray-600">{c._count?.projetos ?? 0}</span>
+                      {fazendas.length > 0 ? (
+                        <button
+                          onClick={() => setExpandido(p => ({ ...p, [c.id]: !p[c.id] }))}
+                          className="flex items-center gap-1 text-sm text-green-700 font-medium hover:text-green-800"
+                        >
+                          {c._count?.projetos ?? 0} · {fazendas.length} fazenda{fazendas.length > 1 ? 's' : ''}
+                          {aberto ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                        </button>
+                      ) : (
+                        <span className="text-sm text-gray-600">{c._count?.projetos ?? 0}</span>
+                      )}
                     </td>
                     <td className="px-4 py-3">
                       <button onClick={() => abrirEditar(c)}
@@ -189,7 +224,34 @@ export default function ClientesPage() {
                       </button>
                     </td>
                   </tr>
-                ))}
+                  {aberto && fazendas.length > 0 && (
+                    <tr key={`${c.id}-fazendas`} className="bg-gray-50/60">
+                      <td colSpan={6} className="px-4 py-3">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                          {fazendas.map((f, i) => (
+                            <div key={i} className="bg-white border border-gray-100 rounded-xl p-3">
+                              <div className="flex items-center gap-1.5 mb-1.5">
+                                <Home className="w-3.5 h-3.5 text-green-600 flex-shrink-0" />
+                                <p className="text-sm font-semibold text-gray-900 truncate">{f.nome}</p>
+                              </div>
+                              <div className="space-y-1 text-xs text-gray-500">
+                                <p className="flex items-center gap-1">
+                                  <MapPin className="w-3 h-3 flex-shrink-0" />
+                                  {f.municipio || '—'}{f.estado ? `/${f.estado}` : ''}
+                                </p>
+                                <p>Área: {f.area != null ? `${Number(f.area).toLocaleString('pt-BR')} ha` : '—'}</p>
+                                <p className="truncate" title={f.car}>CAR: {f.car || '—'}</p>
+                                <p className="text-gray-400">Projeto(s): {f.codigos.join(', ')}</p>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                  </Fragment>
+                  )
+                })}
               </tbody>
             </table>
           </div>

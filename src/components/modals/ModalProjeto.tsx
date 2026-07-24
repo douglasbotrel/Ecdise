@@ -110,6 +110,8 @@ export function ModalProjeto({ open, onClose, projeto, onSalvo, modoAcao = 'edit
   const [usuarios, setUsuarios] = useState<any[]>([])
   const [loading, setLoading] = useState(false)
   const [novoCliente, setNovoCliente] = useState(false)
+  const carFileInputRef = useRef<HTMLInputElement>(null)
+  const [importandoCar, setImportandoCar] = useState(false)
   const [arquivos, setArquivos] = useState<{ nome: string; url: string; uploading?: boolean }[]>([])
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -268,8 +270,8 @@ export function ModalProjeto({ open, onClose, projeto, onSalvo, modoAcao = 'edit
     if (fileInputRef.current) fileInputRef.current.value = ''
   }
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault()
+  async function handleSubmit(e?: React.FormEvent, fecharValidacao: boolean = true) {
+    e?.preventDefault()
 
     if (modoReal === 'criar') {
       if (!form.tipoServico) { toast.error('Selecione o tipo de serviço'); return }
@@ -323,8 +325,10 @@ export function ModalProjeto({ open, onClose, projeto, onSalvo, modoAcao = 'edit
           valorProposto: calcularValorTotal(form.servicosContratados),
           gestorResponsavelId: form.gestorResponsavelId || null,
           supervisorId: form.supervisorId || null,
-          avancarPipeline: true,
-          observacaoTransicao: 'Serviços e valores validados pelo ADM — encaminhado ao setor de contratos',
+          avancarPipeline: fecharValidacao,
+          observacaoTransicao: fecharValidacao
+            ? 'Serviços e valores validados pelo ADM — encaminhado ao setor de contratos'
+            : 'Serviços e valor total salvos — proposta ainda não fechada com o cliente',
         }
       } else if (modoReal === 'contrato_info') {
         const resContrato = await fetch('/api/contratos', {
@@ -395,7 +399,7 @@ export function ModalProjeto({ open, onClose, projeto, onSalvo, modoAcao = 'edit
       const msgs: Record<string, string> = {
         criar:         '✅ Projeto criado! Analista notificado.',
         analise:       '✅ Análise concluída! ADM notificado para validação.',
-        validacao:     '✅ Proposta validada! Setor de contratos notificado.',
+        validacao:     fecharValidacao ? '✅ Proposta validada! Setor de contratos notificado.' : '💾 Valores salvos — proposta ainda não fechada.',
         contrato_info: '✅ Contrato salvo! Financeiro notificado para aguardar sinal.',
         financeiro:    !projeto?.contrato?.valorTotal || Number(projeto?.contrato?.valorTotal) <= 0
           ? '✅ Projeto liberado para Operacional! Defina o valor do contrato depois.'
@@ -433,6 +437,57 @@ export function ModalProjeto({ open, onClose, projeto, onSalvo, modoAcao = 'edit
     .normalize('NFD').replace(/[̀-ͯ]/g, '')
   const servicosAmbiental    = servicos.filter(s => normalizeCateg(s.categoria) === 'ambiental')
   const servicosRegularizacao = servicos.filter(s => ['regularizacao', 'regularização'].includes(normalizeCateg(s.categoria)))
+
+  async function handleImportarCar(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    const tiposAceitos = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png']
+    if (!tiposAceitos.includes(file.type)) {
+      toast.error('Envie um arquivo PDF, JPG ou PNG')
+      if (carFileInputRef.current) carFileInputRef.current.value = ''
+      return
+    }
+
+    setImportandoCar(true)
+    try {
+      const base64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader()
+        reader.onload = () => resolve((reader.result as string).split(',')[1])
+        reader.onerror = () => reject(new Error('Falha ao ler o arquivo'))
+        reader.readAsDataURL(file)
+      })
+
+      const res = await fetch('/api/car/extrair', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fileBase64: base64, mimeType: file.type, fileName: file.name }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        toast.error(data.error || 'Erro ao ler o documento')
+        return
+      }
+
+      const { dados } = data
+      // Preenche o formulário — o usuário ainda precisa revisar e confirmar
+      setNovoCliente(true)
+      if (dados.nomeCliente) set('clienteNome', dados.nomeCliente)
+      if (dados.cpfCnpj) set('clienteCpfCnpj', maskCpfCnpj(dados.cpfCnpj))
+      if (dados.municipio) set('municipio', dados.municipio)
+      if (dados.estado) set('estado', dados.estado.toUpperCase().slice(0, 2))
+      if (dados.nomeFazenda) set('imovelNome', dados.nomeFazenda)
+      if (dados.areaHectares && Number(dados.areaHectares) > 0) set('areaHectares', dados.areaHectares)
+      if (dados.car) set('car', dados.car)
+
+      toast.success('Dados extraídos do CAR! Confira e corrija o que precisar antes de salvar.')
+    } catch (err) {
+      toast.error('Erro ao importar o documento CAR')
+    } finally {
+      setImportandoCar(false)
+      if (carFileInputRef.current) carFileInputRef.current.value = ''
+    }
+  }
 
   function calcularValorTotal(nomes: string[]): number {
     return servicos
@@ -501,6 +556,25 @@ export function ModalProjeto({ open, onClose, projeto, onSalvo, modoAcao = 'edit
 
           {/* ── MODO CRIAR ──────────────────────────────────────── */}
           {modoReal === 'criar' && (<>
+            <div className="bg-green-50 border border-dashed border-green-200 rounded-xl p-3.5 flex items-center justify-between gap-3">
+              <div>
+                <p className="text-sm font-semibold text-green-800">📄 Importar dados via CAR</p>
+                <p className="text-xs text-green-600 mt-0.5">
+                  Envie o PDF ou foto do CAR — nome, CPF, fazenda, município e área são preenchidos automaticamente. Você confere e corrige antes de salvar.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => carFileInputRef.current?.click()}
+                disabled={importandoCar}
+                className="flex-shrink-0 flex items-center gap-1.5 px-3.5 py-2 bg-white border border-green-300 text-green-700 text-sm font-medium rounded-lg hover:bg-green-50 disabled:opacity-60"
+              >
+                {importandoCar ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+                {importandoCar ? 'Lendo documento...' : 'Importar CAR'}
+              </button>
+              <input ref={carFileInputRef} type="file" accept=".pdf,.jpg,.jpeg,.png" className="hidden" onChange={handleImportarCar} />
+            </div>
+
             <div>
               <div className="flex items-center justify-between mb-1.5">
                 <label className="text-sm font-medium text-gray-700">Cliente *</label>
@@ -1009,21 +1083,35 @@ export function ModalProjeto({ open, onClose, projeto, onSalvo, modoAcao = 'edit
               className="px-5 py-2.5 border border-gray-200 rounded-xl text-gray-700 hover:bg-gray-50 font-medium text-sm">
               Cancelar
             </button>
-            <button type="submit" disabled={loading}
-              className="px-5 py-2.5 bg-green-600 hover:bg-green-700 disabled:bg-green-400 text-white font-semibold rounded-xl text-sm flex items-center gap-2">
-              {loading && <Loader2 className="w-4 h-4 animate-spin" />}
-              {modoReal === 'criar'         && 'Criar e Notificar Analista'}
-              {modoReal === 'analise'       && <><CheckCircle className="w-4 h-4" /> Concluir Análise</>}
-              {modoReal === 'validacao'     && <><CheckCircle className="w-4 h-4" /> Validar e Encaminhar Contrato</>}
-              {modoReal === 'contrato_info' && <><FileText className="w-4 h-4" /> Salvar Contrato e Notificar Financeiro</>}
-              {modoReal === 'financeiro'    && (
-                (!projeto?.contrato?.valorTotal || Number(projeto?.contrato?.valorTotal) <= 0)
-                  ? <><ArrowRight className="w-4 h-4" /> Liberar para Operacional</>
-                  : <><DollarSign className="w-4 h-4" /> Confirmar Recebimento</>
-              )}
-              {modoReal === 'operacional'   && <><ArrowRight className="w-4 h-4" /> Atribuir e Iniciar</>}
-              {modoReal === 'editar'        && 'Salvar Alterações'}
-            </button>
+            {modoReal === 'validacao' ? (
+              <>
+                <button type="button" onClick={() => handleSubmit(undefined, false)} disabled={loading}
+                  className="px-5 py-2.5 border border-amber-200 bg-amber-50 hover:bg-amber-100 disabled:opacity-50 text-amber-700 font-semibold rounded-xl text-sm flex items-center gap-2">
+                  {loading && <Loader2 className="w-4 h-4 animate-spin" />}
+                  Salvar — Serviço Não Fechado
+                </button>
+                <button type="button" onClick={() => handleSubmit(undefined, true)} disabled={loading}
+                  className="px-5 py-2.5 bg-green-600 hover:bg-green-700 disabled:bg-green-400 text-white font-semibold rounded-xl text-sm flex items-center gap-2">
+                  {loading && <Loader2 className="w-4 h-4 animate-spin" />}
+                  <CheckCircle className="w-4 h-4" /> Encerrar e Enviar Contrato
+                </button>
+              </>
+            ) : (
+              <button type="submit" disabled={loading}
+                className="px-5 py-2.5 bg-green-600 hover:bg-green-700 disabled:bg-green-400 text-white font-semibold rounded-xl text-sm flex items-center gap-2">
+                {loading && <Loader2 className="w-4 h-4 animate-spin" />}
+                {modoReal === 'criar'         && 'Criar e Notificar Analista'}
+                {modoReal === 'analise'       && <><CheckCircle className="w-4 h-4" /> Concluir Análise</>}
+                {modoReal === 'contrato_info' && <><FileText className="w-4 h-4" /> Salvar Contrato e Notificar Financeiro</>}
+                {modoReal === 'financeiro'    && (
+                  (!projeto?.contrato?.valorTotal || Number(projeto?.contrato?.valorTotal) <= 0)
+                    ? <><ArrowRight className="w-4 h-4" /> Liberar para Operacional</>
+                    : <><DollarSign className="w-4 h-4" /> Confirmar Recebimento</>
+                )}
+                {modoReal === 'operacional'   && <><ArrowRight className="w-4 h-4" /> Atribuir e Iniciar</>}
+                {modoReal === 'editar'        && 'Salvar Alterações'}
+              </button>
+            )}
           </div>
         </form>
       </div>
