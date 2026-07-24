@@ -47,6 +47,11 @@ export default function AcompanhamentoDetalhe() {
   // Toggle de ação individual (mostra spinner na linha)
   const [togglingId, setTogglingId] = useState<string | null>(null)
 
+  // Credenciais de acesso ao SIGLA (CPF + senha do cliente)
+  const [editandoCredSigla, setEditandoCredSigla] = useState(false)
+  const [credSiglaForm, setCredSiglaForm]         = useState({ login: '', senha: '' })
+  const [salvandoCredSigla, setSalvandoCredSigla] = useState(false)
+
   // Override manual de expandir/retrair cada card de pendência (chave = pendencia.id)
   const [expandedOverride, setExpandedOverride] = useState<Record<string, boolean>>({})
 
@@ -80,12 +85,35 @@ export default function AcompanhamentoDetalhe() {
     finally { setSalvandoTipo(false) }
   }
 
+  // ── Salvar credenciais de acesso ao SIGLA (CPF + senha do cliente) ──
+  async function salvarCredSigla() {
+    if (!credSiglaForm.login.trim() || !credSiglaForm.senha.trim()) {
+      toast.error('Preencha CPF e senha')
+      return
+    }
+    setSalvandoCredSigla(true)
+    try {
+      const credsAtuais = projeto?.credenciais ? (() => { try { return JSON.parse(projeto.credenciais) } catch { return {} } })() : {}
+      const novasCreds = { ...credsAtuais, SIGLA: { login: credSiglaForm.login.trim(), senha: credSiglaForm.senha } }
+      const res = await fetch(`/api/projetos/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ credenciais: JSON.stringify(novasCreds) }),
+      })
+      if (!res.ok) { toast.error('Erro ao salvar credenciais'); return }
+      toast.success('Credenciais do SIGLA salvas!')
+      setEditandoCredSigla(false)
+      loadProjeto()
+    } catch { toast.error('Erro ao salvar credenciais') }
+    finally { setSalvandoCredSigla(false) }
+  }
+
   // Modal Verificar agora (instrução para rodar o script)
   const [modalRodar, setModalRodar] = useState(false)
   const [copiado, setCopiado]       = useState(false)
 
-  const cmdSoEste = `python sigla_checker.py --id ${id}`
-  const cmdTodos  = 'python sigla_checker.py'
+  const cmdSoEste = `py sigla_checker.py --id ${id}`
+  const cmdTodos  = 'py sigla_checker.py'
 
   function copiarComando() {
     navigator.clipboard.writeText(cmdSoEste).then(() => {
@@ -458,6 +486,72 @@ export default function AcompanhamentoDetalhe() {
               : 'Ative "Em acompanhamento" para iniciar as consultas automáticas'}
           </p>
         )}
+      </div>
+
+      {/* ── Credenciais de acesso ao SIGLA (CPF + senha do cliente) ── */}
+      <div className="bg-white rounded-xl border border-gray-100 p-3 sm:p-4">
+        <div className="flex items-center justify-between flex-wrap gap-2 mb-2">
+          <span className="text-xs font-medium text-gray-500">🔑 Acesso ao SIGLA (CPF + senha)</span>
+          {!editandoCredSigla && (
+            <button
+              onClick={() => {
+                const creds = projeto.credenciais ? (() => { try { return JSON.parse(projeto.credenciais) } catch { return {} } })() : {}
+                setCredSiglaForm({ login: creds.SIGLA?.login || '', senha: creds.SIGLA?.senha || '' })
+                setEditandoCredSigla(true)
+              }}
+              className="flex items-center gap-1 text-xs text-green-600 hover:text-green-700 font-medium"
+            >
+              <Pencil className="w-3 h-3" /> {(() => {
+                const creds = projeto.credenciais ? (() => { try { return JSON.parse(projeto.credenciais) } catch { return {} } })() : {}
+                return creds.SIGLA?.login ? 'Editar' : 'Adicionar'
+              })()}
+            </button>
+          )}
+        </div>
+
+        {editandoCredSigla ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <input
+              value={credSiglaForm.login}
+              onChange={e => setCredSiglaForm(p => ({ ...p, login: e.target.value }))}
+              placeholder="CPF (ex: 000.000.000-00)"
+              className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+            />
+            <input
+              value={credSiglaForm.senha}
+              onChange={e => setCredSiglaForm(p => ({ ...p, senha: e.target.value }))}
+              placeholder="Senha"
+              className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+            />
+            <div className="sm:col-span-2 flex justify-end gap-2 pt-1">
+              <button
+                onClick={() => setEditandoCredSigla(false)}
+                className="px-3 py-1.5 text-xs font-medium text-gray-500 hover:bg-gray-50 rounded-lg"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={salvarCredSigla}
+                disabled={salvandoCredSigla}
+                className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50"
+              >
+                <Save className="w-3 h-3" /> {salvandoCredSigla ? 'Salvando...' : 'Salvar'}
+              </button>
+            </div>
+          </div>
+        ) : (() => {
+          const creds = projeto.credenciais ? (() => { try { return JSON.parse(projeto.credenciais) } catch { return {} } })() : {}
+          return creds.SIGLA?.login ? (
+            <div className="flex flex-wrap gap-4 text-sm">
+              <span><span className="text-gray-400">CPF:</span> <span className="font-mono text-gray-800">{creds.SIGLA.login}</span></span>
+              <span><span className="text-gray-400">Senha:</span> <span className="font-mono text-gray-800">{creds.SIGLA.senha}</span></span>
+            </div>
+          ) : (
+            <p className="text-sm text-gray-400 italic">
+              Sem credenciais cadastradas — necessário para o robô consultar o SIGLA automaticamente.
+            </p>
+          )
+        })()}
       </div>
 
       {/* ── Licença concedida (se existir) ─────────────────────── */}
