@@ -1061,3 +1061,33 @@ Call log:
 2026-07-24 18:33:02,303 [INFO] === Início — 24/07/2026 18:33 ===
 2026-07-24 18:33:02,697 [INFO] 11 projeto(s) para verificar.
 2026-07-24 18:33:06,835 [INFO] --- [cmrcu65de000b10txol49cypb] Roniel Barros | Processo: 26010021070/2026 ---
+2026-07-24 18:33:12,666 [INFO]   → Abrindo SIGLA...
+2026-07-24 18:33:17,274 [INFO]   → Login OK.
+2026-07-24 18:33:17,275 [INFO]   → Navegação: recursos_florestais
+2026-07-24 18:33:52,361 [ERROR]   ✖ Locator.click: Timeout 30000ms exceeded.
+Call log:
+  - waiting for get_by_role("row", name="Requerimentos", exact=True)
+
+2026-07-24 18:33:52,660 [INFO]   ✔ Status mudou: "Constituído processo | ✅ Sem pendências" → "None"
+2026-07-24 18:33:52,722 [INFO] --- [cmrcu6tst0004gwna08bo9bvb] Bianca Magalhaes | Processo: 25080037326/2025 ---
+2026-07-24 18:33:54,779 [INFO]   → Abrindo SIGLA...
+2026-07-24 18:33:56,219 [INFO]   → Login OK.
+2026-07-24 18:33:56,219 [INFO]   → Navegação: recursos_florestais
+2026-07-24 18:34:31,236 [ERROR]   ✖ Locator.click: Timeout 30000ms exceeded.
+Call log:
+  - waiting for get_by_role("row", name="Requerimentos", exact=True)
+
+2026-07-24 18:34:31,502 [INFO]   ✔ Status mudou: "Constituído processo | ✅ Sem pendências" → "None"
+2026-07-24 18:34:31,520 [INFO] --- [cmrcu84ov000igwnaioig3lgz] Maurilio | Processo: 25080037650/2025 ---
+2026-07-24 18:34:33,595 [INFO]   → Abrindo SIGLA...
+2026-07-24 18:34:35,186 [INFO]   → Login OK.
+2026-07-24 18:34:35,188 [INFO]   → Navegação: recursos_florestais
+2026-07-24 18:35:10,201 [ERROR]   ✖ Locator.click: Timeout 30000ms exceeded.
+Call log:
+  - waiting for get_by_role("row", name="Requerimentos", exact=True)
+
+2026-07-24 18:35:10,482 [INFO]   ✔ Status mudou: "Constituído processo | ✅ Sem pendências" → "None"
+2026-07-24 18:35:10,495 [INFO] --- [cmrcu7ffw000bgwnabngsgbaf] Isete Pereira | Processo: 26040053943/2026 ---
+2026-07-24 18:35:12,529 [INFO]   → Abrindo SIGLA...
+2026-07-24 18:35:13,979 [INFO]   → Login OK.
+2026-07-24 18:35:13,980 [INFO]   → Navegação: recursos_florestais
