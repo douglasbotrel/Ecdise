@@ -225,6 +225,22 @@ export async function PATCH(request: NextRequest) {
       include: { responsavel: { select: { id: true, nome: true } } }
     })
 
+    // ── Tarefa concluída no Operacional → fecha a vistoria de campo vinculada ──
+    // Evita que a vistoria continue aparecendo em "Minhas Vistorias" (Agendada/
+    // Em Campo) depois que a ação já foi dada como concluída no Operacional.
+    if (status === 'CONCLUIDA' && tarefaAtual.requerVistoriaCampo) {
+      const vistoriaVinculada = await prisma.vistoria.findUnique({ where: { tarefaId: id } })
+      if (vistoriaVinculada && !['REALIZADA', 'CANCELADA'].includes(vistoriaVinculada.status)) {
+        await prisma.vistoria.update({
+          where: { id: vistoriaVinculada.id },
+          data: {
+            status: 'REALIZADA',
+            dataRealizada: vistoriaVinculada.dataRealizada || new Date(),
+          },
+        })
+      }
+    }
+
     // ── Notificar quando responsável é designado ─────────────────────────
     if (
       responsavelId &&

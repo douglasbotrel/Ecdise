@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import Link from 'next/link'
 import {
@@ -19,6 +20,7 @@ function categorizarSIGLA(statusSIGLA: string | null): SiglaCategoria {
 }
 
 export default function AcompanhamentoPage() {
+  const router = useRouter()
   const [projetos, setProjetos]       = useState<any[]>([])
   const [loading, setLoading]         = useState(true)
   const [search, setSearch]           = useState('')
@@ -86,6 +88,38 @@ export default function AcompanhamentoPage() {
   const emExigencia  = projetos.filter(p => categorizarSIGLA(p.statusSIGLA) === 'exigencia').length
   const semPend      = projetos.filter(p => categorizarSIGLA(p.statusSIGLA) === 'ok' && !p.licenca).length
   const totalLicenc  = projetos.filter(p => !!p.licenca).length
+
+  // ── Resumo de pendências formais (Pendencia/AcaoPendencia) por projeto ──
+  const resumoPendencias = visiveis
+    .map((p: any) => {
+      const abertas = (p.pendencias || []).filter((pd: any) => pd.status === 'ABERTA')
+      if (abertas.length === 0) return null
+      const prazosValidos = abertas
+        .map((pd: any) => pd.prazoResposta ? new Date(pd.prazoResposta).getTime() : null)
+        .filter((t: number | null): t is number => t !== null && !isNaN(t))
+      const prazoMaisProximo = prazosValidos.length > 0 ? new Date(Math.min(...prazosValidos)) : null
+      const dias = prazoMaisProximo
+        ? Math.ceil((prazoMaisProximo.getTime() - new Date().setHours(0, 0, 0, 0)) / 86_400_000)
+        : null
+      return { projeto: p, quantidade: abertas.length, prazo: prazoMaisProximo, dias }
+    })
+    .filter((x: any): x is NonNullable<typeof x> => x !== null)
+    .sort((a: any, b: any) => (a.dias ?? 9999) - (b.dias ?? 9999))
+
+  function corPrazo(dias: number | null) {
+    if (dias === null) return 'text-gray-400'
+    if (dias < 0) return 'text-red-700 font-bold'
+    if (dias <= 3) return 'text-red-600 font-semibold'
+    if (dias <= 7) return 'text-amber-600 font-semibold'
+    return 'text-gray-600'
+  }
+
+  function textoPrazo(dias: number | null) {
+    if (dias === null) return '—'
+    if (dias < 0) return `Vencido há ${Math.abs(dias)}d`
+    if (dias === 0) return 'Vence hoje'
+    return `${dias} dia${dias > 1 ? 's' : ''}`
+  }
 
   return (
     <div className="space-y-5">
@@ -157,6 +191,56 @@ export default function AcompanhamentoPage() {
           <RefreshCw className="w-4 h-4" /> Atualizar
         </button>
       </div>
+
+      {/* ── Lista de pendências (com prazo) ────────────── */}
+      {!loading && resumoPendencias.length > 0 && (
+        <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+          <div className="px-4 py-3 border-b border-gray-100 flex items-center gap-2">
+            <AlertTriangle className="w-4 h-4 text-red-500" />
+            <h2 className="text-sm font-semibold text-gray-900">
+              Pendências abertas ({resumoPendencias.length})
+            </h2>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="text-left text-xs font-semibold text-gray-500 px-4 py-2">Cliente</th>
+                  <th className="text-left text-xs font-semibold text-gray-500 px-4 py-2">Fazenda</th>
+                  <th className="text-left text-xs font-semibold text-gray-500 px-4 py-2">Processo</th>
+                  <th className="text-center text-xs font-semibold text-gray-500 px-4 py-2">Qtd.</th>
+                  <th className="text-left text-xs font-semibold text-gray-500 px-4 py-2">Prazo</th>
+                  <th className="text-left text-xs font-semibold text-gray-500 px-4 py-2">Dias p/ vencer</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-50">
+                {resumoPendencias.map(({ projeto: p, quantidade, prazo, dias }: any) => (
+                  <tr
+                    key={p.id}
+                    onClick={() => router.push(`/acompanhamento/${p.id}`)}
+                    className="hover:bg-gray-50 cursor-pointer transition-colors"
+                  >
+                    <td className="px-4 py-2.5 text-sm font-medium text-gray-900">{p.cliente?.nome || '—'}</td>
+                    <td className="px-4 py-2.5 text-sm text-gray-600">{p.imovelNome || '—'}</td>
+                    <td className="px-4 py-2.5 text-sm font-mono text-gray-600">{p.protocoloCodigoOrgao || p.codigo}</td>
+                    <td className="px-4 py-2.5 text-center">
+                      <span className="inline-flex items-center justify-center w-6 h-6 bg-red-100 text-red-700 text-xs font-bold rounded-full">
+                        {quantidade}
+                      </span>
+                    </td>
+                    <td className="px-4 py-2.5 text-sm text-gray-600">
+                      {prazo ? prazo.toLocaleDateString('pt-BR') : '—'}
+                    </td>
+                    <td className={`px-4 py-2.5 text-sm ${corPrazo(dias)}`}>
+                      {textoPrazo(dias)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
       {/* ── Duas Colunas ──────────────────────────────── */}
       {loading ? (

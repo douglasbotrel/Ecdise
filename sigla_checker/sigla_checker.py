@@ -53,10 +53,16 @@ log = logging.getLogger(__name__)
 # ──────────────────────────────────────────────
 TIPO_SERVICO_MAP = {
     # ⚠️ ORDEM IMPORTA: chaves mais específicas primeiro para evitar
-    # que 'lau' (substring de 'laur') seja detectada antes de 'laur'.
+    # que 'lau' (substring de 'laur') seja detectada antes de 'laur',
+    # e que o 'lar' genérico (de 'reguLARização') capture 'luar' antes da hora.
 
     # Requerimentos → Recursos florestais → Listar
     'laur':          'recursos_florestais',       # ✅ confirmado — DEVE vir antes de 'lau'
+    'luar':          'recursos_florestais',       # ✅ Licença Única Ambiental de Regularização — bug 2026-07:
+                                                    #    "LUAR" caía no 'lar' genérico (de "regularização") e ia
+                                                    #    pra aba errada (Licenciamento Ambiental), escondendo
+                                                    #    pendências de Recursos Florestais/Supressão. Precisa
+                                                    #    vir ANTES da chave 'lar' abaixo.
     'florestal':     'recursos_florestais',
     'floresta':      'recursos_florestais',
 
@@ -128,18 +134,36 @@ def enviar_status(projeto_id: str, protocolo: str, status_novo: str | None, erro
 def fazer_login(page, login: str, senha: str):
     """
     Navega para o SIGLA e faz login com CPF + senha.
-    A partir de 2026-07, o formulário de login já aparece direto na primeira
-    tela (sem a etapa de clicar em "Módulo Empreendedor"), e os campos
-    passaram a usar o prefixo "loginForm" em vez de "j_idt35".
-    Botão de acesso também mudou de "Acessar" para "Entrar".
+
+    O site tem alternado entre dois formatos de tela inicial (visto em 2026-07):
+      A) Formulário de login já na primeira tela — campos "loginForm:cpf" /
+         "loginForm:senha", botão "Entrar".
+      B) Tela inicial pede clique em "Módulo Empreendedor" antes — depois
+         mostra campos "j_idt37:cpf" / "j_idt37:senha", botão "Acessar"
+         (confirmado via playwright codegen em 2026-07).
+
+    Tenta o formato A primeiro; se os campos não aparecerem em poucos
+    segundos, cai automaticamente para o formato B — assim o script continua
+    funcionando não importa qual dos dois o SIGLA mostrar naquele momento.
     """
     log.info('  → Abrindo SIGLA...')
     page.goto(SIGLA_BASE_URL, wait_until='domcontentloaded', timeout=60_000)
 
-    # Preenche CPF e senha (já na primeira tela)
-    page.locator('input[name="loginForm:cpf"]').fill(login)
-    page.locator('[id="loginForm:senha"]').fill(senha)
-    page.get_by_role('button', name='Entrar').click()
+    try:
+        # Formato A: login direto na primeira tela
+        campo_cpf = page.locator('input[name="loginForm:cpf"]')
+        campo_cpf.wait_for(timeout=5_000)
+        campo_cpf.fill(login)
+        page.locator('[id="loginForm:senha"]').fill(senha)
+        page.get_by_role('button', name='Entrar').click()
+    except PlaywrightTimeout:
+        # Formato B: precisa clicar em "Módulo Empreendedor" primeiro
+        log.info('  → Tela inicial no formato com "Módulo Empreendedor" — clicando...')
+        page.get_by_role('cell', name='Módulo Empreendedor', exact=True).click()
+        page.locator('input[name="j_idt37:cpf"]').fill(login)
+        page.locator('[id="j_idt37:senha"]').fill(senha)
+        page.get_by_role('button', name='Acessar').click()
+
     page.wait_for_load_state('domcontentloaded', timeout=30_000)
     log.info('  → Login OK.')
 

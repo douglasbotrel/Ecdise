@@ -200,6 +200,7 @@ model Tarefa {
   projeto     Projeto   @relation(fields: [projetoId], references: [id])
   responsavel Usuario?  @relation("TarefaResponsavel", fields: [responsavelId], references: [id])
   documentos  Documento[]
+  vistoriaVinculada Vistoria?
 
   @@map("tarefas")
 }
@@ -309,6 +310,7 @@ model Frota {
 model Vistoria {
   id            String   @id @default(cuid())
   projetoId     String
+  tarefaId      String?  @unique // Vincula à Tarefa de origem (Operacional) — permite fechar a vistoria automaticamente quando a tarefa é concluída
   titulo        String
   tipo          String   @default("VISTORIA_CAMPO")
   status        String   @default("AGENDADA")
@@ -336,6 +338,7 @@ model Vistoria {
   atualizadoEm DateTime @updatedAt
 
   projeto     Projeto      @relation(fields: [projetoId],     references: [id])
+  tarefa      Tarefa?      @relation(fields: [tarefaId],      references: [id])
   responsavel Usuario?     @relation("VistoriaResponsavel",   fields: [responsavelId], references: [id])
   equipeRef   Equipe?      @relation(fields: [equipeId],      references: [id])
   frotaRef    Frota?       @relation(fields: [frotaId],       references: [id])

@@ -53,7 +53,7 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json()
     const {
-      projetoId, titulo, tipo, dataAgendada, dataSaida, dataVolta,
+      projetoId, tarefaId, titulo, tipo, dataAgendada, dataSaida, dataVolta,
       local, municipio, responsavelId, equipeId, frotaId, equipe, frota, observacoes
     } = body
 
@@ -64,6 +64,7 @@ export async function POST(request: NextRequest) {
     const vistoria = await prisma.vistoria.create({
       data: {
         projetoId,
+        tarefaId: tarefaId || null,
         titulo: titulo || 'Vistoria de Campo',
         tipo: tipo || 'VISTORIA_CAMPO',
         dataAgendada: new Date(dataAgendada),

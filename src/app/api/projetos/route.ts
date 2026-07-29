@@ -56,7 +56,7 @@ export async function GET(request: NextRequest) {
           analistaRapido: { select: { id: true, nome: true } },
           contrato: { select: { id: true, statusContrato: true, valorTotal: true } },
           licenca: { select: { id: true, numero: true, dataEmissao: true, dataValidade: true } },
-          pendencias: { select: { id: true, status: true } },
+          pendencias: { select: { id: true, status: true, prazoResposta: true, numeroPedido: true, data: true } },
           _count: { select: { tarefas: true, vistorias: true, documentos: true } },
         },
         orderBy: { criadoEm: 'desc' },

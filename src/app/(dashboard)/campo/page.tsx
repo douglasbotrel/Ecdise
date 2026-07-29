@@ -109,6 +109,7 @@ export default function CampoPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           projetoId:    tarefa.projetoId || tarefa.projeto?.id,
+          tarefaId:     tarefa.id,
           titulo:       tarefa.titulo,
           tipo:         'VISTORIA_CAMPO',
           dataAgendada: dataSaidaEfetiva,

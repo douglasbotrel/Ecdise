@@ -1091,3 +1091,173 @@ Call log:
 2026-07-24 18:35:12,529 [INFO]   → Abrindo SIGLA...
 2026-07-24 18:35:13,979 [INFO]   → Login OK.
 2026-07-24 18:35:13,980 [INFO]   → Navegação: recursos_florestais
+2026-07-24 18:35:49,014 [ERROR]   ✖ Locator.click: Timeout 30000ms exceeded.
+Call log:
+  - waiting for get_by_role("row", name="Requerimentos", exact=True)
+
+2026-07-24 18:35:49,278 [INFO]   ✔ Status mudou: "Constituído processo | ✅ Sem pendências" → "None"
+2026-07-24 18:35:49,290 [INFO] --- [cmrcu4twd000410txncvzfghq] Raiton | Processo: 25110049770/2025 ---
+2026-07-24 18:35:51,375 [INFO]   → Abrindo SIGLA...
+2026-07-24 18:35:52,966 [INFO]   → Login OK.
+2026-07-24 18:35:52,968 [INFO]   → Navegação: recursos_florestais
+2026-07-24 18:36:27,981 [ERROR]   ✖ Locator.click: Timeout 30000ms exceeded.
+Call log:
+  - waiting for get_by_role("row", name="Requerimentos", exact=True)
+
+2026-07-24 18:36:28,237 [INFO]   ✔ Status mudou: "Constituído processo | ✅ Sem pendências" → "None"
+2026-07-24 18:36:28,251 [INFO] --- [PRJ-0003] Jailson Lima Claro | Processo: 26070010650/2026 ---
+2026-07-24 18:36:30,236 [INFO]   → Abrindo SIGLA...
+2026-07-24 18:36:32,020 [INFO]   → Login OK.
+2026-07-24 18:36:32,022 [INFO]   → Navegação: licenciamento_ambiental
+2026-07-24 18:37:07,039 [ERROR]   ✖ Locator.click: Timeout 30000ms exceeded.
+Call log:
+  - waiting for get_by_role("row", name="Requerimentos", exact=True)
+
+2026-07-24 18:37:07,528 [INFO]   ✔ Status mudou: "Constituído processo | 🔴 Em exigência" → "None"
+2026-07-24 18:37:07,543 [INFO] --- [cmrcudlxr000wgwnavt8x1pjk] Talvane | Processo: 26040034502/2026 ---
+2026-07-24 18:37:09,811 [INFO]   → Abrindo SIGLA...
+2026-07-24 18:37:11,307 [INFO]   → Login OK.
+2026-07-24 18:37:11,309 [INFO]   → Navegação: recursos_hidricos
+2026-07-24 18:37:46,325 [ERROR]   ✖ Locator.click: Timeout 30000ms exceeded.
+Call log:
+  - waiting for get_by_role("row", name="Requerimentos", exact=True)
+
+2026-07-24 18:37:46,601 [INFO]   ✔ Status mudou: "Constituído processo | 🔴 Em exigência" → "None"
+2026-07-24 18:37:46,611 [INFO] --- [cmrcu8p13000pgwna48q4u5ep] Isaias | Processo: 25110049202/2025 ---
+2026-07-24 18:37:48,671 [INFO]   → Abrindo SIGLA...
+2026-07-24 18:37:50,041 [INFO]   → Login OK.
+2026-07-24 18:37:50,045 [INFO]   → Navegação: recursos_florestais
+2026-07-24 18:38:25,064 [ERROR]   ✖ Locator.click: Timeout 30000ms exceeded.
+Call log:
+  - waiting for get_by_role("row", name="Requerimentos", exact=True)
+
+2026-07-24 18:38:25,381 [INFO]   ✔ Status mudou: "Constituído processo | ✅ Sem pendências" → "None"
+2026-07-24 18:38:25,395 [INFO] --- [cmrcu9aka000i10txcee6xxr3] Eloi | Processo: 25080037570/2025 ---
+2026-07-24 18:38:27,445 [INFO]   → Abrindo SIGLA...
+2026-07-24 18:38:28,953 [INFO]   → Login OK.
+2026-07-24 18:38:28,955 [INFO]   → Navegação: recursos_florestais
+2026-07-24 18:39:03,976 [ERROR]   ✖ Locator.click: Timeout 30000ms exceeded.
+Call log:
+  - waiting for get_by_role("row", name="Requerimentos", exact=True)
+
+2026-07-24 18:39:04,286 [INFO]   ✔ Status mudou: "Constituído processo | ✅ Sem pendências" → "None"
+2026-07-24 18:39:04,311 [INFO] --- [PRJ-0016] Antônio Carlos Batista Muniz | Processo: 26070042160/2026 ---
+2026-07-24 18:39:06,393 [INFO]   → Abrindo SIGLA...
+2026-07-24 18:39:07,737 [INFO]   → Login OK.
+2026-07-24 18:39:07,737 [INFO]   → Navegação: licenciamento_ambiental
+2026-07-24 18:39:42,747 [ERROR]   ✖ Locator.click: Timeout 30000ms exceeded.
+Call log:
+  - waiting for get_by_role("row", name="Requerimentos", exact=True)
+
+2026-07-24 18:39:43,047 [INFO]   ✔ Status inalterado: "None"
+2026-07-24 18:39:43,065 [INFO] --- [cmrcucr1q000p10txqe83wo0k] Marcos Padrasto | Processo: 26050038165/2026 ---
+2026-07-24 18:39:45,133 [INFO]   → Abrindo SIGLA...
+2026-07-24 18:39:46,665 [INFO]   → Login OK.
+2026-07-24 18:39:46,665 [INFO]   → Navegação: recursos_florestais
+2026-07-24 18:40:21,675 [ERROR]   ✖ Locator.click: Timeout 30000ms exceeded.
+Call log:
+  - waiting for get_by_role("row", name="Requerimentos", exact=True)
+
+2026-07-24 18:40:21,997 [INFO]   ✔ Status mudou: "Constituído processo | 🔴 Em exigência" → "None"
+2026-07-24 18:40:22,224 [INFO] === Fim — 0 OK, 11 erro(s), 439s ===
+2026-07-24 18:53:24,718 [INFO] === Início — 24/07/2026 18:53 ===
+2026-07-24 18:53:25,009 [INFO] 11 projeto(s) para verificar.
+2026-07-24 18:53:27,185 [INFO] --- [cmrcu7ffw000bgwnabngsgbaf] Isete Pereira | Processo: 26040053943/2026 ---
+2026-07-24 18:53:33,079 [INFO]   → Abrindo SIGLA...
+2026-07-24 18:53:37,411 [INFO]   → Login OK.
+2026-07-24 18:53:37,412 [INFO]   → Navegação: recursos_florestais
+2026-07-24 18:54:12,418 [ERROR]   ✖ Locator.click: Timeout 30000ms exceeded.
+Call log:
+  - waiting for get_by_role("row", name="Requerimentos", exact=True)
+
+2026-07-24 18:54:12,680 [INFO]   ✔ Status mudou: "Constituído processo | ✅ Sem pendências" → "None"
+2026-07-24 18:54:12,699 [INFO] --- [cmrcu4twd000410txncvzfghq] Raiton | Processo: 25110049770/2025 ---
+2026-07-24 18:54:14,951 [INFO]   → Abrindo SIGLA...
+2026-07-24 18:54:16,585 [INFO]   → Login OK.
+2026-07-24 18:54:16,586 [INFO]   → Navegação: recursos_florestais
+2026-07-24 18:54:51,599 [ERROR]   ✖ Locator.click: Timeout 30000ms exceeded.
+Call log:
+  - waiting for get_by_role("row", name="Requerimentos", exact=True)
+
+2026-07-24 18:54:51,903 [INFO]   ✔ Status mudou: "Constituído processo | ✅ Sem pendências" → "None"
+2026-07-24 18:54:51,914 [INFO] --- [cmrcu65de000b10txol49cypb] Roniel Barros | Processo: 26010021070/2026 ---
+2026-07-24 18:54:53,981 [INFO]   → Abrindo SIGLA...
+2026-07-24 18:54:55,536 [INFO]   → Login OK.
+2026-07-24 18:54:55,537 [INFO]   → Navegação: recursos_florestais
+2026-07-24 18:55:30,543 [ERROR]   ✖ Locator.click: Timeout 30000ms exceeded.
+Call log:
+  - waiting for get_by_role("row", name="Requerimentos", exact=True)
+
+2026-07-24 18:55:30,854 [INFO]   ✔ Status mudou: "Constituído processo | ✅ Sem pendências" → "None"
+2026-07-24 18:55:30,870 [INFO] --- [PRJ-0003] Jailson Lima Claro | Processo: 26070010650/2026 ---
+2026-07-24 18:55:33,102 [INFO]   → Abrindo SIGLA...
+2026-07-24 18:55:34,418 [INFO]   → Login OK.
+2026-07-24 18:55:34,418 [INFO]   → Navegação: licenciamento_ambiental
+2026-07-24 18:56:09,437 [ERROR]   ✖ Locator.click: Timeout 30000ms exceeded.
+Call log:
+  - waiting for get_by_role("row", name="Requerimentos", exact=True)
+
+2026-07-24 18:56:09,724 [INFO]   ✔ Status mudou: "Constituído processo | 🔴 Em exigência" → "None"
+2026-07-24 18:56:09,737 [INFO] --- [cmrcu6tst0004gwna08bo9bvb] Bianca Magalhaes | Processo: 25080037326/2025 ---
+2026-07-24 18:56:11,966 [INFO]   → Abrindo SIGLA...
+2026-07-24 18:56:34,374 [INFO]   → Login OK.
+2026-07-24 18:56:34,374 [INFO]   → Navegação: recursos_florestais
+2026-07-24 18:57:09,394 [ERROR]   ✖ Locator.click: Timeout 30000ms exceeded.
+Call log:
+  - waiting for get_by_role("row", name="Requerimentos", exact=True)
+
+2026-07-24 18:57:09,670 [INFO]   ✔ Status mudou: "Constituído processo | ✅ Sem pendências" → "None"
+2026-07-24 18:57:09,678 [INFO] --- [cmrcu84ov000igwnaioig3lgz] Maurilio | Processo: 25080037650/2025 ---
+2026-07-24 18:57:11,693 [INFO]   → Abrindo SIGLA...
+2026-07-24 18:57:13,004 [INFO]   → Login OK.
+2026-07-24 18:57:13,004 [INFO]   → Navegação: recursos_florestais
+2026-07-24 18:57:48,015 [ERROR]   ✖ Locator.click: Timeout 30000ms exceeded.
+Call log:
+  - waiting for get_by_role("row", name="Requerimentos", exact=True)
+
+2026-07-24 18:57:48,273 [INFO]   ✔ Status mudou: "Constituído processo | ✅ Sem pendências" → "None"
+2026-07-24 18:57:48,290 [INFO] --- [cmrcudlxr000wgwnavt8x1pjk] Talvane | Processo: 26040034502/2026 ---
+2026-07-24 18:57:50,472 [INFO]   → Abrindo SIGLA...
+2026-07-24 18:57:51,803 [INFO]   → Login OK.
+2026-07-24 18:57:51,803 [INFO]   → Navegação: recursos_hidricos
+2026-07-24 18:58:26,824 [ERROR]   ✖ Locator.click: Timeout 30000ms exceeded.
+Call log:
+  - waiting for get_by_role("row", name="Requerimentos", exact=True)
+
+2026-07-24 18:58:27,126 [INFO]   ✔ Status mudou: "Constituído processo | 🔴 Em exigência" → "None"
+2026-07-24 18:58:27,142 [INFO] --- [cmrcu9aka000i10txcee6xxr3] Eloi | Processo: 25080037570/2025 ---
+2026-07-24 18:58:29,452 [INFO]   → Abrindo SIGLA...
+2026-07-24 18:58:30,823 [INFO]   → Login OK.
+2026-07-24 18:58:30,823 [INFO]   → Navegação: recursos_florestais
+2026-07-24 18:59:05,834 [ERROR]   ✖ Locator.click: Timeout 30000ms exceeded.
+Call log:
+  - waiting for get_by_role("row", name="Requerimentos", exact=True)
+
+2026-07-24 18:59:06,153 [INFO]   ✔ Status mudou: "Constituído processo | ✅ Sem pendências" → "None"
+2026-07-24 18:59:06,171 [INFO] --- [PRJ-0016] Antônio Carlos Batista Muniz | Processo: 26070042160/2026 ---
+2026-07-24 18:59:08,117 [INFO]   → Abrindo SIGLA...
+2026-07-24 18:59:09,545 [INFO]   → Login OK.
+2026-07-24 18:59:09,546 [INFO]   → Navegação: licenciamento_ambiental
+2026-07-24 18:59:44,561 [ERROR]   ✖ Locator.click: Timeout 30000ms exceeded.
+Call log:
+  - waiting for get_by_role("row", name="Requerimentos", exact=True)
+
+2026-07-24 18:59:44,819 [INFO]   ✔ Status inalterado: "None"
+2026-07-24 18:59:44,834 [INFO] --- [cmrcucr1q000p10txqe83wo0k] Marcos Padrasto | Processo: 26050038165/2026 ---
+2026-07-24 18:59:47,019 [INFO]   → Abrindo SIGLA...
+2026-07-24 18:59:48,506 [INFO]   → Login OK.
+2026-07-24 18:59:48,506 [INFO]   → Navegação: recursos_florestais
+2026-07-24 19:00:23,513 [ERROR]   ✖ Locator.click: Timeout 30000ms exceeded.
+Call log:
+  - waiting for get_by_role("row", name="Requerimentos", exact=True)
+
+2026-07-24 19:00:23,791 [INFO]   ✔ Status mudou: "Constituído processo | 🔴 Em exigência" → "None"
+2026-07-24 19:00:23,812 [INFO] --- [cmrcu8p13000pgwna48q4u5ep] Isaias | Processo: 25110049202/2025 ---
+2026-07-24 19:00:25,911 [INFO]   → Abrindo SIGLA...
+2026-07-24 19:00:27,383 [INFO]   → Login OK.
+2026-07-24 19:00:27,383 [INFO]   → Navegação: recursos_florestais
+2026-07-24 19:00:39,147 [ERROR]   ✖ Locator.click: Page crashed
+Call log:
+  - waiting for get_by_role("row", name="Requerimentos", exact=True)
+
+2026-07-24 19:00:39,464 [INFO]   ✔ Status mudou: "Constituído processo | ✅ Sem pendências" → "None"
