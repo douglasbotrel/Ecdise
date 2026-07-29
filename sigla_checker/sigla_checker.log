@@ -1261,3 +1261,356 @@ Call log:
   - waiting for get_by_role("row", name="Requerimentos", exact=True)
 
 2026-07-24 19:00:39,464 [INFO]   ✔ Status mudou: "Constituído processo | ✅ Sem pendências" → "None"
+2026-07-29 18:48:21,500 [INFO] === Início — 29/07/2026 18:48 ===
+2026-07-29 18:48:21,798 [INFO] 11 projeto(s) para verificar.
+2026-07-29 18:48:34,641 [INFO] --- [cmrcu6tst0004gwna08bo9bvb] Bianca Magalhaes | Processo: 25080037326/2025 ---
+2026-07-29 18:48:40,701 [INFO]   → Abrindo SIGLA...
+2026-07-29 18:48:46,528 [INFO]   → Login OK.
+2026-07-29 18:48:46,529 [INFO]   → Navegação (definida manualmente): recursos_florestais
+2026-07-29 18:49:21,539 [ERROR]   ✖ Locator.click: Timeout 30000ms exceeded.
+Call log:
+  - waiting for get_by_role("row", name="Requerimentos", exact=True)
+
+2026-07-29 18:49:21,881 [INFO]   ✔ Status mudou: "Constituído processo | ✅ Sem pendências" → "None"
+2026-07-29 18:49:21,906 [INFO] --- [cmrcudlxr000wgwnavt8x1pjk] Talvane | Processo: 26040034502/2026 ---
+2026-07-29 18:49:23,992 [INFO]   → Abrindo SIGLA...
+2026-07-29 18:49:25,968 [INFO]   → Login OK.
+2026-07-29 18:49:25,968 [INFO]   → Navegação (definida manualmente): recursos_hidricos
+2026-07-29 18:50:00,994 [ERROR]   ✖ Locator.click: Timeout 30000ms exceeded.
+Call log:
+  - waiting for get_by_role("row", name="Requerimentos", exact=True)
+
+2026-07-29 18:50:01,339 [INFO]   ✔ Status mudou: "Constituído processo | 🔴 Em exigência" → "None"
+2026-07-29 18:50:01,352 [INFO] --- [PRJ-0003] Jailson Lima Claro | Processo: 26070010650/2026 ---
+2026-07-29 18:50:03,426 [INFO]   → Abrindo SIGLA...
+2026-07-29 18:50:04,820 [INFO]   → Login OK.
+2026-07-29 18:50:04,821 [INFO]   → Navegação (definida manualmente): licenciamento_ambiental
+2026-07-29 18:50:39,841 [ERROR]   ✖ Locator.click: Timeout 30000ms exceeded.
+Call log:
+  - waiting for get_by_role("row", name="Requerimentos", exact=True)
+
+2026-07-29 18:50:40,314 [INFO]   ✔ Status mudou: "Constituído processo | 🔴 Em exigência" → "None"
+2026-07-29 18:50:40,322 [INFO] --- [cmrcu84ov000igwnaioig3lgz] Maurilio | Processo: 25080037650/2025 ---
+2026-07-29 18:50:42,097 [INFO]   → Abrindo SIGLA...
+2026-07-29 18:50:44,033 [INFO]   → Login OK.
+2026-07-29 18:50:44,034 [INFO]   → Navegação (definida manualmente): recursos_florestais
+2026-07-29 18:51:19,051 [ERROR]   ✖ Locator.click: Timeout 30000ms exceeded.
+Call log:
+  - waiting for get_by_role("row", name="Requerimentos", exact=True)
+
+2026-07-29 18:51:19,358 [INFO]   ✔ Status mudou: "Constituído processo | ✅ Sem pendências" → "None"
+2026-07-29 18:51:19,372 [INFO] --- [cmrcu7ffw000bgwnabngsgbaf] Isete Pereira | Processo: 26040053943/2026 ---
+2026-07-29 18:51:21,476 [INFO]   → Abrindo SIGLA...
+2026-07-29 18:51:23,874 [INFO]   → Login OK.
+2026-07-29 18:51:23,875 [INFO]   → Navegação (definida manualmente): recursos_florestais
+2026-07-29 18:51:58,898 [ERROR]   ✖ Locator.click: Timeout 30000ms exceeded.
+Call log:
+  - waiting for get_by_role("row", name="Requerimentos", exact=True)
+
+2026-07-29 18:51:59,250 [INFO]   ✔ Status mudou: "Constituído processo | ✅ Sem pendências" → "None"
+2026-07-29 18:51:59,266 [INFO] --- [cmrcu65de000b10txol49cypb] Roniel Barros | Processo: 26010021070/2026 ---
+2026-07-29 18:52:01,504 [INFO]   → Abrindo SIGLA...
+2026-07-29 18:52:14,195 [INFO]   → Login OK.
+2026-07-29 18:52:14,196 [INFO]   → Navegação (definida manualmente): recursos_florestais
+2026-07-29 18:52:49,215 [ERROR]   ✖ Locator.click: Timeout 30000ms exceeded.
+Call log:
+  - waiting for get_by_role("row", name="Requerimentos", exact=True)
+
+2026-07-29 18:52:49,551 [INFO]   ✔ Status mudou: "Constituído processo | ✅ Sem pendências" → "None"
+2026-07-29 18:52:49,566 [INFO] --- [cmrcu4twd000410txncvzfghq] Raiton | Processo: 25110049770/2025 ---
+2026-07-29 18:52:51,627 [INFO]   → Abrindo SIGLA...
+2026-07-29 18:52:53,697 [INFO]   → Login OK.
+2026-07-29 18:52:53,698 [INFO]   → Navegação (definida manualmente): recursos_florestais
+2026-07-29 18:53:28,731 [ERROR]   ✖ Locator.click: Timeout 30000ms exceeded.
+Call log:
+  - waiting for get_by_role("row", name="Requerimentos", exact=True)
+
+2026-07-29 18:53:29,054 [INFO]   ✔ Status mudou: "Constituído processo | ✅ Sem pendências" → "None"
+2026-07-29 18:53:29,073 [INFO] --- [cmrcucr1q000p10txqe83wo0k] Marcos Padrasto | Processo: 26050038165/2026 ---
+2026-07-29 18:53:31,174 [INFO]   → Abrindo SIGLA...
+2026-07-29 18:53:32,741 [INFO]   → Login OK.
+2026-07-29 18:53:32,741 [INFO]   → Navegação (definida manualmente): recursos_florestais
+2026-07-29 18:54:07,762 [ERROR]   ✖ Locator.click: Timeout 30000ms exceeded.
+Call log:
+  - waiting for get_by_role("row", name="Requerimentos", exact=True)
+
+2026-07-29 18:54:08,085 [INFO]   ✔ Status mudou: "Constituído processo | 🔴 Em exigência" → "None"
+2026-07-29 18:54:08,101 [INFO] --- [PRJ-0016] Antônio Carlos Batista Muniz | Processo: 26070042160/2026 ---
+2026-07-29 18:54:10,444 [INFO]   → Abrindo SIGLA...
+2026-07-29 18:54:11,869 [INFO]   → Login OK.
+2026-07-29 18:54:11,869 [INFO]   → Navegação (definida manualmente): recursos_florestais
+2026-07-29 18:54:46,877 [ERROR]   ✖ Locator.click: Timeout 30000ms exceeded.
+Call log:
+  - waiting for get_by_role("row", name="Requerimentos", exact=True)
+
+2026-07-29 18:54:47,201 [INFO]   ✔ Status inalterado: "None"
+2026-07-29 18:54:47,220 [INFO] --- [cmrcu9aka000i10txcee6xxr3] Eloi | Processo: 25080037570/2025 ---
+2026-07-29 18:54:49,091 [INFO]   → Abrindo SIGLA...
+2026-07-29 18:54:50,703 [INFO]   → Login OK.
+2026-07-29 18:54:50,704 [INFO]   → Navegação (definida manualmente): recursos_florestais
+2026-07-29 18:55:25,716 [ERROR]   ✖ Locator.click: Timeout 30000ms exceeded.
+Call log:
+  - waiting for get_by_role("row", name="Requerimentos", exact=True)
+
+2026-07-29 18:55:26,006 [INFO]   ✔ Status mudou: "Constituído processo | ✅ Sem pendências" → "None"
+2026-07-29 18:55:26,012 [INFO] --- [cmrcu8p13000pgwna48q4u5ep] Isaias | Processo: 25110049202/2025 ---
+2026-07-29 18:55:27,850 [INFO]   → Abrindo SIGLA...
+2026-07-29 18:55:29,420 [INFO]   → Login OK.
+2026-07-29 18:55:29,421 [INFO]   → Navegação (definida manualmente): recursos_florestais
+2026-07-29 18:56:04,442 [ERROR]   ✖ Locator.click: Timeout 30000ms exceeded.
+Call log:
+  - waiting for get_by_role("row", name="Requerimentos", exact=True)
+
+2026-07-29 18:56:04,747 [INFO]   ✔ Status mudou: "Constituído processo | ✅ Sem pendências" → "None"
+2026-07-29 18:56:05,002 [INFO] === Fim — 0 OK, 11 erro(s), 463s ===
+2026-07-29 19:03:35,746 [INFO] === Início — 29/07/2026 19:03 ===
+2026-07-29 19:03:36,150 [INFO] 11 projeto(s) para verificar.
+2026-07-29 19:03:39,248 [INFO] --- [cmrcudlxr000wgwnavt8x1pjk] Talvane | Processo: 26040034502/2026 ---
+2026-07-29 19:03:39,644 [INFO]   → Abrindo SIGLA...
+2026-07-29 19:03:41,250 [INFO]   → Login OK.
+2026-07-29 19:03:41,253 [INFO]   → Navegação (definida manualmente): recursos_hidricos
+2026-07-29 19:04:16,273 [ERROR]   ✖ Locator.click: Timeout 30000ms exceeded.
+Call log:
+  - waiting for get_by_role("row", name="Requerimentos", exact=True)
+
+2026-07-29 19:04:16,611 [INFO]   ✔ Status mudou: "Constituído processo | 🔴 Em exigência" → "None"
+2026-07-29 19:04:16,652 [INFO] --- [PRJ-0003] Jailson Lima Claro | Processo: 26070010650/2026 ---
+2026-07-29 19:04:16,968 [INFO]   → Abrindo SIGLA...
+2026-07-29 19:04:20,658 [INFO]   → Login OK.
+2026-07-29 19:04:20,659 [INFO]   → Navegação (definida manualmente): licenciamento_ambiental
+2026-07-29 19:04:50,032 [ERROR]   ✖ Locator.click: Target page, context or browser has been closed
+Call log:
+  - waiting for get_by_role("row", name="Requerimentos", exact=True)
+
+2026-07-29 19:04:50,363 [INFO]   ✔ Status mudou: "Constituído processo | 🔴 Em exigência" → "None"
+2026-07-29 19:06:13,064 [INFO] === Início — 29/07/2026 19:06 ===
+2026-07-29 19:06:13,368 [INFO] 11 projeto(s) para verificar.
+2026-07-29 19:06:14,853 [INFO] --- [cmrcu65de000b10txol49cypb] Roniel Barros | Processo: 26010021070/2026 ---
+2026-07-29 19:06:15,080 [INFO]   → Abrindo SIGLA...
+2026-07-29 19:06:38,047 [INFO]   → Login OK.
+2026-07-29 19:06:38,048 [INFO]   → Navegação (definida manualmente): recursos_florestais
+2026-07-29 19:06:39,018 [INFO]   → 12 linha(s) encontradas. Procurando "26010021070/2026"...
+2026-07-29 19:06:39,069 [WARNING]   → Processo não encontrado. Conteúdo da tabela (primeiras linhas com dados):
+2026-07-29 19:06:39,072 [WARNING]       Página inicial |  Alterar senha |  Cadastro |  Requerimentos |  Licenciamento ambiental |  Recursos hídricos |  Recursos
+2026-07-29 19:06:39,075 [WARNING]       Página inicial
+2026-07-29 19:06:39,077 [WARNING]       Alterar senha
+2026-07-29 19:06:39,079 [WARNING]       Cadastro
+2026-07-29 19:06:39,081 [WARNING]       Requerimentos
+2026-07-29 19:06:39,084 [WARNING]       Licenciamento ambiental
+2026-07-29 19:06:39,087 [WARNING]       Recursos hídricos
+2026-07-29 19:06:39,089 [WARNING]       Recursos florestais
+2026-07-29 19:06:39,096 [ERROR]   ✖ Nº do processo "26010021070/2026" não encontrado na lista de requerimentos. Verifique o número cadastrado no Ecdise (veja o log acima para ver o que aparece no SIGLA).
+2026-07-29 19:06:39,434 [INFO]   ✔ Status mudou: "Constituído processo | ✅ Sem pendências" → "None"
+2026-07-29 19:06:39,457 [INFO] --- [cmrcu4twd000410txncvzfghq] Raiton | Processo: 25110049770/2025 ---
+2026-07-29 19:06:39,671 [INFO]   → Abrindo SIGLA...
+2026-07-29 19:06:58,544 [INFO]   → Login OK.
+2026-07-29 19:06:58,545 [INFO]   → Navegação (definida manualmente): recursos_florestais
+2026-07-29 19:06:59,559 [INFO]   → 12 linha(s) encontradas. Procurando "25110049770/2025"...
+2026-07-29 19:06:59,614 [WARNING]   → Processo não encontrado. Conteúdo da tabela (primeiras linhas com dados):
+2026-07-29 19:06:59,617 [WARNING]       Página inicial |  Alterar senha |  Cadastro |  Requerimentos |  Licenciamento ambiental |  Recursos hídricos |  Recursos
+2026-07-29 19:06:59,619 [WARNING]       Página inicial
+2026-07-29 19:06:59,623 [WARNING]       Alterar senha
+2026-07-29 19:06:59,625 [WARNING]       Cadastro
+2026-07-29 19:06:59,628 [WARNING]       Requerimentos
+2026-07-29 19:06:59,631 [WARNING]       Licenciamento ambiental
+2026-07-29 19:06:59,634 [WARNING]       Recursos hídricos
+2026-07-29 19:06:59,636 [WARNING]       Recursos florestais
+2026-07-29 19:06:59,645 [ERROR]   ✖ Nº do processo "25110049770/2025" não encontrado na lista de requerimentos. Verifique o número cadastrado no Ecdise (veja o log acima para ver o que aparece no SIGLA).
+2026-07-29 19:06:59,957 [INFO]   ✔ Status mudou: "Constituído processo | ✅ Sem pendências" → "None"
+2026-07-29 19:06:59,996 [INFO] --- [cmrcudlxr000wgwnavt8x1pjk] Talvane | Processo: 26040034502/2026 ---
+2026-07-29 19:07:00,285 [INFO]   → Abrindo SIGLA...
+2026-07-29 19:07:02,569 [INFO]   → Login OK.
+2026-07-29 19:07:02,569 [INFO]   → Navegação (definida manualmente): recursos_hidricos
+2026-07-29 19:07:03,743 [INFO]   → 13 linha(s) encontradas. Procurando "26040034502/2026"...
+2026-07-29 19:07:34,253 [ERROR]   ✖ Locator.inner_text: Timeout 30000ms exceeded.
+Call log:
+  - waiting for locator("table tr").nth(12)
+
+2026-07-29 19:07:34,604 [INFO]   ✔ Status mudou: "Constituído processo | 🔴 Em exigência" → "None"
+2026-07-29 19:07:34,617 [INFO] --- [PRJ-0003] Jailson Lima Claro | Processo: 26070010650/2026 ---
+2026-07-29 19:07:34,929 [INFO]   → Abrindo SIGLA...
+2026-07-29 19:07:40,329 [INFO]   → Login OK.
+2026-07-29 19:07:40,330 [INFO]   → Navegação (definida manualmente): licenciamento_ambiental
+2026-07-29 19:07:41,371 [INFO]   → 13 linha(s) encontradas. Procurando "26070010650/2026"...
+2026-07-29 19:07:41,973 [INFO]   → Encontrado via busca parcial ("26070010650")
+2026-07-29 19:07:41,974 [INFO]   → Resultado: Constituído processo | ✅ Sem pendências
+2026-07-29 19:07:42,379 [INFO]   ✔ Status mudou: "Constituído processo | 🔴 Em exigência" → "Constituído processo | ✅ Sem pendências"
+2026-07-29 19:07:42,413 [INFO] --- [cmrcu84ov000igwnaioig3lgz] Maurilio | Processo: 25080037650/2025 ---
+2026-07-29 19:07:42,684 [INFO]   → Abrindo SIGLA...
+2026-07-29 19:07:45,370 [INFO]   → Login OK.
+2026-07-29 19:07:45,370 [INFO]   → Navegação (definida manualmente): recursos_florestais
+2026-07-29 19:07:46,548 [INFO]   → 12 linha(s) encontradas. Procurando "25080037650/2025"...
+2026-07-29 19:07:47,140 [INFO]   → Encontrado via busca parcial ("25080037650")
+2026-07-29 19:07:47,141 [INFO]   → Resultado: Constituído processo | ✅ Sem pendências
+2026-07-29 19:07:47,460 [INFO]   ✔ Status inalterado: "Constituído processo | ✅ Sem pendências"
+2026-07-29 19:07:47,497 [INFO] --- [cmrcu7ffw000bgwnabngsgbaf] Isete Pereira | Processo: 26040053943/2026 ---
+2026-07-29 19:07:47,765 [INFO]   → Abrindo SIGLA...
+2026-07-29 19:07:50,033 [INFO]   → Login OK.
+2026-07-29 19:07:50,033 [INFO]   → Navegação (definida manualmente): recursos_florestais
+2026-07-29 19:07:50,991 [INFO]   → 12 linha(s) encontradas. Procurando "26040053943/2026"...
+2026-07-29 19:07:51,061 [WARNING]   → Processo não encontrado. Conteúdo da tabela (primeiras linhas com dados):
+2026-07-29 19:07:51,065 [WARNING]       Página inicial |  Alterar senha |  Cadastro |  Requerimentos |  Licenciamento ambiental |  Recursos hídricos |  Recursos
+2026-07-29 19:07:51,068 [WARNING]       Página inicial
+2026-07-29 19:07:51,071 [WARNING]       Alterar senha
+2026-07-29 19:07:51,074 [WARNING]       Cadastro
+2026-07-29 19:07:51,077 [WARNING]       Requerimentos
+2026-07-29 19:07:51,081 [WARNING]       Licenciamento ambiental
+2026-07-29 19:07:51,084 [WARNING]       Recursos hídricos
+2026-07-29 19:07:51,086 [WARNING]       Recursos florestais
+2026-07-29 19:07:51,097 [ERROR]   ✖ Nº do processo "26040053943/2026" não encontrado na lista de requerimentos. Verifique o número cadastrado no Ecdise (veja o log acima para ver o que aparece no SIGLA).
+2026-07-29 19:07:51,377 [INFO]   ✔ Status mudou: "Constituído processo | ✅ Sem pendências" → "None"
+2026-07-29 19:07:51,412 [INFO] --- [cmrcu6tst0004gwna08bo9bvb] Bianca Magalhaes | Processo: 25080037326/2025 ---
+2026-07-29 19:07:51,660 [INFO]   → Abrindo SIGLA...
+2026-07-29 19:07:53,899 [INFO]   → Login OK.
+2026-07-29 19:07:53,900 [INFO]   → Navegação (definida manualmente): recursos_florestais
+2026-07-29 19:07:54,876 [INFO]   → 12 linha(s) encontradas. Procurando "25080037326/2025"...
+2026-07-29 19:07:54,932 [WARNING]   → Processo não encontrado. Conteúdo da tabela (primeiras linhas com dados):
+2026-07-29 19:07:54,934 [WARNING]       Página inicial |  Alterar senha |  Cadastro |  Requerimentos |  Licenciamento ambiental |  Recursos hídricos |  Recursos
+2026-07-29 19:07:54,937 [WARNING]       Página inicial
+2026-07-29 19:07:54,940 [WARNING]       Alterar senha
+2026-07-29 19:07:54,942 [WARNING]       Cadastro
+2026-07-29 19:07:54,946 [WARNING]       Requerimentos
+2026-07-29 19:07:54,949 [WARNING]       Licenciamento ambiental
+2026-07-29 19:07:54,951 [WARNING]       Recursos hídricos
+2026-07-29 19:07:54,954 [WARNING]       Recursos florestais
+2026-07-29 19:07:54,963 [ERROR]   ✖ Nº do processo "25080037326/2025" não encontrado na lista de requerimentos. Verifique o número cadastrado no Ecdise (veja o log acima para ver o que aparece no SIGLA).
+2026-07-29 19:07:55,293 [INFO]   ✔ Status mudou: "Constituído processo | ✅ Sem pendências" → "None"
+2026-07-29 19:07:55,323 [INFO] --- [cmrcucr1q000p10txqe83wo0k] Marcos Padrasto | Processo: 26050038165/2026 ---
+2026-07-29 19:07:55,616 [INFO]   → Abrindo SIGLA...
+2026-07-29 19:07:58,354 [INFO]   → Login OK.
+2026-07-29 19:07:58,354 [INFO]   → Navegação (definida manualmente): recursos_florestais
+2026-07-29 19:07:59,435 [INFO]   → 12 linha(s) encontradas. Procurando "26050038165/2026"...
+2026-07-29 19:07:59,553 [WARNING]   → Processo não encontrado. Conteúdo da tabela (primeiras linhas com dados):
+2026-07-29 19:07:59,559 [WARNING]       Página inicial |  Alterar senha |  Cadastro |  Requerimentos |  Licenciamento ambiental |  Recursos hídricos |  Recursos
+2026-07-29 19:07:59,565 [WARNING]       Página inicial
+2026-07-29 19:07:59,570 [WARNING]       Alterar senha
+2026-07-29 19:07:59,575 [WARNING]       Cadastro
+2026-07-29 19:07:59,581 [WARNING]       Requerimentos
+2026-07-29 19:07:59,991 [WARNING]       Solicitações
+2026-07-29 19:08:00,004 [WARNING]       Sair
+2026-07-29 19:08:00,015 [WARNING]       Lista das solicitações cadastrados Supressão
+2026-07-29 19:08:00,059 [ERROR]   ✖ Nº do processo "26050038165/2026" não encontrado na lista de requerimentos. Verifique o número cadastrado no Ecdise (veja o log acima para ver o que aparece no SIGLA).
+2026-07-29 19:08:00,379 [INFO]   ✔ Status mudou: "Constituído processo | 🔴 Em exigência" → "None"
+2026-07-29 19:08:00,411 [INFO] --- [PRJ-0016] Antônio Carlos Batista Muniz | Processo: 26070042160/2026 ---
+2026-07-29 19:08:00,724 [INFO]   → Abrindo SIGLA...
+2026-07-29 19:08:02,972 [INFO]   → Login OK.
+2026-07-29 19:08:02,973 [INFO]   → Navegação (definida manualmente): recursos_florestais
+2026-07-29 19:08:04,001 [INFO]   → 12 linha(s) encontradas. Procurando "26070042160/2026"...
+2026-07-29 19:08:04,065 [WARNING]   → Processo não encontrado. Conteúdo da tabela (primeiras linhas com dados):
+2026-07-29 19:08:04,069 [WARNING]       Página inicial |  Alterar senha |  Cadastro |  Requerimentos |  Licenciamento ambiental |  Recursos hídricos |  Recursos
+2026-07-29 19:08:04,073 [WARNING]       Página inicial
+2026-07-29 19:08:04,077 [WARNING]       Alterar senha
+2026-07-29 19:08:04,081 [WARNING]       Cadastro
+2026-07-29 19:08:04,085 [WARNING]       Requerimentos
+2026-07-29 19:08:04,089 [WARNING]       Licenciamento ambiental
+2026-07-29 19:08:04,092 [WARNING]       Recursos hídricos
+2026-07-29 19:08:04,096 [WARNING]       Recursos florestais
+2026-07-29 19:08:04,106 [ERROR]   ✖ Nº do processo "26070042160/2026" não encontrado na lista de requerimentos. Verifique o número cadastrado no Ecdise (veja o log acima para ver o que aparece no SIGLA).
+2026-07-29 19:08:04,386 [INFO]   ✔ Status inalterado: "None"
+2026-07-29 19:08:04,412 [INFO] --- [cmrcu9aka000i10txcee6xxr3] Eloi | Processo: 25080037570/2025 ---
+2026-07-29 19:08:04,701 [INFO]   → Abrindo SIGLA...
+2026-07-29 19:08:06,989 [INFO]   → Login OK.
+2026-07-29 19:08:06,989 [INFO]   → Navegação (definida manualmente): recursos_florestais
+2026-07-29 19:08:08,069 [INFO]   → 12 linha(s) encontradas. Procurando "25080037570/2025"...
+2026-07-29 19:08:08,675 [INFO]   → Encontrado via busca parcial ("25080037570")
+2026-07-29 19:08:08,676 [INFO]   → Resultado: Constituído processo | 🔴 Em exigência
+2026-07-29 19:08:09,089 [INFO]   ✔ Status mudou: "Constituído processo | ✅ Sem pendências" → "Constituído processo | 🔴 Em exigência"
+2026-07-29 19:08:09,117 [INFO] --- [cmrcu8p13000pgwna48q4u5ep] Isaias | Processo: 25110049202/2025 ---
+2026-07-29 19:08:09,375 [INFO]   → Abrindo SIGLA...
+2026-07-29 19:08:11,962 [INFO]   → Login OK.
+2026-07-29 19:08:11,962 [INFO]   → Navegação (definida manualmente): recursos_florestais
+2026-07-29 19:08:13,145 [INFO]   → 12 linha(s) encontradas. Procurando "25110049202/2025"...
+2026-07-29 19:08:13,235 [WARNING]   → Processo não encontrado. Conteúdo da tabela (primeiras linhas com dados):
+2026-07-29 19:08:13,238 [WARNING]       Página inicial |  Alterar senha |  Cadastro |  Requerimentos |  Licenciamento ambiental |  Recursos hídricos |  Recursos
+2026-07-29 19:08:13,242 [WARNING]       Página inicial
+2026-07-29 19:08:13,246 [WARNING]       Alterar senha
+2026-07-29 19:08:13,251 [WARNING]       Cadastro
+2026-07-29 19:08:13,255 [WARNING]       Requerimentos
+2026-07-29 19:08:13,260 [WARNING]       Licenciamento ambiental
+2026-07-29 19:08:13,264 [WARNING]       Recursos hídricos
+2026-07-29 19:08:13,269 [WARNING]       Recursos florestais
+2026-07-29 19:08:13,721 [ERROR]   ✖ Nº do processo "25110049202/2025" não encontrado na lista de requerimentos. Verifique o número cadastrado no Ecdise (veja o log acima para ver o que aparece no SIGLA).
+2026-07-29 19:08:14,044 [INFO]   ✔ Status mudou: "Constituído processo | ✅ Sem pendências" → "None"
+2026-07-29 19:08:14,407 [INFO] === Fim — 3 OK, 8 erro(s), 121s ===
+2026-07-29 19:09:09,803 [INFO] === Início — 29/07/2026 19:09 ===
+2026-07-29 19:09:10,120 [INFO] 11 projeto(s) para verificar.
+2026-07-29 19:09:11,613 [INFO] --- [cmrcu65de000b10txol49cypb] Roniel Barros | Processo: 26010021070/2026 ---
+2026-07-29 19:09:11,867 [INFO]   → Abrindo SIGLA...
+2026-07-29 19:09:17,276 [INFO]   → Login OK.
+2026-07-29 19:09:17,277 [INFO]   → Navegação (definida manualmente): recursos_florestais
+2026-07-29 19:09:19,346 [INFO]   → 1 linha(s) encontradas. Procurando "26010021070/2026"...
+2026-07-29 19:09:19,402 [INFO]   → Resultado: Constituído processo | 🔴 Em exigência
+2026-07-29 19:09:19,785 [INFO]   ✔ Status mudou: "Constituído processo | ✅ Sem pendências" → "Constituído processo | 🔴 Em exigência"
+2026-07-29 19:09:19,810 [INFO] --- [cmrcu4twd000410txncvzfghq] Raiton | Processo: 25110049770/2025 ---
+2026-07-29 19:09:20,059 [INFO]   → Abrindo SIGLA...
+2026-07-29 19:09:22,333 [INFO]   → Login OK.
+2026-07-29 19:09:22,333 [INFO]   → Navegação (definida manualmente): recursos_florestais
+2026-07-29 19:09:24,270 [INFO]   → 1 linha(s) encontradas. Procurando "25110049770/2025"...
+2026-07-29 19:09:24,305 [INFO]   → Resultado: Constituído processo | ✅ Sem pendências
+2026-07-29 19:09:24,633 [INFO]   ✔ Status inalterado: "Constituído processo | ✅ Sem pendências"
+2026-07-29 19:09:24,652 [INFO] --- [cmrcu84ov000igwnaioig3lgz] Maurilio | Processo: 25080037650/2025 ---
+2026-07-29 19:09:24,838 [INFO]   → Abrindo SIGLA...
+2026-07-29 19:09:27,124 [INFO]   → Login OK.
+2026-07-29 19:09:27,125 [INFO]   → Navegação (definida manualmente): recursos_florestais
+2026-07-29 19:10:02,762 [ERROR]   ✖ Locator.click: Timeout 30000ms exceeded.
+Call log:
+  - waiting for get_by_role("row", name="Recursos florestais", exact=True)
+
+2026-07-29 19:10:03,098 [INFO]   ✔ Status mudou: "Constituído processo | ✅ Sem pendências" → "None"
+2026-07-29 19:10:03,124 [INFO] --- [cmrcu7ffw000bgwnabngsgbaf] Isete Pereira | Processo: 26040053943/2026 ---
+2026-07-29 19:10:03,455 [INFO]   → Abrindo SIGLA...
+2026-07-29 19:10:05,940 [INFO]   → Login OK.
+2026-07-29 19:10:05,940 [INFO]   → Navegação (definida manualmente): recursos_florestais
+2026-07-29 19:10:08,021 [INFO]   → 1 linha(s) encontradas. Procurando "26040053943/2026"...
+2026-07-29 19:10:08,065 [INFO]   → Resultado: Constituído processo | ✅ Sem pendências
+2026-07-29 19:10:08,392 [INFO]   ✔ Status inalterado: "Constituído processo | ✅ Sem pendências"
+2026-07-29 19:10:08,424 [INFO] --- [cmrcu6tst0004gwna08bo9bvb] Bianca Magalhaes | Processo: 25080037326/2025 ---
+2026-07-29 19:10:08,653 [INFO]   → Abrindo SIGLA...
+2026-07-29 19:10:11,023 [INFO]   → Login OK.
+2026-07-29 19:10:11,023 [INFO]   → Navegação (definida manualmente): recursos_florestais
+2026-07-29 19:10:12,921 [INFO]   → 1 linha(s) encontradas. Procurando "25080037326/2025"...
+2026-07-29 19:10:12,943 [INFO]   → Resultado: Constituído processo | ✅ Sem pendências
+2026-07-29 19:10:13,271 [INFO]   ✔ Status inalterado: "Constituído processo | ✅ Sem pendências"
+2026-07-29 19:10:13,300 [INFO] --- [cmrcudlxr000wgwnavt8x1pjk] Talvane | Processo: 26040034502/2026 ---
+2026-07-29 19:10:13,491 [INFO]   → Abrindo SIGLA...
+2026-07-29 19:10:33,048 [INFO]   → Login OK.
+2026-07-29 19:10:33,049 [INFO]   → Navegação (definida manualmente): recursos_hidricos
+2026-07-29 19:10:35,227 [INFO]   → 1 linha(s) encontradas. Procurando "26040034502/2026"...
+2026-07-29 19:10:35,283 [INFO]   → Resultado: Constituído processo | 🔴 Em exigência
+2026-07-29 19:10:36,525 [INFO]   ✔ Status inalterado: "Constituído processo | 🔴 Em exigência"
+2026-07-29 19:10:36,548 [INFO] --- [PRJ-0003] Jailson Lima Claro | Processo: 26070010650/2026 ---
+2026-07-29 19:10:36,897 [INFO]   → Abrindo SIGLA...
+2026-07-29 19:10:39,268 [INFO]   → Login OK.
+2026-07-29 19:10:39,269 [INFO]   → Navegação (definida manualmente): licenciamento_ambiental
+2026-07-29 19:10:41,203 [INFO]   → 1 linha(s) encontradas. Procurando "26070010650/2026"...
+2026-07-29 19:10:41,223 [INFO]   → Resultado: Constituído processo | ✅ Sem pendências
+2026-07-29 19:10:41,548 [INFO]   ✔ Status inalterado: "Constituído processo | ✅ Sem pendências"
+2026-07-29 19:10:41,573 [INFO] --- [cmrcu9aka000i10txcee6xxr3] Eloi | Processo: 25080037570/2025 ---
+2026-07-29 19:10:41,752 [INFO]   → Abrindo SIGLA...
+2026-07-29 19:10:44,270 [INFO]   → Login OK.
+2026-07-29 19:10:44,270 [INFO]   → Navegação (definida manualmente): recursos_florestais
+2026-07-29 19:10:46,295 [INFO]   → 1 linha(s) encontradas. Procurando "25080037570/2025"...
+2026-07-29 19:10:46,316 [INFO]   → Resultado: Constituído processo | 🔴 Em exigência
+2026-07-29 19:10:46,686 [INFO]   ✔ Status inalterado: "Constituído processo | 🔴 Em exigência"
+2026-07-29 19:10:46,731 [INFO] --- [cmrcu8p13000pgwna48q4u5ep] Isaias | Processo: 25110049202/2025 ---
+2026-07-29 19:10:46,945 [INFO]   → Abrindo SIGLA...
+2026-07-29 19:10:49,252 [INFO]   → Login OK.
+2026-07-29 19:10:49,252 [INFO]   → Navegação (definida manualmente): recursos_florestais
+2026-07-29 19:10:51,132 [INFO]   → 1 linha(s) encontradas. Procurando "25110049202/2025"...
+2026-07-29 19:10:51,151 [INFO]   → Resultado: Constituído processo | ✅ Sem pendências
+2026-07-29 19:10:51,493 [INFO]   ✔ Status inalterado: "Constituído processo | ✅ Sem pendências"
+2026-07-29 19:10:51,516 [INFO] --- [cmrcucr1q000p10txqe83wo0k] Marcos Padrasto | Processo: 26050038165/2026 ---
+2026-07-29 19:10:51,710 [INFO]   → Abrindo SIGLA...
+2026-07-29 19:10:54,114 [INFO]   → Login OK.
+2026-07-29 19:10:54,114 [INFO]   → Navegação (definida manualmente): recursos_florestais
+2026-07-29 19:10:56,070 [INFO]   → 1 linha(s) encontradas. Procurando "26050038165/2026"...
+2026-07-29 19:10:56,091 [INFO]   → Resultado: Constituído processo | ✅ Sem pendências
+2026-07-29 19:10:56,433 [INFO]   ✔ Status mudou: "Constituído processo | 🔴 Em exigência" → "Constituído processo | ✅ Sem pendências"
+2026-07-29 19:10:56,447 [INFO] --- [PRJ-0016] Antônio Carlos Batista Muniz | Processo: 26070042160/2026 ---
+2026-07-29 19:10:56,633 [INFO]   → Abrindo SIGLA...
+2026-07-29 19:10:59,298 [INFO]   → Login OK.
+2026-07-29 19:10:59,299 [INFO]   → Navegação (definida manualmente): recursos_florestais
+2026-07-29 19:11:01,369 [INFO]   → 1 linha(s) encontradas. Procurando "26070042160/2026"...
+2026-07-29 19:11:01,386 [INFO]   → Resultado: Constituído processo | 🔴 Em exigência
+2026-07-29 19:11:01,714 [INFO]   ✔ Status mudou: "None" → "Constituído processo | 🔴 Em exigência"
+2026-07-29 19:11:01,926 [INFO] === Fim — 10 OK, 1 erro(s), 112s ===

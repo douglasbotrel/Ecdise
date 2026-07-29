@@ -133,36 +133,23 @@ def enviar_status(projeto_id: str, protocolo: str, status_novo: str | None, erro
 
 def fazer_login(page, login: str, senha: str):
     """
-    Navega para o SIGLA e faz login com CPF + senha.
+    Navega para o SIGLA e faz login com CPF + senha via Módulo Empreendedor.
 
-    O site tem alternado entre dois formatos de tela inicial (visto em 2026-07):
-      A) Formulário de login já na primeira tela — campos "loginForm:cpf" /
-         "loginForm:senha", botão "Entrar".
-      B) Tela inicial pede clique em "Módulo Empreendedor" antes — depois
-         mostra campos "j_idt37:cpf" / "j_idt37:senha", botão "Acessar"
-         (confirmado via playwright codegen em 2026-07).
-
-    Tenta o formato A primeiro; se os campos não aparecerem em poucos
-    segundos, cai automaticamente para o formato B — assim o script continua
-    funcionando não importa qual dos dois o SIGLA mostrar naquele momento.
+    ⚠️ Histórico (2026-07): a página inicial do SIGLA tem uma caixa de login
+    genérica ("Acesso à área restrita") com campos parecidos ("loginForm:cpf"),
+    mas ela NÃO é o login do Módulo Empreendedor — é outra área do site.
+    Tentar logar por ali faz o Ecdise cair num usuário/área errada e trava
+    a navegação depois. O fluxo confirmado (via playwright codegen, validado
+    em várias sessões reais) é sempre: clicar em "Módulo Empreendedor"
+    primeiro, e só então preencher CPF/senha.
     """
     log.info('  → Abrindo SIGLA...')
     page.goto(SIGLA_BASE_URL, wait_until='domcontentloaded', timeout=60_000)
 
-    try:
-        # Formato A: login direto na primeira tela
-        campo_cpf = page.locator('input[name="loginForm:cpf"]')
-        campo_cpf.wait_for(timeout=5_000)
-        campo_cpf.fill(login)
-        page.locator('[id="loginForm:senha"]').fill(senha)
-        page.get_by_role('button', name='Entrar').click()
-    except PlaywrightTimeout:
-        # Formato B: precisa clicar em "Módulo Empreendedor" primeiro
-        log.info('  → Tela inicial no formato com "Módulo Empreendedor" — clicando...')
-        page.get_by_role('cell', name='Módulo Empreendedor', exact=True).click()
-        page.locator('input[name="j_idt37:cpf"]').fill(login)
-        page.locator('[id="j_idt37:senha"]').fill(senha)
-        page.get_by_role('button', name='Acessar').click()
+    page.get_by_role('cell', name='Módulo Empreendedor', exact=True).click()
+    page.locator('input[name="j_idt37:cpf"]').fill(login)
+    page.locator('[id="j_idt37:senha"]').fill(senha)
+    page.get_by_role('button', name='Acessar').click()
 
     page.wait_for_load_state('domcontentloaded', timeout=30_000)
     log.info('  → Login OK.')
@@ -224,13 +211,17 @@ def extrair_status_da_lista(page, num_processo: str) -> str:
       "Constituído processo | 🔴 Em exigência"
       "Em tramitação | ✅ Sem pendências"
     """
-    # Aguarda pelo menos uma linha de dados aparecer na tabela
+    # Aguarda a tabela de RESULTADOS carregar (não o menu, que também é uma
+    # tabela). O clique em "Listar" é uma atualização via AJAX (RichFaces),
+    # não uma navegação de página inteira — por isso esperamos especificamente
+    # pela classe "rf-dt-c" (célula da grade de resultados), em vez de
+    # qualquer "table tr td" genérico, que pega o menu lateral antes da hora.
     try:
-        page.wait_for_selector('table tr td', timeout=15_000)
+        page.wait_for_selector('td.rf-dt-c', timeout=15_000)
     except PlaywrightTimeout:
         raise Exception('Tabela de requerimentos não carregou — verifique se o login foi bem-sucedido')
 
-    rows = page.locator('table tr').all()
+    rows = page.locator('tr:has(td.rf-dt-c)').all()
     log.info(f'  → {len(rows)} linha(s) encontradas. Procurando "{num_processo}"...')
 
     # Termo primário (completo) e fallback sem "/ANO"
