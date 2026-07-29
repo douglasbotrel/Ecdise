@@ -1,72 +1,149 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { getCurrentUser } from '@/lib/auth'
 
-// Autenticação por token fixo — definir SIGLA_BOT_TOKEN nas env vars do Vercel
-function verificarToken(req: NextRequest): boolean {
-  const authHeader = req.headers.get('authorization') ?? ''
-  const token = authHeader.replace('Bearer ', '').trim()
-  const esperado = process.env.SIGLA_BOT_TOKEN
-  if (!esperado) return false
-  return token === esperado
+export async function GET(request: NextRequest) {
+  try {
+    const user = await getCurrentUser()
+    if (!user) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
+
+    const { searchParams } = new URL(request.url)
+    const statusComercial = searchParams.get('statusComercial')
+    const etapaPipeline = searchParams.get('etapaPipeline')
+    const clienteId = searchParams.get('clienteId')
+    const analistaRapidoId = searchParams.get('analistaRapidoId')
+    const responsavelId = searchParams.get('responsavelId')
+    const search = searchParams.get('search')
+    const emAcompanhamento = searchParams.get('emAcompanhamento')
+    const limit = parseInt(searchParams.get('limit') || '50')
+    const page = parseInt(searchParams.get('page') || '1')
+
+    // suporta múltiplas etapas via "etapas=A,B,C"
+    const etapasParam = searchParams.get('etapas')
+
+    const where: any = {}
+    if (statusComercial) where.statusComercial = statusComercial
+    if (etapaPipeline) where.etapaPipeline = etapaPipeline
+    if (etapasParam) where.etapaPipeline = { in: etapasParam.split(',').map(e => e.trim()) }
+    if (clienteId) where.clienteId = clienteId
+    if (analistaRapidoId) where.analistaRapidoId = analistaRapidoId
+    if (responsavelId) where.responsavelId = responsavelId
+    if (emAcompanhamento === 'true')  where.emAcompanhamento = true
+    if (emAcompanhamento === 'false') where.emAcompanhamento = false
+    if (search) {
+      where.OR = [
+        { codigo: { contains: search } },
+        { imovelNome: { contains: search } },
+        { municipio: { contains: search } },
+        { cliente: { nome: { contains: search } } },
+      ]
+    }
+
+    // Restrição por role: analista rápido vê só os seus
+    if (user.role === 'ANALISTA_RAPIDO') {
+      where.analistaRapidoId = user.id
+    } else if (user.role === 'ANALISTA' || user.role === 'TECNICO_CAMPO') {
+      where.responsavelId = user.id
+    }
+
+    const [projetos, total] = await Promise.all([
+      prisma.projeto.findMany({
+        where,
+        include: {
+          cliente: { select: { id: true, nome: true, cpfCnpj: true } },
+          responsavel: { select: { id: true, nome: true } },
+          supervisor: { select: { id: true, nome: true } },
+          analistaRapido: { select: { id: true, nome: true } },
+          contrato: { select: { id: true, statusContrato: true, valorTotal: true } },
+          licenca: { select: { id: true, numero: true, dataEmissao: true, dataValidade: true } },
+          pendencias: { select: { id: true, status: true, prazoResposta: true, numeroPedido: true, data: true } },
+          _count: { select: { tarefas: true, vistorias: true, documentos: true } },
+        },
+        orderBy: { criadoEm: 'desc' },
+        take: limit,
+        skip: (page - 1) * limit,
+      }),
+      prisma.projeto.count({ where }),
+    ])
+
+    return NextResponse.json({ projetos, total, page, limit })
+  } catch (error) {
+    console.error('Erro ao buscar projetos:', error)
+    return NextResponse.json({ error: 'Erro interno' }, { status: 500 })
+  }
 }
 
-/**
- * GET /api/sigla/projetos
- * Retorna todos os projetos em acompanhamento que possuem credenciais SIGLA e número de protocolo.
- * Usado exclusivamente pelo script Python sigla_checker.py
- */
-export async function GET(req: NextRequest) {
-  if (!verificarToken(req)) {
-    return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
-  }
-
+export async function POST(request: NextRequest) {
   try {
-    const projetos = await prisma.projeto.findMany({
-      where: {
-        emAcompanhamento: true,
-        protocoloCodigoOrgao: { not: null },
-        credenciais: { not: null },
+    const user = await getCurrentUser()
+    if (!user) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
+
+    const body = await request.json()
+    const {
+      clienteId, tipoServico, descricao, imovelNome, imovelEndereco,
+      municipio, estado, car, areaHectares, valorProposto,
+      observacoes, analistaRapidoId,
+    } = body
+
+    if (!clienteId || !tipoServico) {
+      return NextResponse.json({ error: 'Cliente e tipo de serviço são obrigatórios' }, { status: 400 })
+    }
+
+    // Código sequencial
+    const count = await prisma.projeto.count()
+    const codigo = `PRJ-${String(count + 1).padStart(4, '0')}`
+
+    const projeto = await prisma.projeto.create({
+      data: {
+        codigo,
+        clienteId,
+        tipoServico,
+        descricao,
+        imovelNome,
+        imovelEndereco,
+        municipio,
+        estado,
+        car,
+        areaHectares: areaHectares ? parseFloat(areaHectares) : null,
+        valorProposto: valorProposto ? parseFloat(valorProposto) : null,
+        observacoes,
+        analistaRapidoId: analistaRapidoId || null,
+        etapaPipeline: 'SOLICITACAO',
+        statusComercial: 'RECEBIDO',
+        statusOperacional: 'NAO_INICIADO',
       },
-      select: {
-        id: true,
-        codigo: true,
-        tipoServico: true,
-        caminhoSIGLA: true,
-        protocoloCodigoOrgao: true,
-        credenciais: true,
-        statusSIGLA: true,
-        ultimaConsultaSIGLA: true,
-        cliente: { select: { nome: true } },
+      include: {
+        cliente: true,
+        analistaRapido: { select: { id: true, nome: true, email: true } },
       },
     })
 
-    // Filtra apenas os que têm credenciais SIGLA preenchidas
-    const resultado = projetos
-      .map(p => {
-        let cred: Record<string, Record<string, string>> = {}
-        try { cred = JSON.parse(p.credenciais ?? '{}') } catch {}
-
-        const sigla = cred['SIGLA'] ?? cred['sigla']
-        if (!sigla?.login || !sigla?.senha) return null
-
-        return {
-          id:                  p.id,
-          codigo:              p.codigo,
-          tipoServico:         p.tipoServico,      // ← fallback (texto livre) se caminhoSIGLA não estiver definido
-          caminhoSIGLA:        p.caminhoSIGLA,      // ← explícito: recursos_florestais | licenciamento_ambiental | recursos_hidricos
-          cliente:             p.cliente.nome,
-          protocolo:           p.protocoloCodigoOrgao,
-          login:               sigla.login,
-          senha:               sigla.senha,
-          statusAtual:         p.statusSIGLA,
-          ultimaConsulta:      p.ultimaConsultaSIGLA,
-        }
+    // Notifica o analista rápido designado
+    if (analistaRapidoId) {
+      await prisma.notificacao.create({
+        data: {
+          usuarioId: analistaRapidoId,
+          titulo: 'Nova solicitação para análise',
+          mensagem: `Projeto ${codigo} — ${imovelNome || tipoServico} (${municipio || 'sem município'}) aguarda sua análise técnica rápida.`,
+          tipo: 'info',
+          link: `/comercial`,
+        },
       })
-      .filter(Boolean)
+    }
 
-    return NextResponse.json({ projetos: resultado, total: resultado.length })
-  } catch (err) {
-    console.error('[SIGLA] Erro ao buscar projetos:', err)
+    await prisma.log.create({
+      data: {
+        usuarioId: user.id,
+        acao: 'CRIAR_PROJETO',
+        entidade: 'Projeto',
+        entidadeId: projeto.id,
+        detalhes: `Projeto ${codigo} criado — etapa: SOLICITACAO`,
+      },
+    })
+
+    return NextResponse.json({ projeto }, { status: 201 })
+  } catch (error) {
+    console.error('Erro ao criar projeto:', error)
     return NextResponse.json({ error: 'Erro interno' }, { status: 500 })
   }
 }

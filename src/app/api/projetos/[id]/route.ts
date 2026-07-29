@@ -262,7 +262,6 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
           statusOperacional: body.statusOperacional || autoStatusOperacional,
         }),
         ...(body.tipoServico !== undefined && { tipoServico: body.tipoServico }),
-        ...(body.caminhoSIGLA !== undefined && { caminhoSIGLA: body.caminhoSIGLA || null }),
         ...(body.descricao !== undefined && { descricao: body.descricao }),
         ...(body.imovelNome !== undefined && { imovelNome: body.imovelNome }),
         ...(body.municipio !== undefined && { municipio: body.municipio }),
