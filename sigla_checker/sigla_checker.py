@@ -332,11 +332,20 @@ def consultar_projeto(page, projeto: dict) -> str:
     senha        = projeto['senha']
     num_processo = projeto['protocolo']       # ex: "26070010650/2026"
     tipo_servico = projeto.get('tipoServico', '')
+    caminho_explicito = (projeto.get('caminhoSIGLA') or '').strip()
 
     fazer_login(page, login, senha)
 
-    tipo_nav = detectar_tipo(tipo_servico)
-    log.info(f'  → Navegação: {tipo_nav}')
+    if caminho_explicito and caminho_explicito in NAVEGADORES:
+        # ✅ Caminho definido manualmente no Ecdise (Acompanhamento → Caminho de
+        # verificação no SIGLA) — não depende de adivinhar pelo nome do serviço.
+        tipo_nav = caminho_explicito
+        log.info(f'  → Navegação (definida manualmente): {tipo_nav}')
+    else:
+        # Fallback: tenta adivinhar pelo texto do tipo de serviço (menos confiável —
+        # recomenda-se configurar o "Caminho de verificação no SIGLA" no projeto).
+        tipo_nav = detectar_tipo(tipo_servico)
+        log.info(f'  → Navegação (adivinhada pelo texto "{tipo_servico}"): {tipo_nav}')
 
     fn = NAVEGADORES.get(tipo_nav, navegar_licenciamento_ambiental)
     status = fn(page, num_processo)
