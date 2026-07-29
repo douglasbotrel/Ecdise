@@ -31,6 +31,7 @@ export async function GET(req: NextRequest) {
         id: true,
         codigo: true,
         tipoServico: true,
+        caminhoSIGLA: true,
         protocoloCodigoOrgao: true,
         credenciais: true,
         statusSIGLA: true,
@@ -51,7 +52,8 @@ export async function GET(req: NextRequest) {
         return {
           id:                  p.id,
           codigo:              p.codigo,
-          tipoServico:         p.tipoServico,      // ← necessário para detectar o menu correto no SIGLA
+          tipoServico:         p.tipoServico,      // ← fallback (texto livre) se caminhoSIGLA não estiver definido
+          caminhoSIGLA:        p.caminhoSIGLA,      // ← explícito: recursos_florestais | licenciamento_ambiental | recursos_hidricos
           cliente:             p.cliente.nome,
           protocolo:           p.protocoloCodigoOrgao,
           login:               sigla.login,
