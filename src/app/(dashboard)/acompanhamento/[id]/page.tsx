@@ -66,6 +66,34 @@ export default function AcompanhamentoDetalhe() {
   // Edição inline do tipo de serviço
   const [editandoTipo, setEditandoTipo] = useState(false)
   const [novoTipo, setNovoTipo]         = useState('')
+
+  // Caminho explícito de verificação no SIGLA (substitui a adivinhação por texto)
+  const [editandoCaminho, setEditandoCaminho] = useState(false)
+  const [novoCaminho, setNovoCaminho]         = useState('')
+  const [salvandoCaminho, setSalvandoCaminho] = useState(false)
+
+  const CAMINHOS_SIGLA: { value: string; label: string }[] = [
+    { value: '',                        label: 'Não verificar automaticamente' },
+    { value: 'recursos_florestais',     label: 'Recursos Florestais (LAUR, LUAR, Supressão)' },
+    { value: 'licenciamento_ambiental', label: 'Licenciamento Ambiental (LAU, LAR)' },
+    { value: 'recursos_hidricos',       label: 'Recursos Hídricos (Outorga, OSI)' },
+  ]
+
+  async function salvarCaminhoSigla() {
+    setSalvandoCaminho(true)
+    try {
+      const res = await fetch(`/api/projetos/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ caminhoSIGLA: novoCaminho || null }),
+      })
+      if (!res.ok) { toast.error('Erro ao salvar'); return }
+      toast.success('Caminho de verificação salvo!')
+      setEditandoCaminho(false)
+      loadProjeto()
+    } catch { toast.error('Erro ao salvar') }
+    finally { setSalvandoCaminho(false) }
+  }
   const [salvandoTipo, setSalvandoTipo] = useState(false)
 
   async function salvarTipoServico() {
@@ -486,6 +514,52 @@ export default function AcompanhamentoDetalhe() {
               : 'Ative "Em acompanhamento" para iniciar as consultas automáticas'}
           </p>
         )}
+      </div>
+
+      {/* ── Caminho explícito de verificação no SIGLA ──────────── */}
+      <div className="bg-white rounded-xl border border-gray-100 p-3 sm:p-4">
+        <div className="flex items-center justify-between flex-wrap gap-2 mb-2">
+          <span className="text-xs font-medium text-gray-500">🧭 Caminho de verificação no SIGLA</span>
+          {!editandoCaminho && (
+            <button
+              onClick={() => { setNovoCaminho(projeto.caminhoSIGLA || ''); setEditandoCaminho(true) }}
+              className="flex items-center gap-1 text-xs text-green-600 hover:text-green-700 font-medium"
+            >
+              <Pencil className="w-3 h-3" /> Alterar
+            </button>
+          )}
+        </div>
+
+        {editandoCaminho ? (
+          <div className="flex flex-col gap-2">
+            <select
+              value={novoCaminho}
+              onChange={e => setNovoCaminho(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500 bg-white"
+              autoFocus
+            >
+              {CAMINHOS_SIGLA.map(c => (
+                <option key={c.value} value={c.value}>{c.label}</option>
+              ))}
+            </select>
+            <div className="flex justify-end gap-2">
+              <button onClick={() => setEditandoCaminho(false)} className="px-3 py-1.5 text-xs font-medium text-gray-500 hover:bg-gray-50 rounded-lg">
+                Cancelar
+              </button>
+              <button onClick={salvarCaminhoSigla} disabled={salvandoCaminho}
+                className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50">
+                <Save className="w-3 h-3" /> {salvandoCaminho ? 'Salvando...' : 'Salvar'}
+              </button>
+            </div>
+          </div>
+        ) : (
+          <p className="text-sm text-gray-800">
+            {CAMINHOS_SIGLA.find(c => c.value === (projeto.caminhoSIGLA || ''))?.label}
+          </p>
+        )}
+        <p className="text-xs text-gray-400 mt-1.5">
+          Escolha explícita — o robô usa isso em vez de tentar adivinhar pelo nome do serviço.
+        </p>
       </div>
 
       {/* ── Credenciais de acesso ao SIGLA (CPF + senha do cliente) ── */}
