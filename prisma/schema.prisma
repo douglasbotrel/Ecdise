@@ -117,6 +117,7 @@ model Projeto {
   protocoloCodigoOrgao String?
   emAcompanhamento     Boolean  @default(false)
   // Consulta automática SIGLA
+  caminhoSIGLA         String?   // Caminho explícito de verificação: recursos_florestais | licenciamento_ambiental | recursos_hidricos | null (não verifica)
   statusSIGLA          String?   // Última situação extraída automaticamente do SIGLA
   ultimaConsultaSIGLA  DateTime? // Quando foi feita a última consulta automática
   criadoEm            DateTime @default(now())
