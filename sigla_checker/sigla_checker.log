@@ -2054,3 +2054,5 @@ Call log:
     - navigated to "https://sigla.sema.ma.gov.br/sigla/pages/public/cliente/main.jsf"
 
 2026-08-04 15:03:29,297 [INFO]   ✔ Status mudou: "Constituído processo | 🔴 Em exigência" → "None"
+2026-08-04 15:03:29,319 [INFO] --- [cmrcu8p13000pgwna48q4u5ep] Isaias | Processo: 25110049202/2025 ---
+2026-08-04 15:03:32,081 [INFO]   → Abrindo SIGLA...
