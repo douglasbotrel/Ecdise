@@ -1614,3 +1614,443 @@ Call log:
 2026-07-29 19:11:01,386 [INFO]   → Resultado: Constituído processo | 🔴 Em exigência
 2026-07-29 19:11:01,714 [INFO]   ✔ Status mudou: "None" → "Constituído processo | 🔴 Em exigência"
 2026-07-29 19:11:01,926 [INFO] === Fim — 10 OK, 1 erro(s), 112s ===
+2026-07-29 19:22:07,989 [INFO] === Início — 29/07/2026 19:22 ===
+2026-07-29 19:22:08,324 [INFO] 11 projeto(s) para verificar.
+2026-07-29 19:22:10,046 [INFO] --- [cmrcu84ov000igwnaioig3lgz] Maurilio | Processo: 25080037650/2025 ---
+2026-07-29 19:22:10,341 [INFO]   → Abrindo SIGLA...
+2026-07-29 19:22:11,789 [ERROR]   ✖ Page.goto: net::ERR_ABORTED; maybe frame was detached?
+Call log:
+  - navigating to "https://sigla.sema.ma.gov.br/sigla/", waiting until "domcontentloaded"
+
+2026-07-29 19:22:12,101 [INFO]   ✔ Status mudou: "Constituído processo | ✅ Sem pendências" → "None"
+2026-07-29 19:22:12,120 [INFO] --- [cmrcu7ffw000bgwnabngsgbaf] Isete Pereira | Processo: 26040053943/2026 ---
+2026-07-29 19:22:12,405 [INFO]   → Abrindo SIGLA...
+2026-07-29 19:22:13,205 [ERROR]   ✖ Page.goto: net::ERR_ABORTED; maybe frame was detached?
+Call log:
+  - navigating to "https://sigla.sema.ma.gov.br/sigla/", waiting until "domcontentloaded"
+
+2026-07-29 19:22:13,533 [INFO]   ✔ Status mudou: "Constituído processo | ✅ Sem pendências" → "None"
+2026-07-30 09:14:06,383 [INFO] === Início — 30/07/2026 09:14 ===
+2026-07-30 09:14:17,454 [ERROR] Erro ao buscar projetos da API Ecdise: HTTPSConnectionPool(host='ecdise.vercel.app', port=443): Max retries exceeded with url: /api/sigla/projetos (Caused by NameResolutionError("HTTPSConnection(host='ecdise.vercel.app', port=443): Failed to resolve 'ecdise.vercel.app' ([Errno 11001] getaddrinfo failed)"))
+2026-07-30 09:14:17,455 [INFO] Nenhum projeto para consultar. Verifique se há projetos com emAcompanhamento=true e credenciais SIGLA preenchidas.
+2026-07-30 09:14:46,313 [INFO] === Início — 30/07/2026 09:14 ===
+2026-07-30 09:14:46,680 [INFO] 11 projeto(s) para verificar.
+2026-07-30 09:14:57,203 [INFO] --- [cmrcu84ov000igwnaioig3lgz] Maurilio | Processo: 25080037650/2025 ---
+2026-07-30 09:14:57,460 [INFO]   → Abrindo SIGLA...
+2026-07-30 09:15:03,171 [INFO]   → Login OK.
+2026-07-30 09:15:03,172 [INFO]   → Navegação (definida manualmente): recursos_florestais
+2026-07-30 09:15:05,500 [INFO]   → 1 linha(s) encontradas. Procurando "25080037650/2025"...
+2026-07-30 09:15:05,584 [INFO]   → Resultado: Constituído processo | ✅ Sem pendências
+2026-07-30 09:15:05,971 [INFO]   ✔ Status inalterado: "Constituído processo | ✅ Sem pendências"
+2026-07-30 09:15:06,035 [INFO] --- [cmrcu7ffw000bgwnabngsgbaf] Isete Pereira | Processo: 26040053943/2026 ---
+2026-07-30 09:15:06,204 [INFO]   → Abrindo SIGLA...
+2026-07-30 09:15:08,714 [INFO]   → Login OK.
+2026-07-30 09:15:08,715 [INFO]   → Navegação (definida manualmente): recursos_florestais
+2026-07-30 09:15:10,842 [INFO]   → 1 linha(s) encontradas. Procurando "26040053943/2026"...
+2026-07-30 09:15:10,886 [INFO]   → Resultado: Constituído processo | ✅ Sem pendências
+2026-07-30 09:15:11,224 [INFO]   ✔ Status inalterado: "Constituído processo | ✅ Sem pendências"
+2026-07-30 09:15:11,238 [INFO] --- [cmrcu65de000b10txol49cypb] Roniel Barros | Processo: 26010021070/2026 ---
+2026-07-30 09:15:11,310 [INFO]   → Abrindo SIGLA...
+2026-07-30 09:15:13,745 [INFO]   → Login OK.
+2026-07-30 09:15:13,746 [INFO]   → Navegação (definida manualmente): recursos_florestais
+2026-07-30 09:15:15,892 [INFO]   → 1 linha(s) encontradas. Procurando "26010021070/2026"...
+2026-07-30 09:15:15,924 [INFO]   → Resultado: Constituído processo | 🔴 Em exigência
+2026-07-30 09:15:16,255 [INFO]   ✔ Status inalterado: "Constituído processo | 🔴 Em exigência"
+2026-07-30 09:15:16,290 [INFO] --- [cmrcu6tst0004gwna08bo9bvb] Bianca Magalhaes | Processo: 25080037326/2025 ---
+2026-07-30 09:15:16,449 [INFO]   → Abrindo SIGLA...
+2026-07-30 09:15:18,813 [INFO]   → Login OK.
+2026-07-30 09:15:18,814 [INFO]   → Navegação (definida manualmente): recursos_florestais
+2026-07-30 09:15:20,896 [INFO]   → 1 linha(s) encontradas. Procurando "25080037326/2025"...
+2026-07-30 09:15:20,952 [INFO]   → Resultado: Constituído processo | ✅ Sem pendências
+2026-07-30 09:15:21,299 [INFO]   ✔ Status inalterado: "Constituído processo | ✅ Sem pendências"
+2026-07-30 09:15:21,308 [INFO] --- [cmrcudlxr000wgwnavt8x1pjk] Talvane | Processo: 26040034502/2026 ---
+2026-07-30 09:15:21,369 [INFO]   → Abrindo SIGLA...
+2026-07-30 09:15:23,870 [INFO]   → Login OK.
+2026-07-30 09:15:23,871 [INFO]   → Navegação (definida manualmente): recursos_hidricos
+2026-07-30 09:15:26,101 [INFO]   → 1 linha(s) encontradas. Procurando "26040034502/2026"...
+2026-07-30 09:15:26,200 [INFO]   → Resultado: Constituído processo | 🔴 Em exigência
+2026-07-30 09:15:26,761 [INFO]   ✔ Status inalterado: "Constituído processo | 🔴 Em exigência"
+2026-07-30 09:15:26,787 [INFO] --- [cmrcu4twd000410txncvzfghq] Raiton | Processo: 25110049770/2025 ---
+2026-07-30 09:15:26,991 [INFO]   → Abrindo SIGLA...
+2026-07-30 09:15:29,642 [INFO]   → Login OK.
+2026-07-30 09:15:29,643 [INFO]   → Navegação (definida manualmente): recursos_florestais
+2026-07-30 09:15:32,068 [INFO]   → 1 linha(s) encontradas. Procurando "25110049770/2025"...
+2026-07-30 09:15:32,133 [INFO]   → Resultado: Constituído processo | ✅ Sem pendências
+2026-07-30 09:15:32,624 [INFO]   ✔ Status inalterado: "Constituído processo | ✅ Sem pendências"
+2026-07-30 09:15:32,644 [INFO] --- [PRJ-0003] Jailson Lima Claro | Processo: 26070010650/2026 ---
+2026-07-30 09:15:32,768 [INFO]   → Abrindo SIGLA...
+2026-07-30 09:15:35,415 [INFO]   → Login OK.
+2026-07-30 09:15:35,417 [INFO]   → Navegação (definida manualmente): licenciamento_ambiental
+2026-07-30 09:15:37,639 [INFO]   → 1 linha(s) encontradas. Procurando "26070010650/2026"...
+2026-07-30 09:15:37,704 [INFO]   → Resultado: Constituído processo | ✅ Sem pendências
+2026-07-30 09:15:38,095 [INFO]   ✔ Status inalterado: "Constituído processo | ✅ Sem pendências"
+2026-07-30 09:15:38,113 [INFO] --- [cmrcu9aka000i10txcee6xxr3] Eloi | Processo: 25080037570/2025 ---
+2026-07-30 09:15:38,216 [INFO]   → Abrindo SIGLA...
+2026-07-30 09:15:40,710 [INFO]   → Login OK.
+2026-07-30 09:15:40,711 [INFO]   → Navegação (definida manualmente): recursos_florestais
+2026-07-30 09:15:42,881 [INFO]   → 1 linha(s) encontradas. Procurando "25080037570/2025"...
+2026-07-30 09:15:42,932 [INFO]   → Resultado: Constituído processo | 🔴 Em exigência
+2026-07-30 09:15:43,334 [INFO]   ✔ Status inalterado: "Constituído processo | 🔴 Em exigência"
+2026-07-30 09:15:43,344 [INFO] --- [cmrcu8p13000pgwna48q4u5ep] Isaias | Processo: 25110049202/2025 ---
+2026-07-30 09:15:43,564 [INFO]   → Abrindo SIGLA...
+2026-07-30 09:15:45,811 [INFO]   → Login OK.
+2026-07-30 09:15:45,812 [INFO]   → Navegação (definida manualmente): recursos_florestais
+2026-07-30 09:15:47,827 [INFO]   → 1 linha(s) encontradas. Procurando "25110049202/2025"...
+2026-07-30 09:15:47,872 [INFO]   → Resultado: Constituído processo | ✅ Sem pendências
+2026-07-30 09:15:48,200 [INFO]   ✔ Status inalterado: "Constituído processo | ✅ Sem pendências"
+2026-07-30 09:15:48,217 [INFO] --- [cmrcucr1q000p10txqe83wo0k] Marcos Padrasto | Processo: 26050038165/2026 ---
+2026-07-30 09:15:48,275 [INFO]   → Abrindo SIGLA...
+2026-07-30 09:15:50,933 [INFO]   → Login OK.
+2026-07-30 09:15:50,933 [INFO]   → Navegação (definida manualmente): recursos_florestais
+2026-07-30 09:15:54,195 [INFO]   → 1 linha(s) encontradas. Procurando "26050038165/2026"...
+2026-07-30 09:15:54,235 [INFO]   → Resultado: Constituído processo | ✅ Sem pendências
+2026-07-30 09:15:54,592 [INFO]   ✔ Status inalterado: "Constituído processo | ✅ Sem pendências"
+2026-07-30 09:15:54,606 [INFO] --- [PRJ-0016] Antônio Carlos Batista Muniz | Processo: 26070042160/2026 ---
+2026-07-30 09:15:54,691 [INFO]   → Abrindo SIGLA...
+2026-07-30 09:15:57,088 [INFO]   → Login OK.
+2026-07-30 09:15:57,089 [INFO]   → Navegação (definida manualmente): recursos_florestais
+2026-07-30 09:15:59,105 [INFO]   → 1 linha(s) encontradas. Procurando "26070042160/2026"...
+2026-07-30 09:15:59,151 [INFO]   → Resultado: Constituído processo | 🔴 Em exigência
+2026-07-30 09:15:59,456 [INFO]   ✔ Status inalterado: "Constituído processo | 🔴 Em exigência"
+2026-07-30 09:15:59,588 [INFO] === Fim — 11 OK, 0 erro(s), 73s ===
+2026-07-30 16:44:39,840 [INFO] === Início — 30/07/2026 16:44 ===
+2026-07-30 16:44:40,281 [INFO] 11 projeto(s) para verificar.
+2026-07-30 16:44:48,386 [INFO] --- [cmrcu6tst0004gwna08bo9bvb] Bianca Magalhaes | Processo: 25080037326/2025 ---
+2026-07-30 16:44:48,658 [INFO]   → Abrindo SIGLA...
+2026-07-30 16:44:55,328 [INFO]   → Login OK.
+2026-07-30 16:44:55,330 [INFO]   → Navegação (definida manualmente): recursos_florestais
+2026-07-30 16:44:57,833 [INFO]   → 1 linha(s) encontradas. Procurando "25080037326/2025"...
+2026-07-30 16:44:58,013 [INFO]   → Resultado: Constituído processo | ✅ Sem pendências
+2026-07-30 16:44:58,498 [INFO]   ✔ Status inalterado: "Constituído processo | ✅ Sem pendências"
+2026-07-30 16:44:58,539 [INFO] --- [cmrcudlxr000wgwnavt8x1pjk] Talvane | Processo: 26040034502/2026 ---
+2026-07-30 16:44:58,685 [INFO]   → Abrindo SIGLA...
+2026-07-30 16:45:01,151 [INFO]   → Login OK.
+2026-07-30 16:45:01,154 [INFO]   → Navegação (definida manualmente): recursos_hidricos
+2026-07-30 16:45:03,561 [INFO]   → 1 linha(s) encontradas. Procurando "26040034502/2026"...
+2026-07-30 16:45:03,649 [INFO]   → Resultado: Constituído processo | 🔴 Em exigência
+2026-07-30 16:45:04,069 [INFO]   ✔ Status inalterado: "Constituído processo | 🔴 Em exigência"
+2026-07-30 16:45:04,092 [INFO] --- [cmrcu4twd000410txncvzfghq] Raiton | Processo: 25110049770/2025 ---
+2026-07-30 16:45:04,219 [INFO]   → Abrindo SIGLA...
+2026-07-30 16:45:06,632 [INFO]   → Login OK.
+2026-07-30 16:45:06,633 [INFO]   → Navegação (definida manualmente): recursos_florestais
+2026-07-30 16:45:09,236 [INFO]   → 1 linha(s) encontradas. Procurando "25110049770/2025"...
+2026-07-30 16:45:09,335 [INFO]   → Resultado: Constituído processo | ✅ Sem pendências
+2026-07-30 16:45:09,750 [INFO]   ✔ Status inalterado: "Constituído processo | ✅ Sem pendências"
+2026-07-30 16:45:09,773 [INFO] --- [PRJ-0003] Jailson Lima Claro | Processo: 26070010650/2026 ---
+2026-07-30 16:45:09,923 [INFO]   → Abrindo SIGLA...
+2026-07-30 16:45:12,570 [INFO]   → Login OK.
+2026-07-30 16:45:12,571 [INFO]   → Navegação (definida manualmente): licenciamento_ambiental
+2026-07-30 16:45:15,008 [INFO]   → 1 linha(s) encontradas. Procurando "26070010650/2026"...
+2026-07-30 16:45:15,103 [INFO]   → Resultado: Constituído processo | ✅ Sem pendências
+2026-07-30 16:45:15,493 [INFO]   ✔ Status inalterado: "Constituído processo | ✅ Sem pendências"
+2026-07-30 16:45:15,521 [INFO] --- [cmrcu84ov000igwnaioig3lgz] Maurilio | Processo: 25080037650/2025 ---
+2026-07-30 16:45:15,645 [INFO]   → Abrindo SIGLA...
+2026-07-30 16:45:18,137 [INFO]   → Login OK.
+2026-07-30 16:45:18,138 [INFO]   → Navegação (definida manualmente): recursos_florestais
+2026-07-30 16:45:20,536 [INFO]   → 1 linha(s) encontradas. Procurando "25080037650/2025"...
+2026-07-30 16:45:20,618 [INFO]   → Resultado: Constituído processo | ✅ Sem pendências
+2026-07-30 16:45:21,021 [INFO]   ✔ Status inalterado: "Constituído processo | ✅ Sem pendências"
+2026-07-30 16:45:21,049 [INFO] --- [cmrcu7ffw000bgwnabngsgbaf] Isete Pereira | Processo: 26040053943/2026 ---
+2026-07-30 16:45:21,163 [INFO]   → Abrindo SIGLA...
+2026-07-30 16:45:23,764 [INFO]   → Login OK.
+2026-07-30 16:45:23,765 [INFO]   → Navegação (definida manualmente): recursos_florestais
+2026-07-30 16:45:26,156 [INFO]   → 1 linha(s) encontradas. Procurando "26040053943/2026"...
+2026-07-30 16:45:26,243 [INFO]   → Resultado: Constituído processo | ✅ Sem pendências
+2026-07-30 16:45:26,646 [INFO]   ✔ Status inalterado: "Constituído processo | ✅ Sem pendências"
+2026-07-30 16:45:26,668 [INFO] --- [cmrcu65de000b10txol49cypb] Roniel Barros | Processo: 26010021070/2026 ---
+2026-07-30 16:45:26,804 [INFO]   → Abrindo SIGLA...
+2026-07-30 16:45:28,972 [INFO]   → Login OK.
+2026-07-30 16:45:28,972 [INFO]   → Navegação (definida manualmente): recursos_florestais
+2026-07-30 16:45:31,247 [INFO]   → 1 linha(s) encontradas. Procurando "26010021070/2026"...
+2026-07-30 16:45:31,323 [INFO]   → Resultado: Constituído processo | ✅ Sem pendências
+2026-07-30 16:45:31,733 [INFO]   ✔ Status mudou: "Constituído processo | 🔴 Em exigência" → "Constituído processo | ✅ Sem pendências"
+2026-07-30 16:45:31,758 [INFO] --- [cmrcucr1q000p10txqe83wo0k] Marcos Padrasto | Processo: 26050038165/2026 ---
+2026-07-30 16:45:31,884 [INFO]   → Abrindo SIGLA...
+2026-07-30 16:45:34,584 [INFO]   → Login OK.
+2026-07-30 16:45:34,584 [INFO]   → Navegação (definida manualmente): recursos_florestais
+2026-07-30 16:45:37,060 [INFO]   → 1 linha(s) encontradas. Procurando "26050038165/2026"...
+2026-07-30 16:45:37,119 [INFO]   → Resultado: Constituído processo | ✅ Sem pendências
+2026-07-30 16:45:37,477 [INFO]   ✔ Status inalterado: "Constituído processo | ✅ Sem pendências"
+2026-07-30 16:45:37,513 [INFO] --- [PRJ-0016] Antônio Carlos Batista Muniz | Processo: 26070042160/2026 ---
+2026-07-30 16:45:37,668 [INFO]   → Abrindo SIGLA...
+2026-07-30 16:45:40,127 [INFO]   → Login OK.
+2026-07-30 16:45:40,128 [INFO]   → Navegação (definida manualmente): recursos_florestais
+2026-07-30 16:45:42,558 [INFO]   → 1 linha(s) encontradas. Procurando "26070042160/2026"...
+2026-07-30 16:45:42,697 [INFO]   → Resultado: Constituído processo | 🔴 Em exigência
+2026-07-30 16:45:43,160 [INFO]   ✔ Status inalterado: "Constituído processo | 🔴 Em exigência"
+2026-07-30 16:45:43,183 [INFO] --- [cmrcu9aka000i10txcee6xxr3] Eloi | Processo: 25080037570/2025 ---
+2026-07-30 16:45:43,323 [INFO]   → Abrindo SIGLA...
+2026-07-30 16:45:45,713 [INFO]   → Login OK.
+2026-07-30 16:45:45,713 [INFO]   → Navegação (definida manualmente): recursos_florestais
+2026-07-30 16:45:47,713 [INFO]   → 1 linha(s) encontradas. Procurando "25080037570/2025"...
+2026-07-30 16:45:47,787 [INFO]   → Resultado: Constituído processo | 🔴 Em exigência
+2026-07-30 16:45:48,170 [INFO]   ✔ Status inalterado: "Constituído processo | 🔴 Em exigência"
+2026-07-30 16:45:48,207 [INFO] --- [cmrcu8p13000pgwna48q4u5ep] Isaias | Processo: 25110049202/2025 ---
+2026-07-30 16:45:48,364 [INFO]   → Abrindo SIGLA...
+2026-07-30 16:45:51,024 [INFO]   → Login OK.
+2026-07-30 16:45:51,024 [INFO]   → Navegação (definida manualmente): recursos_florestais
+2026-07-30 16:45:53,605 [INFO]   → 1 linha(s) encontradas. Procurando "25110049202/2025"...
+2026-07-30 16:45:53,675 [INFO]   → Resultado: Constituído processo | ✅ Sem pendências
+2026-07-30 16:45:54,233 [INFO]   ✔ Status inalterado: "Constituído processo | ✅ Sem pendências"
+2026-07-30 16:45:56,831 [INFO] === Fim — 11 OK, 0 erro(s), 76s ===
+2026-07-31 19:17:56,101 [INFO] === Início — 31/07/2026 19:17 ===
+2026-07-31 19:17:56,520 [INFO] 11 projeto(s) para verificar.
+2026-07-31 19:18:15,389 [INFO] --- [cmrcu84ov000igwnaioig3lgz] Maurilio | Processo: 25080037650/2025 ---
+2026-07-31 19:18:22,815 [INFO]   → Abrindo SIGLA...
+2026-07-31 19:18:27,832 [INFO]   → Login OK.
+2026-07-31 19:18:27,833 [INFO]   → Navegação (definida manualmente): recursos_florestais
+2026-07-31 19:18:29,950 [INFO]   → 1 linha(s) encontradas. Procurando "25080037650/2025"...
+2026-07-31 19:18:30,000 [INFO]   → Resultado: Constituído processo | ✅ Sem pendências
+2026-07-31 19:18:30,433 [INFO]   ✔ Status inalterado: "Constituído processo | ✅ Sem pendências"
+2026-07-31 19:18:30,451 [INFO] --- [cmrcu7ffw000bgwnabngsgbaf] Isete Pereira | Processo: 26040053943/2026 ---
+2026-07-31 19:18:32,963 [INFO]   → Abrindo SIGLA...
+2026-07-31 19:18:35,543 [INFO]   → Login OK.
+2026-07-31 19:18:35,544 [INFO]   → Navegação (definida manualmente): recursos_florestais
+2026-07-31 19:18:37,697 [INFO]   → 1 linha(s) encontradas. Procurando "26040053943/2026"...
+2026-07-31 19:18:37,740 [INFO]   → Resultado: Constituído processo | ✅ Sem pendências
+2026-07-31 19:18:38,106 [INFO]   ✔ Status inalterado: "Constituído processo | ✅ Sem pendências"
+2026-07-31 19:18:38,119 [INFO] --- [cmrcu65de000b10txol49cypb] Roniel Barros | Processo: 26010021070/2026 ---
+2026-07-31 19:18:40,640 [INFO]   → Abrindo SIGLA...
+2026-07-31 19:18:43,199 [INFO]   → Login OK.
+2026-07-31 19:18:43,200 [INFO]   → Navegação (definida manualmente): recursos_florestais
+2026-07-31 19:18:45,476 [INFO]   → 1 linha(s) encontradas. Procurando "26010021070/2026"...
+2026-07-31 19:18:45,514 [INFO]   → Resultado: Constituído processo | ✅ Sem pendências
+2026-07-31 19:18:45,829 [INFO]   ✔ Status inalterado: "Constituído processo | ✅ Sem pendências"
+2026-07-31 19:18:45,846 [INFO] --- [cmrcu6tst0004gwna08bo9bvb] Bianca Magalhaes | Processo: 25080037326/2025 ---
+2026-07-31 19:18:48,427 [INFO]   → Abrindo SIGLA...
+2026-07-31 19:18:50,971 [INFO]   → Login OK.
+2026-07-31 19:18:50,971 [INFO]   → Navegação (definida manualmente): recursos_florestais
+2026-07-31 19:18:53,108 [INFO]   → 1 linha(s) encontradas. Procurando "25080037326/2025"...
+2026-07-31 19:18:53,149 [INFO]   → Resultado: Constituído processo | ✅ Sem pendências
+2026-07-31 19:18:53,506 [INFO]   ✔ Status inalterado: "Constituído processo | ✅ Sem pendências"
+2026-07-31 19:18:53,520 [INFO] --- [cmrcudlxr000wgwnavt8x1pjk] Talvane | Processo: 26040034502/2026 ---
+2026-07-31 19:18:56,057 [INFO]   → Abrindo SIGLA...
+2026-07-31 19:18:58,695 [INFO]   → Login OK.
+2026-07-31 19:18:58,696 [INFO]   → Navegação (definida manualmente): recursos_hidricos
+2026-07-31 19:19:00,893 [INFO]   → 1 linha(s) encontradas. Procurando "26040034502/2026"...
+2026-07-31 19:19:00,931 [INFO]   → Resultado: Constituído processo | 🔴 Em exigência
+2026-07-31 19:19:01,267 [INFO]   ✔ Status inalterado: "Constituído processo | 🔴 Em exigência"
+2026-07-31 19:19:01,286 [INFO] --- [cmrcu4twd000410txncvzfghq] Raiton | Processo: 25110049770/2025 ---
+2026-07-31 19:19:03,786 [INFO]   → Abrindo SIGLA...
+2026-07-31 19:19:06,538 [INFO]   → Login OK.
+2026-07-31 19:19:06,538 [INFO]   → Navegação (definida manualmente): recursos_florestais
+2026-07-31 19:19:08,722 [INFO]   → 1 linha(s) encontradas. Procurando "25110049770/2025"...
+2026-07-31 19:19:08,775 [INFO]   → Resultado: Constituído processo | ✅ Sem pendências
+2026-07-31 19:19:09,149 [INFO]   ✔ Status inalterado: "Constituído processo | ✅ Sem pendências"
+2026-07-31 19:19:09,162 [INFO] --- [PRJ-0003] Jailson Lima Claro | Processo: 26070010650/2026 ---
+2026-07-31 19:19:11,716 [INFO]   → Abrindo SIGLA...
+2026-07-31 19:19:14,354 [INFO]   → Login OK.
+2026-07-31 19:19:14,354 [INFO]   → Navegação (definida manualmente): licenciamento_ambiental
+2026-07-31 19:19:16,525 [INFO]   → 1 linha(s) encontradas. Procurando "26070010650/2026"...
+2026-07-31 19:19:16,577 [INFO]   → Resultado: Constituído processo | ✅ Sem pendências
+2026-07-31 19:19:16,952 [INFO]   ✔ Status inalterado: "Constituído processo | ✅ Sem pendências"
+2026-07-31 19:19:16,965 [INFO] --- [cmrcucr1q000p10txqe83wo0k] Marcos Padrasto | Processo: 26050038165/2026 ---
+2026-07-31 19:19:19,512 [INFO]   → Abrindo SIGLA...
+2026-07-31 19:19:22,198 [INFO]   → Login OK.
+2026-07-31 19:19:22,199 [INFO]   → Navegação (definida manualmente): recursos_florestais
+2026-07-31 19:19:24,285 [INFO]   → 1 linha(s) encontradas. Procurando "26050038165/2026"...
+2026-07-31 19:19:24,327 [INFO]   → Resultado: Constituído processo | ✅ Sem pendências
+2026-07-31 19:19:24,641 [INFO]   ✔ Status inalterado: "Constituído processo | ✅ Sem pendências"
+2026-07-31 19:19:24,655 [INFO] --- [PRJ-0016] Antônio Carlos Batista Muniz | Processo: 26070042160/2026 ---
+2026-07-31 19:19:27,216 [INFO]   → Abrindo SIGLA...
+2026-07-31 19:19:29,957 [INFO]   → Login OK.
+2026-07-31 19:19:29,958 [INFO]   → Navegação (definida manualmente): recursos_florestais
+2026-07-31 19:19:32,033 [INFO]   → 1 linha(s) encontradas. Procurando "26070042160/2026"...
+2026-07-31 19:19:32,076 [INFO]   → Resultado: Constituído processo | 🔴 Em exigência
+2026-07-31 19:19:32,406 [INFO]   ✔ Status inalterado: "Constituído processo | 🔴 Em exigência"
+2026-07-31 19:19:32,421 [INFO] --- [cmrcu9aka000i10txcee6xxr3] Eloi | Processo: 25080037570/2025 ---
+2026-07-31 19:19:34,969 [INFO]   → Abrindo SIGLA...
+2026-07-31 19:19:37,917 [INFO]   → Login OK.
+2026-07-31 19:19:37,918 [INFO]   → Navegação (definida manualmente): recursos_florestais
+2026-07-31 19:19:40,049 [INFO]   → 1 linha(s) encontradas. Procurando "25080037570/2025"...
+2026-07-31 19:19:40,091 [INFO]   → Resultado: Constituído processo | 🔴 Em exigência
+2026-07-31 19:19:40,410 [INFO]   ✔ Status inalterado: "Constituído processo | 🔴 Em exigência"
+2026-07-31 19:19:40,425 [INFO] --- [cmrcu8p13000pgwna48q4u5ep] Isaias | Processo: 25110049202/2025 ---
+2026-07-31 19:19:42,898 [INFO]   → Abrindo SIGLA...
+2026-07-31 19:19:45,334 [INFO]   → Login OK.
+2026-07-31 19:19:45,334 [INFO]   → Navegação (definida manualmente): recursos_florestais
+2026-07-31 19:19:47,472 [INFO]   → 1 linha(s) encontradas. Procurando "25110049202/2025"...
+2026-07-31 19:19:47,511 [INFO]   → Resultado: Constituído processo | ✅ Sem pendências
+2026-07-31 19:19:47,829 [INFO]   ✔ Status inalterado: "Constituído processo | ✅ Sem pendências"
+2026-07-31 19:19:47,956 [INFO] === Fim — 11 OK, 0 erro(s), 111s ===
+2026-08-03 10:35:22,044 [INFO] === Início — 03/08/2026 10:35 ===
+2026-08-03 10:35:22,409 [INFO] 11 projeto(s) para verificar.
+2026-08-03 10:35:43,053 [INFO] --- [cmrcu65de000b10txol49cypb] Roniel Barros | Processo: 26010021070/2026 ---
+2026-08-03 10:35:52,953 [INFO]   → Abrindo SIGLA...
+2026-08-03 10:36:27,450 [ERROR]   ✖ Locator.fill: Timeout 30000ms exceeded.
+Call log:
+  - waiting for locator("input[name=\"j_idt37:cpf\"]")
+    - waiting for" https://sigla.sema.ma.gov.br/sigla/pages/public/cliente/main.jsf" navigation to finish...
+    - navigated to "https://sigla.sema.ma.gov.br/sigla/pages/public/cliente/main.jsf"
+
+2026-08-03 10:36:27,796 [INFO]   ✔ Status mudou: "Constituído processo | ✅ Sem pendências" → "None"
+2026-08-03 10:36:27,809 [INFO] --- [cmrcu6tst0004gwna08bo9bvb] Bianca Magalhaes | Processo: 25080037326/2025 ---
+2026-08-03 10:36:29,989 [INFO]   → Abrindo SIGLA...
+2026-08-03 10:37:01,488 [ERROR]   ✖ Locator.fill: Timeout 30000ms exceeded.
+Call log:
+  - waiting for locator("input[name=\"j_idt37:cpf\"]")
+    - waiting for" https://sigla.sema.ma.gov.br/sigla/pages/public/cliente/main.jsf" navigation to finish...
+    - navigated to "https://sigla.sema.ma.gov.br/sigla/pages/public/cliente/main.jsf"
+
+2026-08-03 10:37:01,835 [INFO]   ✔ Status mudou: "Constituído processo | ✅ Sem pendências" → "None"
+2026-08-03 10:37:01,846 [INFO] --- [cmrcu84ov000igwnaioig3lgz] Maurilio | Processo: 25080037650/2025 ---
+2026-08-03 10:37:04,422 [INFO]   → Abrindo SIGLA...
+2026-08-03 10:37:36,185 [ERROR]   ✖ Locator.fill: Timeout 30000ms exceeded.
+Call log:
+  - waiting for locator("input[name=\"j_idt37:cpf\"]")
+    - waiting for" https://sigla.sema.ma.gov.br/sigla/pages/public/cliente/main.jsf" navigation to finish...
+    - navigated to "https://sigla.sema.ma.gov.br/sigla/pages/public/cliente/main.jsf"
+
+2026-08-03 10:37:36,502 [INFO]   ✔ Status mudou: "Constituído processo | ✅ Sem pendências" → "None"
+2026-08-03 10:37:36,521 [INFO] --- [cmrcudlxr000wgwnavt8x1pjk] Talvane | Processo: 26040034502/2026 ---
+2026-08-03 10:37:40,377 [INFO]   → Abrindo SIGLA...
+2026-08-03 10:38:12,571 [ERROR]   ✖ Locator.fill: Timeout 30000ms exceeded.
+Call log:
+  - waiting for locator("input[name=\"j_idt37:cpf\"]")
+    - waiting for" https://sigla.sema.ma.gov.br/sigla/pages/public/cliente/main.jsf" navigation to finish...
+    - navigated to "https://sigla.sema.ma.gov.br/sigla/pages/public/cliente/main.jsf"
+
+2026-08-03 10:38:12,894 [INFO]   ✔ Status mudou: "Constituído processo | 🔴 Em exigência" → "None"
+2026-08-03 10:38:12,917 [INFO] --- [cmrcu4twd000410txncvzfghq] Raiton | Processo: 25110049770/2025 ---
+2026-08-03 10:38:15,869 [INFO]   → Abrindo SIGLA...
+2026-08-03 10:38:47,432 [ERROR]   ✖ Locator.fill: Timeout 30000ms exceeded.
+Call log:
+  - waiting for locator("input[name=\"j_idt37:cpf\"]")
+    - waiting for" https://sigla.sema.ma.gov.br/sigla/pages/public/cliente/main.jsf" navigation to finish...
+    - navigated to "https://sigla.sema.ma.gov.br/sigla/pages/public/cliente/main.jsf"
+
+2026-08-03 10:38:47,806 [INFO]   ✔ Status mudou: "Constituído processo | ✅ Sem pendências" → "None"
+2026-08-03 10:38:47,825 [INFO] --- [PRJ-0003] Jailson Lima Claro | Processo: 26070010650/2026 ---
+2026-08-03 10:38:50,151 [INFO]   → Abrindo SIGLA...
+2026-08-03 10:39:21,492 [ERROR]   ✖ Locator.fill: Timeout 30000ms exceeded.
+Call log:
+  - waiting for locator("input[name=\"j_idt37:cpf\"]")
+    - waiting for" https://sigla.sema.ma.gov.br/sigla/pages/public/cliente/main.jsf" navigation to finish...
+    - navigated to "https://sigla.sema.ma.gov.br/sigla/pages/public/cliente/main.jsf"
+
+2026-08-03 10:39:21,792 [INFO]   ✔ Status mudou: "Constituído processo | ✅ Sem pendências" → "None"
+2026-08-03 10:39:21,810 [INFO] --- [cmrcu7ffw000bgwnabngsgbaf] Isete Pereira | Processo: 26040053943/2026 ---
+2026-08-03 10:39:23,856 [INFO]   → Abrindo SIGLA...
+2026-08-03 10:39:55,240 [ERROR]   ✖ Locator.fill: Timeout 30000ms exceeded.
+Call log:
+  - waiting for locator("input[name=\"j_idt37:cpf\"]")
+    - waiting for" https://sigla.sema.ma.gov.br/sigla/pages/public/cliente/main.jsf" navigation to finish...
+    - navigated to "https://sigla.sema.ma.gov.br/sigla/pages/public/cliente/main.jsf"
+
+2026-08-03 10:39:55,585 [INFO]   ✔ Status mudou: "Constituído processo | ✅ Sem pendências" → "None"
+2026-08-03 10:39:55,594 [INFO] --- [PRJ-0016] Antônio Carlos Batista Muniz | Processo: 26070042160/2026 ---
+2026-08-03 10:39:57,723 [INFO]   → Abrindo SIGLA...
+2026-08-03 10:40:29,092 [ERROR]   ✖ Locator.fill: Timeout 30000ms exceeded.
+Call log:
+  - waiting for locator("input[name=\"j_idt37:cpf\"]")
+    - waiting for" https://sigla.sema.ma.gov.br/sigla/pages/public/cliente/main.jsf" navigation to finish...
+    - navigated to "https://sigla.sema.ma.gov.br/sigla/pages/public/cliente/main.jsf"
+
+2026-08-03 10:40:29,419 [INFO]   ✔ Status mudou: "Constituído processo | 🔴 Em exigência" → "None"
+2026-08-03 10:40:29,434 [INFO] --- [cmrcu9aka000i10txcee6xxr3] Eloi | Processo: 25080037570/2025 ---
+2026-08-03 10:40:31,558 [INFO]   → Abrindo SIGLA...
+2026-08-03 10:41:02,990 [ERROR]   ✖ Locator.fill: Timeout 30000ms exceeded.
+Call log:
+  - waiting for locator("input[name=\"j_idt37:cpf\"]")
+    - waiting for" https://sigla.sema.ma.gov.br/sigla/pages/public/cliente/main.jsf" navigation to finish...
+    - navigated to "https://sigla.sema.ma.gov.br/sigla/pages/public/cliente/main.jsf"
+
+2026-08-03 10:41:03,363 [INFO]   ✔ Status mudou: "Constituído processo | 🔴 Em exigência" → "None"
+2026-08-03 10:41:03,383 [INFO] --- [cmrcu8p13000pgwna48q4u5ep] Isaias | Processo: 25110049202/2025 ---
+2026-08-03 10:41:05,722 [INFO]   → Abrindo SIGLA...
+2026-08-03 10:41:37,088 [ERROR]   ✖ Locator.fill: Timeout 30000ms exceeded.
+Call log:
+  - waiting for locator("input[name=\"j_idt37:cpf\"]")
+    - waiting for" https://sigla.sema.ma.gov.br/sigla/pages/public/cliente/main.jsf" navigation to finish...
+    - navigated to "https://sigla.sema.ma.gov.br/sigla/pages/public/cliente/main.jsf"
+
+2026-08-03 10:41:37,402 [INFO]   ✔ Status mudou: "Constituído processo | ✅ Sem pendências" → "None"
+2026-08-03 10:41:37,416 [INFO] --- [cmrcucr1q000p10txqe83wo0k] Marcos Padrasto | Processo: 26050038165/2026 ---
+2026-08-03 10:41:39,587 [INFO]   → Abrindo SIGLA...
+2026-08-03 10:42:10,971 [ERROR]   ✖ Locator.fill: Timeout 30000ms exceeded.
+Call log:
+  - waiting for locator("input[name=\"j_idt37:cpf\"]")
+    - waiting for" https://sigla.sema.ma.gov.br/sigla/pages/public/cliente/main.jsf" navigation to finish...
+    - navigated to "https://sigla.sema.ma.gov.br/sigla/pages/public/cliente/main.jsf"
+
+2026-08-03 10:42:11,280 [INFO]   ✔ Status mudou: "Constituído processo | ✅ Sem pendências" → "None"
+2026-08-03 10:42:11,568 [INFO] === Fim — 0 OK, 11 erro(s), 409s ===
+2026-08-04 14:57:45,817 [INFO] === Início — 04/08/2026 14:57 ===
+2026-08-04 14:57:46,298 [INFO] 11 projeto(s) para verificar.
+2026-08-04 14:58:06,456 [INFO] --- [PRJ-0003] Jailson Lima Claro | Processo: 26070010650/2026 ---
+2026-08-04 14:58:10,907 [INFO]   → Abrindo SIGLA...
+2026-08-04 14:58:46,209 [ERROR]   ✖ Locator.fill: Timeout 30000ms exceeded.
+Call log:
+  - waiting for locator("input[name=\"j_idt37:cpf\"]")
+
+2026-08-04 14:58:46,562 [INFO]   ✔ Status mudou: "Constituído processo | ✅ Sem pendências" → "None"
+2026-08-04 14:58:46,619 [INFO] --- [cmrcu7ffw000bgwnabngsgbaf] Isete Pereira | Processo: 26040053943/2026 ---
+2026-08-04 14:58:49,778 [INFO]   → Abrindo SIGLA...
+2026-08-04 14:59:22,041 [ERROR]   ✖ Locator.fill: Timeout 30000ms exceeded.
+Call log:
+  - waiting for locator("input[name=\"j_idt37:cpf\"]")
+    - waiting for" https://sigla.sema.ma.gov.br/sigla/pages/public/cliente/main.jsf" navigation to finish...
+    - navigated to "https://sigla.sema.ma.gov.br/sigla/pages/public/cliente/main.jsf"
+
+2026-08-04 14:59:22,551 [INFO]   ✔ Status mudou: "Constituído processo | ✅ Sem pendências" → "None"
+2026-08-04 14:59:22,571 [INFO] --- [cmrcu65de000b10txol49cypb] Roniel Barros | Processo: 26010021070/2026 ---
+2026-08-04 14:59:25,320 [INFO]   → Abrindo SIGLA...
+2026-08-04 14:59:57,681 [ERROR]   ✖ Locator.fill: Timeout 30000ms exceeded.
+Call log:
+  - waiting for locator("input[name=\"j_idt37:cpf\"]")
+    - waiting for" https://sigla.sema.ma.gov.br/sigla/pages/public/cliente/main.jsf" navigation to finish...
+    - navigated to "https://sigla.sema.ma.gov.br/sigla/pages/public/cliente/main.jsf"
+
+2026-08-04 14:59:58,292 [INFO]   ✔ Status mudou: "Constituído processo | ✅ Sem pendências" → "None"
+2026-08-04 14:59:58,316 [INFO] --- [cmrcu6tst0004gwna08bo9bvb] Bianca Magalhaes | Processo: 25080037326/2025 ---
+2026-08-04 15:00:00,881 [INFO]   → Abrindo SIGLA...
+2026-08-04 15:00:32,964 [ERROR]   ✖ Locator.fill: Timeout 30000ms exceeded.
+Call log:
+  - waiting for locator("input[name=\"j_idt37:cpf\"]")
+
+2026-08-04 15:00:33,332 [INFO]   ✔ Status mudou: "Constituído processo | ✅ Sem pendências" → "None"
+2026-08-04 15:00:33,352 [INFO] --- [cmrcu84ov000igwnaioig3lgz] Maurilio | Processo: 25080037650/2025 ---
+2026-08-04 15:00:36,001 [INFO]   → Abrindo SIGLA...
+2026-08-04 15:01:08,676 [ERROR]   ✖ Locator.fill: Timeout 30000ms exceeded.
+Call log:
+  - waiting for locator("input[name=\"j_idt37:cpf\"]")
+    - waiting for" https://sigla.sema.ma.gov.br/sigla/pages/public/cliente/main.jsf" navigation to finish...
+    - navigated to "https://sigla.sema.ma.gov.br/sigla/pages/public/cliente/main.jsf"
+
+2026-08-04 15:01:09,038 [INFO]   ✔ Status mudou: "Constituído processo | ✅ Sem pendências" → "None"
+2026-08-04 15:01:09,053 [INFO] --- [cmrcudlxr000wgwnavt8x1pjk] Talvane | Processo: 26040034502/2026 ---
+2026-08-04 15:01:11,965 [INFO]   → Abrindo SIGLA...
+2026-08-04 15:01:43,608 [ERROR]   ✖ Locator.fill: Timeout 30000ms exceeded.
+Call log:
+  - waiting for locator("input[name=\"j_idt37:cpf\"]")
+    - waiting for" https://sigla.sema.ma.gov.br/sigla/pages/public/cliente/main.jsf" navigation to finish...
+    - navigated to "https://sigla.sema.ma.gov.br/sigla/pages/public/cliente/main.jsf"
+
+2026-08-04 15:01:43,969 [INFO]   ✔ Status mudou: "Constituído processo | 🔴 Em exigência" → "None"
+2026-08-04 15:01:43,991 [INFO] --- [cmrcu4twd000410txncvzfghq] Raiton | Processo: 25110049770/2025 ---
+2026-08-04 15:01:46,634 [INFO]   → Abrindo SIGLA...
+2026-08-04 15:02:19,147 [ERROR]   ✖ Locator.fill: Timeout 30000ms exceeded.
+Call log:
+  - waiting for locator("input[name=\"j_idt37:cpf\"]")
+    - waiting for" https://sigla.sema.ma.gov.br/sigla/pages/public/cliente/main.jsf" navigation to finish...
+    - navigated to "https://sigla.sema.ma.gov.br/sigla/pages/public/cliente/main.jsf"
+
+2026-08-04 15:02:19,700 [INFO]   ✔ Status mudou: "Constituído processo | ✅ Sem pendências" → "None"
+2026-08-04 15:02:19,716 [INFO] --- [PRJ-0016] Antônio Carlos Batista Muniz | Processo: 26070042160/2026 ---
+2026-08-04 15:02:22,336 [INFO]   → Abrindo SIGLA...
+2026-08-04 15:02:54,069 [ERROR]   ✖ Locator.fill: Timeout 30000ms exceeded.
+Call log:
+  - waiting for locator("input[name=\"j_idt37:cpf\"]")
+    - waiting for" https://sigla.sema.ma.gov.br/sigla/pages/public/cliente/main.jsf" navigation to finish...
+    - navigated to "https://sigla.sema.ma.gov.br/sigla/pages/public/cliente/main.jsf"
+
+2026-08-04 15:02:54,414 [INFO]   ✔ Status mudou: "Constituído processo | 🔴 Em exigência" → "None"
+2026-08-04 15:02:54,434 [INFO] --- [cmrcu9aka000i10txcee6xxr3] Eloi | Processo: 25080037570/2025 ---
+2026-08-04 15:02:57,097 [INFO]   → Abrindo SIGLA...
+2026-08-04 15:03:28,909 [ERROR]   ✖ Locator.fill: Timeout 30000ms exceeded.
+Call log:
+  - waiting for locator("input[name=\"j_idt37:cpf\"]")
+    - waiting for" https://sigla.sema.ma.gov.br/sigla/pages/public/cliente/main.jsf" navigation to finish...
+    - navigated to "https://sigla.sema.ma.gov.br/sigla/pages/public/cliente/main.jsf"
+
+2026-08-04 15:03:29,297 [INFO]   ✔ Status mudou: "Constituído processo | 🔴 Em exigência" → "None"

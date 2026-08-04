@@ -438,6 +438,43 @@ export function ModalProjeto({ open, onClose, projeto, onSalvo, modoAcao = 'edit
   const servicosAmbiental    = servicos.filter(s => normalizeCateg(s.categoria) === 'ambiental')
   const servicosRegularizacao = servicos.filter(s => ['regularizacao', 'regularização'].includes(normalizeCateg(s.categoria)))
 
+  // Redimensiona/comprime uma imagem no navegador antes de enviar, para não
+  // estourar o limite de tamanho de requisição da Vercel (fotos de celular
+  // costumam vir com vários MB). PDFs não são comprimidos aqui.
+  async function comprimirImagem(file: File): Promise<string> {
+    const dataUrl = await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onload = () => resolve(reader.result as string)
+      reader.onerror = () => reject(new Error('Falha ao ler o arquivo'))
+      reader.readAsDataURL(file)
+    })
+
+    const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const el = new Image()
+      el.onload = () => resolve(el)
+      el.onerror = () => reject(new Error('Falha ao processar a imagem'))
+      el.src = dataUrl
+    })
+
+    const MAX_LADO = 1800
+    let { width, height } = img
+    if (width > MAX_LADO || height > MAX_LADO) {
+      const escala = MAX_LADO / Math.max(width, height)
+      width = Math.round(width * escala)
+      height = Math.round(height * escala)
+    }
+
+    const canvas = document.createElement('canvas')
+    canvas.width = width
+    canvas.height = height
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return dataUrl.split(',')[1] // fallback: envia original se canvas falhar
+    ctx.drawImage(img, 0, 0, width, height)
+
+    // Qualidade 0.75 mantém o texto legível e reduz bastante o tamanho
+    return canvas.toDataURL('image/jpeg', 0.75).split(',')[1]
+  }
+
   async function handleImportarCar(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file) return
@@ -451,17 +488,38 @@ export function ModalProjeto({ open, onClose, projeto, onSalvo, modoAcao = 'edit
 
     setImportandoCar(true)
     try {
-      const base64 = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader()
-        reader.onload = () => resolve((reader.result as string).split(',')[1])
-        reader.onerror = () => reject(new Error('Falha ao ler o arquivo'))
-        reader.readAsDataURL(file)
-      })
+      const ehImagem = file.type.startsWith('image/')
+      let base64: string
+      let mimeTypeEnvio = file.type
+
+      if (ehImagem) {
+        base64 = await comprimirImagem(file)
+        mimeTypeEnvio = 'image/jpeg' // canvas sempre reexporta como JPEG
+      } else {
+        base64 = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader()
+          reader.onload = () => resolve((reader.result as string).split(',')[1])
+          reader.onerror = () => reject(new Error('Falha ao ler o arquivo'))
+          reader.readAsDataURL(file)
+        })
+      }
+
+      // Limite prático de ~3.3MB no base64 (~4.5MB é o teto da Vercel; deixamos
+      // margem para o JSON em volta). PDFs não são comprimidos automaticamente.
+      const LIMITE_BASE64 = 3_300_000
+      if (base64.length > LIMITE_BASE64) {
+        toast.error(
+          ehImagem
+            ? 'Imagem ainda muito grande mesmo após compressão. Tente outra foto com menos resolução.'
+            : 'PDF muito grande (limite ~2,5MB). Tente exportar com menos páginas/qualidade, ou envie uma foto do documento em vez do PDF.'
+        )
+        return
+      }
 
       const res = await fetch('/api/car/extrair', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ fileBase64: base64, mimeType: file.type, fileName: file.name }),
+        body: JSON.stringify({ fileBase64: base64, mimeType: mimeTypeEnvio, fileName: file.name }),
       })
       const data = await res.json()
       if (!res.ok) {
