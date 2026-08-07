@@ -72,6 +72,7 @@ export default function BIPage() {
   const pagamentosPorForma  = dadosBi?.pagamentosPorForma  ?? []
   const servicosContratados = dadosBi?.servicosContratados ?? []
   const pendenciasPanorama  = dadosBi?.pendencias          ?? {}
+  const tempos              = dadosBi?.tempos              ?? {}
 
   return (
     <div className="space-y-6">
@@ -144,6 +145,55 @@ export default function BIPage() {
               <p className="text-xs text-gray-400 mt-1">{kpi.label}</p>
             </div>
           ))}
+        </div>
+      </div>
+
+      {/* Tempos Médios — Operacional, Protocolo → Licença, Tratativa de Pendência */}
+      <div>
+        <div className="mb-3">
+          <h3 className="font-semibold text-gray-900">Tempos Médios</h3>
+          <p className="text-xs text-gray-400 mt-0.5">Quanto tempo cada etapa está levando, em média</p>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="bg-white rounded-2xl border border-gray-100 p-5">
+            <div className="w-1.5 h-8 bg-indigo-500 rounded-full mb-3" />
+            <p className="text-3xl font-bold text-gray-900">
+              {tempos.operacionalDias != null ? `${tempos.operacionalDias}` : '—'}
+              {tempos.operacionalDias != null && <span className="text-base font-medium text-gray-400"> dias</span>}
+            </p>
+            <p className="text-xs text-gray-400 mt-1">
+              Tempo médio Operacional (início da execução até o protocolo no órgão)
+            </p>
+            <p className="text-[11px] text-gray-300 mt-1">
+              {tempos.operacionalAmostra ?? 0} projeto(s) considerado(s)
+            </p>
+          </div>
+          <div className="bg-white rounded-2xl border border-gray-100 p-5">
+            <div className="w-1.5 h-8 bg-emerald-500 rounded-full mb-3" />
+            <p className="text-3xl font-bold text-gray-900">
+              {tempos.licencaDias != null ? `${tempos.licencaDias}` : '—'}
+              {tempos.licencaDias != null && <span className="text-base font-medium text-gray-400"> dias</span>}
+            </p>
+            <p className="text-xs text-gray-400 mt-1">
+              Tempo médio até a Licença (protocolo no órgão até a emissão)
+            </p>
+            <p className="text-[11px] text-gray-300 mt-1">
+              {tempos.licencaAmostra ?? 0} projeto(s) considerado(s)
+            </p>
+          </div>
+          <div className="bg-white rounded-2xl border border-gray-100 p-5">
+            <div className="w-1.5 h-8 bg-amber-500 rounded-full mb-3" />
+            <p className="text-3xl font-bold text-gray-900">
+              {tempos.pendenciaDias != null ? `${tempos.pendenciaDias}` : '—'}
+              {tempos.pendenciaDias != null && <span className="text-base font-medium text-gray-400"> dias</span>}
+            </p>
+            <p className="text-xs text-gray-400 mt-1">
+              Tempo médio de tratativa de pendência com o órgão
+            </p>
+            <p className="text-[11px] text-gray-300 mt-1">
+              {tempos.pendenciaAmostra ?? 0} pendência(s) respondida(s)
+            </p>
+          </div>
         </div>
       </div>
 

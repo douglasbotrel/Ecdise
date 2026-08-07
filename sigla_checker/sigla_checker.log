@@ -2056,3 +2056,321 @@ Call log:
 2026-08-04 15:03:29,297 [INFO]   ✔ Status mudou: "Constituído processo | 🔴 Em exigência" → "None"
 2026-08-04 15:03:29,319 [INFO] --- [cmrcu8p13000pgwna48q4u5ep] Isaias | Processo: 25110049202/2025 ---
 2026-08-04 15:03:32,081 [INFO]   → Abrindo SIGLA...
+2026-08-04 15:04:04,322 [ERROR]   ✖ Locator.fill: Timeout 30000ms exceeded.
+Call log:
+  - waiting for locator("input[name=\"j_idt37:cpf\"]")
+    - waiting for" https://sigla.sema.ma.gov.br/sigla/pages/public/cliente/main.jsf" navigation to finish...
+    - navigated to "https://sigla.sema.ma.gov.br/sigla/pages/public/cliente/main.jsf"
+
+2026-08-04 15:04:04,903 [INFO]   ✔ Status mudou: "Constituído processo | ✅ Sem pendências" → "None"
+2026-08-04 15:04:04,927 [INFO] --- [cmrcucr1q000p10txqe83wo0k] Marcos Padrasto | Processo: 26050038165/2026 ---
+2026-08-04 15:04:07,480 [INFO]   → Abrindo SIGLA...
+2026-08-04 15:04:39,384 [ERROR]   ✖ Locator.fill: Timeout 30000ms exceeded.
+Call log:
+  - waiting for locator("input[name=\"j_idt37:cpf\"]")
+
+2026-08-04 15:04:39,773 [INFO]   ✔ Status mudou: "Constituído processo | ✅ Sem pendências" → "None"
+2026-08-04 15:04:40,066 [INFO] === Fim — 0 OK, 11 erro(s), 414s ===
+2026-08-05 21:32:24,349 [INFO] === Início — 05/08/2026 21:32 ===
+2026-08-05 21:32:24,691 [INFO] 11 projeto(s) para verificar.
+2026-08-05 21:32:45,417 [INFO] --- [cmrcu7ffw000bgwnabngsgbaf] Isete Pereira | Processo: 26040053943/2026 ---
+2026-08-05 21:32:53,337 [INFO]   → Abrindo SIGLA...
+2026-08-05 21:33:28,007 [ERROR]   ✖ Locator.fill: Timeout 30000ms exceeded.
+Call log:
+  - waiting for locator("input[name=\"j_idt37:cpf\"]")
+    - waiting for" https://sigla.sema.ma.gov.br/sigla/pages/public/cliente/main.jsf" navigation to finish...
+    - navigated to "https://sigla.sema.ma.gov.br/sigla/pages/public/cliente/main.jsf"
+
+2026-08-05 21:33:28,334 [INFO]   ✔ Status mudou: "Constituído processo | ✅ Sem pendências" → "None"
+2026-08-05 21:33:28,364 [INFO] --- [cmrcu4twd000410txncvzfghq] Raiton | Processo: 25110049770/2025 ---
+2026-08-05 21:33:31,023 [INFO]   → Abrindo SIGLA...
+2026-08-05 21:34:02,493 [ERROR]   ✖ Locator.fill: Timeout 30000ms exceeded.
+Call log:
+  - waiting for locator("input[name=\"j_idt37:cpf\"]")
+    - waiting for" https://sigla.sema.ma.gov.br/sigla/pages/public/cliente/main.jsf" navigation to finish...
+    - navigated to "https://sigla.sema.ma.gov.br/sigla/pages/public/cliente/main.jsf"
+
+2026-08-05 21:34:02,837 [INFO]   ✔ Status mudou: "Constituído processo | ✅ Sem pendências" → "None"
+2026-08-05 21:34:02,851 [INFO] --- [PRJ-0003] Jailson Lima Claro | Processo: 26070010650/2026 ---
+2026-08-05 21:34:05,476 [INFO]   → Abrindo SIGLA...
+2026-08-05 21:34:37,169 [ERROR]   ✖ Locator.fill: Timeout 30000ms exceeded.
+Call log:
+  - waiting for locator("input[name=\"j_idt37:cpf\"]")
+    - waiting for" https://sigla.sema.ma.gov.br/sigla/pages/public/cliente/main.jsf" navigation to finish...
+    - navigated to "https://sigla.sema.ma.gov.br/sigla/pages/public/cliente/main.jsf"
+
+2026-08-05 21:34:37,456 [INFO]   ✔ Status mudou: "Constituído processo | ✅ Sem pendências" → "None"
+2026-08-05 21:34:37,464 [INFO] --- [cmrcu65de000b10txol49cypb] Roniel Barros | Processo: 26010021070/2026 ---
+2026-08-05 21:34:39,584 [INFO]   → Abrindo SIGLA...
+2026-08-05 21:35:11,190 [ERROR]   ✖ Locator.fill: Timeout 30000ms exceeded.
+Call log:
+  - waiting for locator("input[name=\"j_idt37:cpf\"]")
+    - waiting for" https://sigla.sema.ma.gov.br/sigla/pages/public/cliente/main.jsf" navigation to finish...
+    - navigated to "https://sigla.sema.ma.gov.br/sigla/pages/public/cliente/main.jsf"
+
+2026-08-05 21:35:11,502 [INFO]   ✔ Status mudou: "Constituído processo | ✅ Sem pendências" → "None"
+2026-08-05 21:35:11,516 [INFO] --- [cmrcu6tst0004gwna08bo9bvb] Bianca Magalhaes | Processo: 25080037326/2025 ---
+2026-08-05 21:35:13,654 [INFO]   → Abrindo SIGLA...
+2026-08-05 21:35:45,367 [ERROR]   ✖ Locator.fill: Timeout 30000ms exceeded.
+Call log:
+  - waiting for locator("input[name=\"j_idt37:cpf\"]")
+    - waiting for" https://sigla.sema.ma.gov.br/sigla/pages/public/cliente/main.jsf" navigation to finish...
+    - navigated to "https://sigla.sema.ma.gov.br/sigla/pages/public/cliente/main.jsf"
+
+2026-08-05 21:35:45,697 [INFO]   ✔ Status mudou: "Constituído processo | ✅ Sem pendências" → "None"
+2026-08-05 21:35:45,709 [INFO] --- [cmrcu84ov000igwnaioig3lgz] Maurilio | Processo: 25080037650/2025 ---
+2026-08-05 21:35:47,805 [INFO]   → Abrindo SIGLA...
+2026-08-05 21:36:19,470 [ERROR]   ✖ Locator.fill: Timeout 30000ms exceeded.
+Call log:
+  - waiting for locator("input[name=\"j_idt37:cpf\"]")
+    - waiting for" https://sigla.sema.ma.gov.br/sigla/pages/public/cliente/main.jsf" navigation to finish...
+    - navigated to "https://sigla.sema.ma.gov.br/sigla/pages/public/cliente/main.jsf"
+
+2026-08-05 21:36:19,936 [INFO]   ✔ Status mudou: "Constituído processo | ✅ Sem pendências" → "None"
+2026-08-05 21:36:19,948 [INFO] --- [cmrcudlxr000wgwnavt8x1pjk] Talvane | Processo: 26040034502/2026 ---
+2026-08-05 21:36:22,127 [INFO]   → Abrindo SIGLA...
+2026-08-05 21:36:53,673 [ERROR]   ✖ Locator.fill: Timeout 30000ms exceeded.
+Call log:
+  - waiting for locator("input[name=\"j_idt37:cpf\"]")
+    - waiting for" https://sigla.sema.ma.gov.br/sigla/pages/public/cliente/main.jsf" navigation to finish...
+    - navigated to "https://sigla.sema.ma.gov.br/sigla/pages/public/cliente/main.jsf"
+
+2026-08-05 21:36:54,005 [INFO]   ✔ Status mudou: "Constituído processo | 🔴 Em exigência" → "None"
+2026-08-05 21:36:54,016 [INFO] --- [PRJ-0016] Antônio Carlos Batista Muniz | Processo: 26070042160/2026 ---
+2026-08-05 21:36:56,162 [INFO]   → Abrindo SIGLA...
+2026-08-05 21:37:27,699 [ERROR]   ✖ Locator.fill: Timeout 30000ms exceeded.
+Call log:
+  - waiting for locator("input[name=\"j_idt37:cpf\"]")
+    - waiting for" https://sigla.sema.ma.gov.br/sigla/pages/public/cliente/main.jsf" navigation to finish...
+    - navigated to "https://sigla.sema.ma.gov.br/sigla/pages/public/cliente/main.jsf"
+
+2026-08-05 21:37:28,033 [INFO]   ✔ Status mudou: "Constituído processo | 🔴 Em exigência" → "None"
+2026-08-05 21:37:28,048 [INFO] --- [cmrcu9aka000i10txcee6xxr3] Eloi | Processo: 25080037570/2025 ---
+2026-08-05 21:37:30,198 [INFO]   → Abrindo SIGLA...
+2026-08-05 21:38:01,751 [ERROR]   ✖ Locator.fill: Timeout 30000ms exceeded.
+Call log:
+  - waiting for locator("input[name=\"j_idt37:cpf\"]")
+    - waiting for" https://sigla.sema.ma.gov.br/sigla/pages/public/cliente/main.jsf" navigation to finish...
+    - navigated to "https://sigla.sema.ma.gov.br/sigla/pages/public/cliente/main.jsf"
+
+2026-08-05 21:38:02,073 [INFO]   ✔ Status mudou: "Constituído processo | 🔴 Em exigência" → "None"
+2026-08-05 21:38:02,084 [INFO] --- [cmrcu8p13000pgwna48q4u5ep] Isaias | Processo: 25110049202/2025 ---
+2026-08-05 21:38:04,158 [INFO]   → Abrindo SIGLA...
+2026-08-05 21:38:35,807 [ERROR]   ✖ Locator.fill: Timeout 30000ms exceeded.
+Call log:
+  - waiting for locator("input[name=\"j_idt37:cpf\"]")
+    - waiting for" https://sigla.sema.ma.gov.br/sigla/pages/public/cliente/main.jsf" navigation to finish...
+    - navigated to "https://sigla.sema.ma.gov.br/sigla/pages/public/cliente/main.jsf"
+
+2026-08-05 21:38:36,109 [INFO]   ✔ Status mudou: "Constituído processo | ✅ Sem pendências" → "None"
+2026-08-05 21:38:36,118 [INFO] --- [cmrcucr1q000p10txqe83wo0k] Marcos Padrasto | Processo: 26050038165/2026 ---
+2026-08-05 21:38:38,289 [INFO]   → Abrindo SIGLA...
+2026-08-05 21:39:10,013 [ERROR]   ✖ Locator.fill: Timeout 30000ms exceeded.
+Call log:
+  - waiting for locator("input[name=\"j_idt37:cpf\"]")
+    - waiting for" https://sigla.sema.ma.gov.br/sigla/pages/public/cliente/main.jsf" navigation to finish...
+    - navigated to "https://sigla.sema.ma.gov.br/sigla/pages/public/cliente/main.jsf"
+
+2026-08-05 21:39:10,349 [INFO]   ✔ Status mudou: "Constituído processo | ✅ Sem pendências" → "None"
+2026-08-05 21:39:10,688 [INFO] === Fim — 0 OK, 11 erro(s), 406s ===
+2026-08-05 21:43:55,231 [INFO] === Início — 05/08/2026 21:43 ===
+2026-08-05 21:43:55,599 [INFO] 11 projeto(s) para verificar.
+2026-08-05 21:43:59,525 [INFO] --- [cmrcu65de000b10txol49cypb] Roniel Barros | Processo: 26010021070/2026 ---
+2026-08-05 21:44:05,603 [INFO]   → Abrindo SIGLA...
+2026-08-05 21:44:37,452 [ERROR]   ✖ Locator.fill: Timeout 30000ms exceeded.
+Call log:
+  - waiting for locator("input[name=\"j_idt37:cpf\"]")
+    - waiting for" https://sigla.sema.ma.gov.br/sigla/pages/public/cliente/main.jsf" navigation to finish...
+    - navigated to "https://sigla.sema.ma.gov.br/sigla/pages/public/cliente/main.jsf"
+
+2026-08-05 21:44:37,778 [INFO]   ✔ Status mudou: "Constituído processo | ✅ Sem pendências" → "None"
+2026-08-05 21:44:37,798 [INFO] --- [cmrcu6tst0004gwna08bo9bvb] Bianca Magalhaes | Processo: 25080037326/2025 ---
+2026-08-05 21:44:39,914 [INFO]   → Abrindo SIGLA...
+2026-08-05 21:45:11,332 [ERROR]   ✖ Locator.fill: Timeout 30000ms exceeded.
+Call log:
+  - waiting for locator("input[name=\"j_idt37:cpf\"]")
+    - waiting for" https://sigla.sema.ma.gov.br/sigla/pages/public/cliente/main.jsf" navigation to finish...
+    - navigated to "https://sigla.sema.ma.gov.br/sigla/pages/public/cliente/main.jsf"
+
+2026-08-05 21:45:11,657 [INFO]   ✔ Status mudou: "Constituído processo | ✅ Sem pendências" → "None"
+2026-08-05 21:45:11,662 [INFO] --- [cmrcu7ffw000bgwnabngsgbaf] Isete Pereira | Processo: 26040053943/2026 ---
+2026-08-05 21:45:13,786 [INFO]   → Abrindo SIGLA...
+2026-08-05 21:45:45,348 [ERROR]   ✖ Locator.fill: Timeout 30000ms exceeded.
+Call log:
+  - waiting for locator("input[name=\"j_idt37:cpf\"]")
+    - waiting for" https://sigla.sema.ma.gov.br/sigla/pages/public/cliente/main.jsf" navigation to finish...
+    - navigated to "https://sigla.sema.ma.gov.br/sigla/pages/public/cliente/main.jsf"
+
+2026-08-05 21:45:45,677 [INFO]   ✔ Status mudou: "Constituído processo | ✅ Sem pendências" → "None"
+2026-08-05 21:45:45,690 [INFO] --- [cmrcu84ov000igwnaioig3lgz] Maurilio | Processo: 25080037650/2025 ---
+2026-08-05 21:45:47,831 [INFO]   → Abrindo SIGLA...
+2026-08-05 21:46:19,264 [ERROR]   ✖ Locator.fill: Timeout 30000ms exceeded.
+Call log:
+  - waiting for locator("input[name=\"j_idt37:cpf\"]")
+    - waiting for" https://sigla.sema.ma.gov.br/sigla/pages/public/cliente/main.jsf" navigation to finish...
+    - navigated to "https://sigla.sema.ma.gov.br/sigla/pages/public/cliente/main.jsf"
+
+2026-08-05 21:46:19,603 [INFO]   ✔ Status mudou: "Constituído processo | ✅ Sem pendências" → "None"
+2026-08-05 21:46:19,609 [INFO] --- [cmrcu4twd000410txncvzfghq] Raiton | Processo: 25110049770/2025 ---
+2026-08-05 21:46:21,770 [INFO]   → Abrindo SIGLA...
+2026-08-05 21:46:53,251 [ERROR]   ✖ Locator.fill: Timeout 30000ms exceeded.
+Call log:
+  - waiting for locator("input[name=\"j_idt37:cpf\"]")
+    - waiting for" https://sigla.sema.ma.gov.br/sigla/pages/public/cliente/main.jsf" navigation to finish...
+    - navigated to "https://sigla.sema.ma.gov.br/sigla/pages/public/cliente/main.jsf"
+
+2026-08-05 21:46:53,589 [INFO]   ✔ Status mudou: "Constituído processo | ✅ Sem pendências" → "None"
+2026-08-05 21:46:53,595 [INFO] --- [PRJ-0003] Jailson Lima Claro | Processo: 26070010650/2026 ---
+2026-08-05 21:46:55,655 [INFO]   → Abrindo SIGLA...
+2026-08-05 21:47:27,149 [ERROR]   ✖ Locator.fill: Timeout 30000ms exceeded.
+Call log:
+  - waiting for locator("input[name=\"j_idt37:cpf\"]")
+    - waiting for" https://sigla.sema.ma.gov.br/sigla/pages/public/cliente/main.jsf" navigation to finish...
+    - navigated to "https://sigla.sema.ma.gov.br/sigla/pages/public/cliente/main.jsf"
+
+2026-08-05 21:47:27,474 [INFO]   ✔ Status mudou: "Constituído processo | ✅ Sem pendências" → "None"
+2026-08-05 21:47:27,487 [INFO] --- [cmrcudlxr000wgwnavt8x1pjk] Talvane | Processo: 26040034502/2026 ---
+2026-08-05 21:47:29,643 [INFO]   → Abrindo SIGLA...
+2026-08-05 21:48:01,522 [ERROR]   ✖ Locator.fill: Timeout 30000ms exceeded.
+Call log:
+  - waiting for locator("input[name=\"j_idt37:cpf\"]")
+    - waiting for" https://sigla.sema.ma.gov.br/sigla/pages/public/cliente/main.jsf" navigation to finish...
+    - navigated to "https://sigla.sema.ma.gov.br/sigla/pages/public/cliente/main.jsf"
+
+2026-08-05 21:48:01,822 [INFO]   ✔ Status mudou: "Constituído processo | 🔴 Em exigência" → "None"
+2026-08-05 21:48:01,836 [INFO] --- [PRJ-0016] Antônio Carlos Batista Muniz | Processo: 26070042160/2026 ---
+2026-08-05 21:48:04,180 [INFO]   → Abrindo SIGLA...
+2026-08-05 21:48:35,678 [ERROR]   ✖ Locator.fill: Timeout 30000ms exceeded.
+Call log:
+  - waiting for locator("input[name=\"j_idt37:cpf\"]")
+    - waiting for" https://sigla.sema.ma.gov.br/sigla/pages/public/cliente/main.jsf" navigation to finish...
+    - navigated to "https://sigla.sema.ma.gov.br/sigla/pages/public/cliente/main.jsf"
+
+2026-08-05 21:48:35,993 [INFO]   ✔ Status mudou: "Constituído processo | 🔴 Em exigência" → "None"
+2026-08-05 21:48:36,008 [INFO] --- [cmrcu9aka000i10txcee6xxr3] Eloi | Processo: 25080037570/2025 ---
+2026-08-05 21:48:38,223 [INFO]   → Abrindo SIGLA...
+2026-08-05 21:49:09,838 [ERROR]   ✖ Locator.fill: Timeout 30000ms exceeded.
+Call log:
+  - waiting for locator("input[name=\"j_idt37:cpf\"]")
+    - waiting for" https://sigla.sema.ma.gov.br/sigla/pages/public/cliente/main.jsf" navigation to finish...
+    - navigated to "https://sigla.sema.ma.gov.br/sigla/pages/public/cliente/main.jsf"
+
+2026-08-05 21:49:10,130 [INFO]   ✔ Status mudou: "Constituído processo | 🔴 Em exigência" → "None"
+2026-08-05 21:49:10,146 [INFO] --- [cmrcu8p13000pgwna48q4u5ep] Isaias | Processo: 25110049202/2025 ---
+2026-08-05 21:49:12,236 [INFO]   → Abrindo SIGLA...
+2026-08-05 21:49:43,687 [ERROR]   ✖ Locator.fill: Timeout 30000ms exceeded.
+Call log:
+  - waiting for locator("input[name=\"j_idt37:cpf\"]")
+    - waiting for" https://sigla.sema.ma.gov.br/sigla/pages/public/cliente/main.jsf" navigation to finish...
+    - navigated to "https://sigla.sema.ma.gov.br/sigla/pages/public/cliente/main.jsf"
+
+2026-08-05 21:49:43,989 [INFO]   ✔ Status mudou: "Constituído processo | ✅ Sem pendências" → "None"
+2026-08-05 21:49:43,996 [INFO] --- [cmrcucr1q000p10txqe83wo0k] Marcos Padrasto | Processo: 26050038165/2026 ---
+2026-08-05 21:49:46,035 [INFO]   → Abrindo SIGLA...
+2026-08-05 21:50:07,445 [ERROR]   ✖ Locator.fill: Page crashed
+Call log:
+  - waiting for locator("input[name=\"j_idt37:cpf\"]")
+    - waiting for" https://sigla.sema.ma.gov.br/sigla/pages/public/cliente/main.jsf" navigation to finish...
+    - navigated to "https://sigla.sema.ma.gov.br/sigla/pages/public/cliente/main.jsf"
+
+2026-08-05 21:50:07,749 [INFO]   ✔ Status mudou: "Constituído processo | ✅ Sem pendências" → "None"
+2026-08-06 15:27:12,102 [INFO] === Início — 06/08/2026 15:27 ===
+2026-08-06 15:27:12,506 [INFO] 11 projeto(s) para verificar.
+2026-08-06 15:27:20,245 [INFO] --- [cmrcu6tst0004gwna08bo9bvb] Bianca Magalhaes | Processo: 25080037326/2025 ---
+2026-08-06 15:27:20,499 [INFO]   → Abrindo SIGLA...
+2026-08-06 15:27:56,819 [ERROR]   ✖ Locator.fill: Timeout 30000ms exceeded.
+Call log:
+  - waiting for locator("input[name=\"j_idt37:cpf\"]")
+    - waiting for" https://sigla.sema.ma.gov.br/sigla/pages/public/cliente/main.jsf" navigation to finish...
+    - navigated to "https://sigla.sema.ma.gov.br/sigla/pages/public/cliente/main.jsf"
+
+2026-08-06 15:27:57,108 [INFO]   ✔ Status mudou: "Constituído processo | ✅ Sem pendências" → "None"
+2026-08-06 15:27:57,122 [INFO] --- [cmrcudlxr000wgwnavt8x1pjk] Talvane | Processo: 26040034502/2026 ---
+2026-08-06 15:27:57,199 [INFO]   → Abrindo SIGLA...
+2026-08-06 15:28:28,490 [ERROR]   ✖ Locator.fill: Timeout 30000ms exceeded.
+Call log:
+  - waiting for locator("input[name=\"j_idt37:cpf\"]")
+    - waiting for" https://sigla.sema.ma.gov.br/sigla/pages/public/cliente/main.jsf" navigation to finish...
+    - navigated to "https://sigla.sema.ma.gov.br/sigla/pages/public/cliente/main.jsf"
+
+2026-08-06 15:28:28,973 [INFO]   ✔ Status mudou: "Constituído processo | 🔴 Em exigência" → "None"
+2026-08-06 15:28:28,986 [INFO] --- [cmrcu7ffw000bgwnabngsgbaf] Isete Pereira | Processo: 26040053943/2026 ---
+2026-08-06 15:28:29,107 [INFO]   → Abrindo SIGLA...
+2026-08-06 15:29:01,752 [ERROR]   ✖ Locator.fill: Timeout 30000ms exceeded.
+Call log:
+  - waiting for locator("input[name=\"j_idt37:cpf\"]")
+
+2026-08-06 15:29:02,150 [INFO]   ✔ Status mudou: "Constituído processo | ✅ Sem pendências" → "None"
+2026-08-06 15:29:02,162 [INFO] --- [cmrcu84ov000igwnaioig3lgz] Maurilio | Processo: 25080037650/2025 ---
+2026-08-06 15:29:02,270 [INFO]   → Abrindo SIGLA...
+2026-08-06 15:29:33,788 [ERROR]   ✖ Locator.fill: Timeout 30000ms exceeded.
+Call log:
+  - waiting for locator("input[name=\"j_idt37:cpf\"]")
+    - waiting for" https://sigla.sema.ma.gov.br/sigla/pages/public/cliente/main.jsf" navigation to finish...
+    - navigated to "https://sigla.sema.ma.gov.br/sigla/pages/public/cliente/main.jsf"
+
+2026-08-06 15:29:34,099 [INFO]   ✔ Status mudou: "Constituído processo | ✅ Sem pendências" → "None"
+2026-08-06 15:29:34,111 [INFO] --- [cmrcu4twd000410txncvzfghq] Raiton | Processo: 25110049770/2025 ---
+2026-08-06 15:29:34,233 [INFO]   → Abrindo SIGLA...
+2026-08-06 15:30:06,165 [ERROR]   ✖ Locator.fill: Timeout 30000ms exceeded.
+Call log:
+  - waiting for locator("input[name=\"j_idt37:cpf\"]")
+    - waiting for" https://sigla.sema.ma.gov.br/sigla/pages/public/cliente/main.jsf" navigation to finish...
+    - navigated to "https://sigla.sema.ma.gov.br/sigla/pages/public/cliente/main.jsf"
+
+2026-08-06 15:30:06,558 [INFO]   ✔ Status mudou: "Constituído processo | ✅ Sem pendências" → "None"
+2026-08-06 15:30:06,563 [INFO] --- [cmrcu65de000b10txol49cypb] Roniel Barros | Processo: 26010021070/2026 ---
+2026-08-06 15:30:06,612 [INFO]   → Abrindo SIGLA...
+2026-08-06 15:30:38,176 [ERROR]   ✖ Locator.fill: Timeout 30000ms exceeded.
+Call log:
+  - waiting for locator("input[name=\"j_idt37:cpf\"]")
+    - waiting for" https://sigla.sema.ma.gov.br/sigla/pages/public/cliente/main.jsf" navigation to finish...
+    - navigated to "https://sigla.sema.ma.gov.br/sigla/pages/public/cliente/main.jsf"
+
+2026-08-06 15:30:38,532 [INFO]   ✔ Status mudou: "Constituído processo | ✅ Sem pendências" → "None"
+2026-08-06 15:30:38,546 [INFO] --- [PRJ-0003] Jailson Lima Claro | Processo: 26070010650/2026 ---
+2026-08-06 15:30:38,663 [INFO]   → Abrindo SIGLA...
+2026-08-06 15:31:11,274 [ERROR]   ✖ Locator.fill: Timeout 30000ms exceeded.
+Call log:
+  - waiting for locator("input[name=\"j_idt37:cpf\"]")
+    - waiting for" https://sigla.sema.ma.gov.br/sigla/pages/public/cliente/main.jsf" navigation to finish...
+    - navigated to "https://sigla.sema.ma.gov.br/sigla/pages/public/cliente/main.jsf"
+
+2026-08-06 15:31:11,581 [INFO]   ✔ Status mudou: "Constituído processo | ✅ Sem pendências" → "None"
+2026-08-06 15:31:11,595 [INFO] --- [PRJ-0016] Antônio Carlos Batista Muniz | Processo: 26070042160/2026 ---
+2026-08-06 15:31:11,694 [INFO]   → Abrindo SIGLA...
+2026-08-06 15:31:48,442 [ERROR]   ✖ Locator.fill: Timeout 30000ms exceeded.
+Call log:
+  - waiting for locator("input[name=\"j_idt37:cpf\"]")
+    - waiting for" https://sigla.sema.ma.gov.br/sigla/pages/public/cliente/main.jsf" navigation to finish...
+    - navigated to "https://sigla.sema.ma.gov.br/sigla/pages/public/cliente/main.jsf"
+
+2026-08-06 15:31:48,854 [INFO]   ✔ Status mudou: "Constituído processo | 🔴 Em exigência" → "None"
+2026-08-06 15:31:48,863 [INFO] --- [cmrcu9aka000i10txcee6xxr3] Eloi | Processo: 25080037570/2025 ---
+2026-08-06 15:31:48,923 [INFO]   → Abrindo SIGLA...
+2026-08-06 15:32:22,129 [ERROR]   ✖ Locator.fill: Timeout 30000ms exceeded.
+Call log:
+  - waiting for locator("input[name=\"j_idt37:cpf\"]")
+    - waiting for" https://sigla.sema.ma.gov.br/sigla/pages/public/cliente/main.jsf" navigation to finish...
+    - navigated to "https://sigla.sema.ma.gov.br/sigla/pages/public/cliente/main.jsf"
+
+2026-08-06 15:32:22,441 [INFO]   ✔ Status mudou: "Constituído processo | 🔴 Em exigência" → "None"
+2026-08-06 15:32:22,447 [INFO] --- [cmrcu8p13000pgwna48q4u5ep] Isaias | Processo: 25110049202/2025 ---
+2026-08-06 15:32:22,506 [INFO]   → Abrindo SIGLA...
+2026-08-06 15:32:53,979 [ERROR]   ✖ Locator.fill: Timeout 30000ms exceeded.
+Call log:
+  - waiting for locator("input[name=\"j_idt37:cpf\"]")
+    - waiting for" https://sigla.sema.ma.gov.br/sigla/pages/public/cliente/main.jsf" navigation to finish...
+    - navigated to "https://sigla.sema.ma.gov.br/sigla/pages/public/cliente/main.jsf"
+
+2026-08-06 15:32:54,372 [INFO]   ✔ Status mudou: "Constituído processo | ✅ Sem pendências" → "None"
+2026-08-06 15:32:54,387 [INFO] --- [cmrcucr1q000p10txqe83wo0k] Marcos Padrasto | Processo: 26050038165/2026 ---
+2026-08-06 15:32:54,463 [INFO]   → Abrindo SIGLA...
+2026-08-06 15:33:26,074 [ERROR]   ✖ Locator.fill: Timeout 30000ms exceeded.
+Call log:
+  - waiting for locator("input[name=\"j_idt37:cpf\"]")
+    - waiting for" https://sigla.sema.ma.gov.br/sigla/pages/public/cliente/main.jsf" navigation to finish...
+    - navigated to "https://sigla.sema.ma.gov.br/sigla/pages/public/cliente/main.jsf"
+
+2026-08-06 15:33:26,644 [INFO]   ✔ Status mudou: "Constituído processo | ✅ Sem pendências" → "None"
+2026-08-06 15:33:26,794 [INFO] === Fim — 0 OK, 11 erro(s), 374s ===

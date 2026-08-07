@@ -141,6 +141,45 @@ export async function GET(request: NextRequest) {
       }),
     ])
 
+    // ── Tempos médios (operacional, protocolo→licença, tratativa de pendência) ──
+    function mediaDias(pares: { inicio: Date; fim: Date }[]): number | null {
+      const dias = pares
+        .map(p => (p.fim.getTime() - p.inicio.getTime()) / 86_400_000)
+        .filter(d => d >= 0)
+      if (dias.length === 0) return null
+      return Math.round((dias.reduce((a, b) => a + b, 0) / dias.length) * 10) / 10
+    }
+
+    const [projetosOperacional, projetosComLicenca, pendenciasResolvidas] = await Promise.all([
+      // Tempo médio operacional: do início da execução (dataInicio) até o protocolo no órgão
+      prisma.projeto.findMany({
+        where: { dataInicio: { not: null }, protocoloData: { not: null } },
+        select: { dataInicio: true, protocoloData: true },
+      }),
+      // Tempo médio até a licença: do protocolo até a emissão da licença
+      prisma.projeto.findMany({
+        where: { protocoloData: { not: null }, licenca: { isNot: null } },
+        select: { protocoloData: true, licenca: { select: { dataEmissao: true } } },
+      }),
+      // Tempo médio de tratativa de pendência: da abertura até a entrega da resposta
+      prisma.pendencia.findMany({
+        where: { dataEntrega: { not: null } },
+        select: { data: true, dataEntrega: true },
+      }),
+    ])
+
+    const tempoMedioOperacionalDias = mediaDias(
+      projetosOperacional.map(p => ({ inicio: p.dataInicio!, fim: p.protocoloData! }))
+    )
+    const tempoMedioLicencaDias = mediaDias(
+      projetosComLicenca
+        .filter(p => p.licenca?.dataEmissao)
+        .map(p => ({ inicio: p.protocoloData!, fim: p.licenca!.dataEmissao }))
+    )
+    const tempoMedioPendenciaDias = mediaDias(
+      pendenciasResolvidas.map(p => ({ inicio: p.data, fim: p.dataEntrega! }))
+    )
+
     return NextResponse.json({
       evolucaoFinanceira,
       totais: {
@@ -162,6 +201,14 @@ export async function GET(request: NextRequest) {
         aVencer:     pendenciasAVencer,
         atrasadas:   pendenciasAtrasadas,
         respondidas: pendenciasRespondidas,
+      },
+      tempos: {
+        operacionalDias:   tempoMedioOperacionalDias,
+        operacionalAmostra: projetosOperacional.length,
+        licencaDias:        tempoMedioLicencaDias,
+        licencaAmostra:     projetosComLicenca.filter(p => p.licenca?.dataEmissao).length,
+        pendenciaDias:      tempoMedioPendenciaDias,
+        pendenciaAmostra:   pendenciasResolvidas.length,
       },
     })
   } catch (error) {

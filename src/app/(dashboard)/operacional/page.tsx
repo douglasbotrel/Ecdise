@@ -149,6 +149,7 @@ function PainelGestao({ data, loading, onRefresh }: { data: any; loading: boolea
                 <th className="text-left px-4 py-3">Projeto</th>
                 <th className="text-left px-4 py-3 hidden md:table-cell">Responsável</th>
                 <th className="text-left px-4 py-3 hidden lg:table-cell">Prazo</th>
+                <th className="text-left px-4 py-3 hidden xl:table-cell">Tempo</th>
                 <th className="text-left px-4 py-3">Progresso</th>
                 <th className="text-center px-3 py-3 text-green-600">✓</th>
                 <th className="text-center px-3 py-3">Pend.</th>
@@ -182,6 +183,15 @@ function PainelGestao({ data, loading, onRefresh }: { data: any; loading: boolea
                           {p.dataPrazo ? formatDate(p.dataPrazo) : '—'}
                           {prazoVencido && ' ⚠️'}
                         </span>
+                      </td>
+                      <td className="px-4 py-3 hidden xl:table-cell">
+                        {p.dataInicio ? (
+                          <span className="text-xs text-gray-500">
+                            {Math.max(0, Math.floor((Date.now() - new Date(p.dataInicio).getTime()) / 86_400_000))} dias
+                          </span>
+                        ) : (
+                          <span className="text-xs text-gray-300">—</span>
+                        )}
                       </td>
                       <td className="px-4 py-3 min-w-[140px]">
                         <div className="flex items-center gap-2">

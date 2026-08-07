@@ -370,6 +370,7 @@ export function ModalProjeto({ open, onClose, projeto, onSalvo, modoAcao = 'edit
       } else if (modoReal === 'operacional') {
         payload = {
           responsavelId: form.responsavelId || null,
+          dataInicio: new Date().toISOString(), // marca o início real da execução, para o KPI de tempo operacional
           dataPrazo: form.dataPrazo || null,
           statusOperacional: 'EM_ANDAMENTO',
           avancarPipeline: true,

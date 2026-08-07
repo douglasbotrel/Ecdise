@@ -484,6 +484,16 @@ function ProjetoCard({ projeto, servicoPrestado, formatDataConsulta }: {
               <span className="font-mono">Nº {projeto.protocoloCodigoOrgao}</span>
             </div>
           )}
+          {projeto.protocoloData && (
+            <div className="flex items-center gap-2 text-xs text-gray-500">
+              <Clock className="w-3.5 h-3.5 text-gray-300 flex-shrink-0" />
+              <span>
+                {projeto.licenca?.dataEmissao
+                  ? `Protocolo → licença: ${Math.max(0, Math.floor((new Date(projeto.licenca.dataEmissao).getTime() - new Date(projeto.protocoloData).getTime()) / 86_400_000))} dias`
+                  : `${Math.max(0, Math.floor((Date.now() - new Date(projeto.protocoloData).getTime()) / 86_400_000))} dias desde o protocolo`}
+              </span>
+            </div>
+          )}
         </div>
 
         {/* Rodapé */}
