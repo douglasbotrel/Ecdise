@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { toast } from 'sonner'
 import {
-  Plus, X, CheckCircle2, Circle, ChevronLeft, ChevronRight,
+  Plus, X, CheckCircle2, Circle, ChevronLeft, ChevronRight, ChevronDown,
   Calendar, Loader2, Users, TrendingUp
 } from 'lucide-react'
 import Link from 'next/link'
@@ -23,6 +23,18 @@ function formatDataCurta(d: string | Date) {
 
 const ROLES_GESTAO = ['ADMIN', 'GESTOR_GERAL', 'GESTOR_OPERACIONAL', 'GESTOR_ADMINISTRATIVO', 'SUPERVISOR']
 
+function agruparPorProjeto(lista: any[]) {
+  const grupos = new Map<string, { projeto: any; tarefas: any[] }>()
+  for (const t of lista) {
+    const pid = t.projeto?.id || 'sem-projeto'
+    if (!grupos.has(pid)) grupos.set(pid, { projeto: t.projeto, tarefas: [] })
+    grupos.get(pid)!.tarefas.push(t)
+  }
+  return Array.from(grupos.values()).sort((a, b) =>
+    (a.projeto?.codigo || '').localeCompare(b.projeto?.codigo || '')
+  )
+}
+
 export default function TarefasSemanaPage() {
   const [me, setMe] = useState<any>(null)
   const [usuarios, setUsuarios] = useState<any[]>([])
@@ -37,6 +49,7 @@ export default function TarefasSemanaPage() {
   const [verPainelEquipe, setVerPainelEquipe] = useState(false)
   const [kpi, setKpi] = useState<any>(null)
   const [carregandoKpi, setCarregandoKpi] = useState(false)
+  const [colapsados, setColapsados] = useState<Record<string, boolean>>({})
 
   const podeGerenciarEquipe = me && ROLES_GESTAO.includes(me.role)
 
@@ -224,26 +237,50 @@ export default function TarefasSemanaPage() {
             {backlog.length === 0 ? (
               <p className="text-sm text-gray-400 py-6 text-center">Nenhuma tarefa pendente fora da semana.</p>
             ) : (
-              <div className="space-y-2">
-                {backlog.map(t => (
-                  <div key={t.id} className="flex items-start gap-2 p-2.5 rounded-lg border border-gray-100 hover:border-gray-200">
-                    <button
-                      onClick={() => adicionarNaSemana(t.id)}
-                      disabled={processando === t.id}
-                      className="mt-0.5 p-1 rounded-md bg-green-50 text-green-600 hover:bg-green-100 flex-shrink-0 disabled:opacity-50"
-                      title="Colocar nesta semana"
-                    >
-                      {processando === t.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
-                    </button>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm text-gray-800 truncate">{t.titulo}</p>
-                      <p className="text-xs text-gray-400 truncate">
-                        {t.projeto?.codigo} · {t.projeto?.imovelNome || t.projeto?.municipio || ''}
-                        {t.prazo && ` · prazo ${formatDataCurta(t.prazo)}`}
-                      </p>
+              <div>
+                {agruparPorProjeto(backlog).map(grupo => {
+                  const pid = grupo.projeto?.id || 'sem-projeto'
+                  const fechado = colapsados[pid]
+                  return (
+                    <div key={pid} className="mb-3 last:mb-0">
+                      <button
+                        onClick={() => setColapsados(p => ({ ...p, [pid]: !p[pid] }))}
+                        className="w-full flex items-center justify-between py-1.5 px-0.5 text-left"
+                      >
+                        <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide truncate">
+                          {grupo.projeto?.codigo || 'Sem projeto'}
+                          {grupo.projeto?.imovelNome && ` · ${grupo.projeto.imovelNome}`}
+                          <span className="ml-1.5 text-gray-300 font-normal normal-case">({grupo.tarefas.length})</span>
+                        </span>
+                        {fechado
+                          ? <ChevronRight className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+                          : <ChevronDown className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />}
+                      </button>
+                      {!fechado && (
+                        <div className="space-y-2 mt-1">
+                          {grupo.tarefas.map(t => (
+                            <div key={t.id} className="flex items-start gap-2 p-2.5 rounded-lg border border-gray-100 hover:border-gray-200">
+                              <button
+                                onClick={() => adicionarNaSemana(t.id)}
+                                disabled={processando === t.id}
+                                className="mt-0.5 p-1 rounded-md bg-green-50 text-green-600 hover:bg-green-100 flex-shrink-0 disabled:opacity-50"
+                                title="Colocar nesta semana"
+                              >
+                                {processando === t.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
+                              </button>
+                              <div className="min-w-0 flex-1">
+                                <p className="text-sm text-gray-800 truncate">{t.titulo}</p>
+                                {t.prazo && (
+                                  <p className="text-xs text-gray-400 truncate">prazo {formatDataCurta(t.prazo)}</p>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             )}
           </div>
