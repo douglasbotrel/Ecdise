@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation'
 import {
   LayoutDashboard, Briefcase, FileText, Settings,
   ClipboardList, MapPin, DollarSign, CheckSquare,
-  BarChart3, ChevronLeft, ChevronRight, X, FileSearch, Users
+  BarChart3, ChevronLeft, ChevronRight, X, FileSearch, Users, ListChecks
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -16,6 +16,12 @@ const navItems = [
     label: 'Dashboard',
     icon: LayoutDashboard,
     modulo: 'dashboard',
+  },
+  {
+    href: '/tarefas-semana',
+    label: 'Tarefas da Semana',
+    icon: ListChecks,
+    modulo: 'tarefas-semana',
   },
   {
     href: '/comercial',

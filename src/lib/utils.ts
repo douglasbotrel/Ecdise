@@ -152,13 +152,13 @@ export const ETAPA_LABELS: Record<string, string> = {
 export const MODULOS_POR_ROLE: Record<string, string[] | null> = {
   ADMIN:                  null,
   GESTOR_GERAL:           null,
-  GESTOR_ADMINISTRATIVO:  ['dashboard', 'comercial', 'contratos', 'financeiro', 'encerramento', 'configuracoes'],
-  GESTOR_OPERACIONAL:     ['dashboard', 'comercial', 'operacional', 'acompanhamento', 'campo', 'encerramento'],
-  GESTOR_CAMPO:           ['dashboard', 'campo', 'tecnico'],
-  SUPERVISOR:             ['dashboard', 'comercial', 'operacional', 'acompanhamento'],
-  ANALISTA:               ['dashboard', 'operacional', 'acompanhamento'],
-  ANALISTA_RAPIDO:        ['dashboard', 'comercial'],
-  TECNICO_CAMPO:          ['dashboard', 'tecnico'],
+  GESTOR_ADMINISTRATIVO:  ['dashboard', 'tarefas-semana', 'comercial', 'contratos', 'financeiro', 'encerramento', 'configuracoes'],
+  GESTOR_OPERACIONAL:     ['dashboard', 'tarefas-semana', 'comercial', 'operacional', 'acompanhamento', 'campo', 'encerramento'],
+  GESTOR_CAMPO:           ['dashboard', 'tarefas-semana', 'campo', 'tecnico'],
+  SUPERVISOR:             ['dashboard', 'tarefas-semana', 'comercial', 'operacional', 'acompanhamento'],
+  ANALISTA:               ['dashboard', 'tarefas-semana', 'operacional', 'acompanhamento'],
+  ANALISTA_RAPIDO:        ['dashboard', 'tarefas-semana', 'comercial'],
+  TECNICO_CAMPO:          ['dashboard', 'tarefas-semana', 'tecnico'],
 }
 
 export const DEPARTAMENTO_LABELS: Record<string, string> = {

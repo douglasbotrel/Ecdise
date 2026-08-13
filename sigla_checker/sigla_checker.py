@@ -142,16 +142,30 @@ def fazer_login(page, login: str, senha: str):
     a navegação depois. O fluxo confirmado (via playwright codegen, validado
     em várias sessões reais) é sempre: clicar em "Módulo Empreendedor"
     primeiro, e só então preencher CPF/senha.
+
+    ⚠️ Histórico (2026-08): o prefixo do ID desses campos (ex: "j_idt37",
+    "j_idt38"...) é gerado automaticamente pelo JSF e muda sozinho a cada
+    pequena alteração na página — mesmo sem nenhuma mudança visual real.
+    Por isso os seletores abaixo usam "termina com" (CSS $=) em vez do
+    prefixo exato, para não quebrar de novo só porque esse número mudou.
     """
     log.info('  → Abrindo SIGLA...')
     page.goto(SIGLA_BASE_URL, wait_until='domcontentloaded', timeout=60_000)
 
     page.get_by_role('cell', name='Módulo Empreendedor', exact=True).click()
-    page.locator('input[name="j_idt37:cpf"]').fill(login)
-    page.locator('[id="j_idt37:senha"]').fill(senha)
+    page.locator('input[name$=":cpf"]').fill(login)
+    page.locator('[id$=":senha"]').fill(senha)
     page.get_by_role('button', name='Acessar').click()
 
     page.wait_for_load_state('domcontentloaded', timeout=30_000)
+    # Espera extra: a área logada pode demorar a terminar de montar o menu
+    # (chamadas AJAX depois do "domcontentloaded"). Sem isso, o próximo clique
+    # em "Requerimentos" pode falhar simplesmente porque o menu ainda não
+    # renderizou, não porque algo mudou de nome/estrutura.
+    try:
+        page.wait_for_load_state('networkidle', timeout=15_000)
+    except PlaywrightTimeout:
+        pass  # segue mesmo assim — melhor tentar do que travar aqui
     log.info('  → Login OK.')
 
 def fazer_logout(page):
@@ -267,7 +281,7 @@ def clicar_menu(page, nome: str):
     """
     try:
         locator = page.get_by_role('cell', name=nome, exact=True)
-        locator.wait_for(timeout=5_000)
+        locator.wait_for(timeout=10_000)
         locator.click()
     except Exception:
         page.get_by_role('row', name=nome, exact=True).click()

@@ -2374,3 +2374,244 @@ Call log:
 
 2026-08-06 15:33:26,644 [INFO]   ✔ Status mudou: "Constituído processo | ✅ Sem pendências" → "None"
 2026-08-06 15:33:26,794 [INFO] === Fim — 0 OK, 11 erro(s), 374s ===
+2026-08-08 20:37:51,123 [INFO] === Início — 08/08/2026 20:37 ===
+2026-08-08 20:37:51,670 [INFO] 11 projeto(s) para verificar.
+2026-08-08 20:38:21,753 [INFO] --- [cmrcu4twd000410txncvzfghq] Raiton | Processo: 25110049770/2025 ---
+2026-08-08 20:38:30,204 [INFO]   → Abrindo SIGLA...
+2026-08-08 20:39:06,775 [ERROR]   ✖ Locator.fill: Timeout 30000ms exceeded.
+Call log:
+  - waiting for locator("input[name=\"j_idt37:cpf\"]")
+    - waiting for" https://sigla.sema.ma.gov.br/sigla/pages/public/cliente/main.jsf" navigation to finish...
+    - navigated to "https://sigla.sema.ma.gov.br/sigla/pages/public/cliente/main.jsf"
+
+2026-08-08 20:39:07,090 [INFO]   ✔ Status mudou: "Constituído processo | ✅ Sem pendências" → "None"
+2026-08-08 20:39:07,116 [INFO] --- [cmrcu65de000b10txol49cypb] Roniel Barros | Processo: 26010021070/2026 ---
+2026-08-08 20:39:09,618 [INFO]   → Abrindo SIGLA...
+2026-08-08 20:39:41,028 [ERROR]   ✖ Locator.fill: Timeout 30000ms exceeded.
+Call log:
+  - waiting for locator("input[name=\"j_idt37:cpf\"]")
+    - waiting for" https://sigla.sema.ma.gov.br/sigla/pages/public/cliente/main.jsf" navigation to finish...
+    - navigated to "https://sigla.sema.ma.gov.br/sigla/pages/public/cliente/main.jsf"
+
+2026-08-08 20:39:41,328 [INFO]   ✔ Status mudou: "Constituído processo | ✅ Sem pendências" → "None"
+2026-08-08 20:39:41,351 [INFO] --- [cmrcu6tst0004gwna08bo9bvb] Bianca Magalhaes | Processo: 25080037326/2025 ---
+2026-08-08 20:39:44,061 [INFO]   → Abrindo SIGLA...
+2026-08-08 20:40:18,005 [ERROR]   ✖ Locator.fill: Timeout 30000ms exceeded.
+Call log:
+  - waiting for locator("input[name=\"j_idt37:cpf\"]")
+    - waiting for" https://sigla.sema.ma.gov.br/sigla/pages/public/cliente/main.jsf" navigation to finish...
+    - navigated to "https://sigla.sema.ma.gov.br/sigla/pages/public/cliente/main.jsf"
+
+2026-08-08 20:40:18,329 [INFO]   ✔ Status mudou: "Constituído processo | ✅ Sem pendências" → "None"
+2026-08-08 20:40:18,351 [INFO] --- [cmrcudlxr000wgwnavt8x1pjk] Talvane | Processo: 26040034502/2026 ---
+2026-08-08 20:40:21,234 [INFO]   → Abrindo SIGLA...
+2026-08-08 20:40:55,608 [ERROR]   ✖ Locator.fill: Timeout 30000ms exceeded.
+Call log:
+  - waiting for locator("input[name=\"j_idt37:cpf\"]")
+    - waiting for" https://sigla.sema.ma.gov.br/sigla/pages/public/cliente/main.jsf" navigation to finish...
+    - navigated to "https://sigla.sema.ma.gov.br/sigla/pages/public/cliente/main.jsf"
+
+2026-08-08 20:40:55,898 [INFO]   ✔ Status mudou: "Constituído processo | 🔴 Em exigência" → "None"
+2026-08-08 20:40:55,919 [INFO] --- [PRJ-0003] Jailson Lima Claro | Processo: 26070010650/2026 ---
+2026-08-08 20:40:58,570 [INFO]   → Abrindo SIGLA...
+2026-08-08 20:41:30,082 [ERROR]   ✖ Locator.fill: Timeout 30000ms exceeded.
+Call log:
+  - waiting for locator("input[name=\"j_idt37:cpf\"]")
+    - waiting for" https://sigla.sema.ma.gov.br/sigla/pages/public/cliente/main.jsf" navigation to finish...
+    - navigated to "https://sigla.sema.ma.gov.br/sigla/pages/public/cliente/main.jsf"
+
+2026-08-08 20:41:30,380 [INFO]   ✔ Status mudou: "Constituído processo | ✅ Sem pendências" → "None"
+2026-08-08 20:41:30,399 [INFO] --- [cmrcu7ffw000bgwnabngsgbaf] Isete Pereira | Processo: 26040053943/2026 ---
+2026-08-08 20:41:33,080 [INFO]   → Abrindo SIGLA...
+2026-08-08 20:42:04,596 [ERROR]   ✖ Locator.fill: Timeout 30000ms exceeded.
+Call log:
+  - waiting for locator("input[name=\"j_idt37:cpf\"]")
+    - waiting for" https://sigla.sema.ma.gov.br/sigla/pages/public/cliente/main.jsf" navigation to finish...
+    - navigated to "https://sigla.sema.ma.gov.br/sigla/pages/public/cliente/main.jsf"
+
+2026-08-08 20:42:04,922 [INFO]   ✔ Status mudou: "Constituído processo | ✅ Sem pendências" → "None"
+2026-08-08 20:42:04,939 [INFO] --- [cmrcu84ov000igwnaioig3lgz] Maurilio | Processo: 25080037650/2025 ---
+2026-08-08 20:42:07,500 [INFO]   → Abrindo SIGLA...
+2026-08-08 20:42:39,169 [ERROR]   ✖ Locator.fill: Timeout 30000ms exceeded.
+Call log:
+  - waiting for locator("input[name=\"j_idt37:cpf\"]")
+    - waiting for" https://sigla.sema.ma.gov.br/sigla/pages/public/cliente/main.jsf" navigation to finish...
+    - navigated to "https://sigla.sema.ma.gov.br/sigla/pages/public/cliente/main.jsf"
+
+2026-08-08 20:42:39,488 [INFO]   ✔ Status mudou: "Constituído processo | ✅ Sem pendências" → "None"
+2026-08-08 20:42:39,502 [INFO] --- [cmrcu9aka000i10txcee6xxr3] Eloi | Processo: 25080037570/2025 ---
+2026-08-08 20:42:42,076 [INFO]   → Abrindo SIGLA...
+2026-08-08 20:43:13,545 [ERROR]   ✖ Locator.fill: Timeout 30000ms exceeded.
+Call log:
+  - waiting for locator("input[name=\"j_idt37:cpf\"]")
+    - waiting for" https://sigla.sema.ma.gov.br/sigla/pages/public/cliente/main.jsf" navigation to finish...
+    - navigated to "https://sigla.sema.ma.gov.br/sigla/pages/public/cliente/main.jsf"
+
+2026-08-08 20:43:14,112 [INFO]   ✔ Status mudou: "Constituído processo | 🔴 Em exigência" → "None"
+2026-08-08 20:43:14,133 [INFO] --- [PRJ-0016] Antônio Carlos Batista Muniz | Processo: 26070042160/2026 ---
+2026-08-08 20:43:16,869 [INFO]   → Abrindo SIGLA...
+2026-08-08 20:43:48,382 [ERROR]   ✖ Locator.fill: Timeout 30000ms exceeded.
+Call log:
+  - waiting for locator("input[name=\"j_idt37:cpf\"]")
+    - waiting for" https://sigla.sema.ma.gov.br/sigla/pages/public/cliente/main.jsf" navigation to finish...
+    - navigated to "https://sigla.sema.ma.gov.br/sigla/pages/public/cliente/main.jsf"
+
+2026-08-08 20:43:48,715 [INFO]   ✔ Status mudou: "Constituído processo | 🔴 Em exigência" → "None"
+2026-08-08 20:43:48,735 [INFO] --- [cmrcu8p13000pgwna48q4u5ep] Isaias | Processo: 25110049202/2025 ---
+2026-08-08 20:43:51,792 [INFO]   → Abrindo SIGLA...
+2026-08-08 20:44:23,314 [ERROR]   ✖ Locator.fill: Timeout 30000ms exceeded.
+Call log:
+  - waiting for locator("input[name=\"j_idt37:cpf\"]")
+    - waiting for" https://sigla.sema.ma.gov.br/sigla/pages/public/cliente/main.jsf" navigation to finish...
+    - navigated to "https://sigla.sema.ma.gov.br/sigla/pages/public/cliente/main.jsf"
+
+2026-08-08 20:44:23,643 [INFO]   ✔ Status mudou: "Constituído processo | ✅ Sem pendências" → "None"
+2026-08-08 20:44:23,667 [INFO] --- [cmrcucr1q000p10txqe83wo0k] Marcos Padrasto | Processo: 26050038165/2026 ---
+2026-08-08 20:44:26,454 [INFO]   → Abrindo SIGLA...
+2026-08-08 20:44:58,047 [ERROR]   ✖ Locator.fill: Timeout 30000ms exceeded.
+Call log:
+  - waiting for locator("input[name=\"j_idt37:cpf\"]")
+    - waiting for" https://sigla.sema.ma.gov.br/sigla/pages/public/cliente/main.jsf" navigation to finish...
+    - navigated to "https://sigla.sema.ma.gov.br/sigla/pages/public/cliente/main.jsf"
+
+2026-08-08 20:44:58,376 [INFO]   ✔ Status mudou: "Constituído processo | ✅ Sem pendências" → "None"
+2026-08-08 20:44:58,671 [INFO] === Fim — 0 OK, 11 erro(s), 427s ===
+2026-08-10 15:07:44,017 [INFO] === Início — 10/08/2026 15:07 ===
+2026-08-10 15:07:44,451 [INFO] 11 projeto(s) para verificar.
+2026-08-10 15:07:53,273 [INFO] --- [cmrcu65de000b10txol49cypb] Roniel Barros | Processo: 26010021070/2026 ---
+2026-08-10 15:07:58,216 [INFO]   → Abrindo SIGLA...
+2026-08-10 15:08:05,132 [INFO]   → Login OK.
+2026-08-10 15:08:05,133 [INFO]   → Navegação (definida manualmente): recursos_florestais
+2026-08-10 15:08:40,165 [ERROR]   ✖ Locator.click: Timeout 30000ms exceeded.
+Call log:
+  - waiting for get_by_role("row", name="Requerimentos", exact=True)
+
+2026-08-10 15:08:40,646 [INFO]   ✔ Status mudou: "Constituído processo | ✅ Sem pendências" → "None"
+2026-08-10 15:08:40,659 [INFO] --- [cmrcu7ffw000bgwnabngsgbaf] Isete Pereira | Processo: 26040053943/2026 ---
+2026-08-10 15:08:42,290 [INFO]   → Abrindo SIGLA...
+2026-08-10 15:08:45,038 [INFO]   → Login OK.
+2026-08-10 15:08:45,039 [INFO]   → Navegação (definida manualmente): recursos_florestais
+2026-08-10 15:09:20,049 [ERROR]   ✖ Locator.click: Timeout 30000ms exceeded.
+Call log:
+  - waiting for get_by_role("row", name="Requerimentos", exact=True)
+
+2026-08-10 15:09:20,480 [INFO]   ✔ Status mudou: "Constituído processo | ✅ Sem pendências" → "None"
+2026-08-10 15:09:20,489 [INFO] --- [cmrcu84ov000igwnaioig3lgz] Maurilio | Processo: 25080037650/2025 ---
+2026-08-10 15:09:22,486 [INFO]   → Abrindo SIGLA...
+2026-08-10 15:09:25,831 [INFO]   → Login OK.
+2026-08-10 15:09:25,832 [INFO]   → Navegação (definida manualmente): recursos_florestais
+2026-08-10 15:10:00,848 [ERROR]   ✖ Locator.click: Timeout 30000ms exceeded.
+Call log:
+  - waiting for get_by_role("row", name="Requerimentos", exact=True)
+
+2026-08-10 15:10:01,235 [INFO]   ✔ Status mudou: "Constituído processo | ✅ Sem pendências" → "None"
+2026-08-10 15:10:01,253 [INFO] --- [cmrcu4twd000410txncvzfghq] Raiton | Processo: 25110049770/2025 ---
+2026-08-10 15:10:03,299 [INFO]   → Abrindo SIGLA...
+2026-08-10 15:10:59,078 [ERROR] Future exception was never retrieved
+future: <Future finished exception=TargetClosedError('Target page, context or browser has been closed')>
+playwright._impl._errors.TargetClosedError: Target page, context or browser has been closed
+2026-08-10 15:10:59,081 [ERROR] Future exception was never retrieved
+future: <Future finished exception=TargetClosedError('Target page, context or browser has been closed')>
+playwright._impl._errors.TargetClosedError: Target page, context or browser has been closed
+2026-08-10 15:11:04,643 [INFO] === Início — 10/08/2026 15:11 ===
+2026-08-10 15:11:05,131 [INFO] 11 projeto(s) para verificar.
+2026-08-10 15:11:08,116 [INFO] --- [cmrcu65de000b10txol49cypb] Roniel Barros | Processo: 26010021070/2026 ---
+2026-08-10 15:11:13,683 [INFO]   → Abrindo SIGLA...
+2026-08-10 15:11:17,316 [INFO]   → Login OK.
+2026-08-10 15:11:17,316 [INFO]   → Navegação (definida manualmente): recursos_florestais
+2026-08-10 15:11:57,334 [ERROR]   ✖ Locator.click: Timeout 30000ms exceeded.
+Call log:
+  - waiting for get_by_role("row", name="Requerimentos", exact=True)
+
+2026-08-10 15:11:57,661 [INFO]   ✔ Status mudou: "Constituído processo | ✅ Sem pendências" → "None"
+2026-08-10 15:11:57,673 [INFO] --- [cmrcu7ffw000bgwnabngsgbaf] Isete Pereira | Processo: 26040053943/2026 ---
+2026-08-10 15:11:59,199 [INFO]   → Abrindo SIGLA...
+2026-08-10 15:12:02,725 [INFO]   → Login OK.
+2026-08-10 15:12:02,728 [INFO]   → Navegação (definida manualmente): recursos_florestais
+2026-08-10 15:12:42,752 [ERROR]   ✖ Locator.click: Timeout 30000ms exceeded.
+Call log:
+  - waiting for get_by_role("row", name="Requerimentos", exact=True)
+
+2026-08-10 15:12:43,134 [INFO]   ✔ Status mudou: "Constituído processo | ✅ Sem pendências" → "None"
+2026-08-10 15:12:43,144 [INFO] --- [cmrcu4twd000410txncvzfghq] Raiton | Processo: 25110049770/2025 ---
+2026-08-10 15:12:45,083 [INFO]   → Abrindo SIGLA...
+2026-08-10 15:12:48,761 [INFO]   → Login OK.
+2026-08-10 15:12:48,762 [INFO]   → Navegação (definida manualmente): recursos_florestais
+2026-08-10 15:13:28,785 [ERROR]   ✖ Locator.click: Timeout 30000ms exceeded.
+Call log:
+  - waiting for get_by_role("row", name="Requerimentos", exact=True)
+
+2026-08-10 15:13:29,102 [INFO]   ✔ Status mudou: "Constituído processo | ✅ Sem pendências" → "None"
+2026-08-10 15:13:29,109 [INFO] --- [cmrcu6tst0004gwna08bo9bvb] Bianca Magalhaes | Processo: 25080037326/2025 ---
+2026-08-10 15:13:30,595 [INFO]   → Abrindo SIGLA...
+2026-08-10 15:13:34,120 [INFO]   → Login OK.
+2026-08-10 15:13:34,120 [INFO]   → Navegação (definida manualmente): recursos_florestais
+2026-08-10 15:14:14,132 [ERROR]   ✖ Locator.click: Timeout 30000ms exceeded.
+Call log:
+  - waiting for get_by_role("row", name="Requerimentos", exact=True)
+
+2026-08-10 15:14:14,567 [INFO]   ✔ Status mudou: "Constituído processo | ✅ Sem pendências" → "None"
+2026-08-10 15:14:14,580 [INFO] --- [cmrcudlxr000wgwnavt8x1pjk] Talvane | Processo: 26040034502/2026 ---
+2026-08-10 15:14:16,316 [INFO]   → Abrindo SIGLA...
+2026-08-10 15:14:20,676 [INFO]   → Login OK.
+2026-08-10 15:14:20,677 [INFO]   → Navegação (definida manualmente): recursos_hidricos
+2026-08-10 15:15:00,701 [ERROR]   ✖ Locator.click: Timeout 30000ms exceeded.
+Call log:
+  - waiting for get_by_role("row", name="Requerimentos", exact=True)
+
+2026-08-10 15:15:01,060 [INFO]   ✔ Status mudou: "Constituído processo | 🔴 Em exigência" → "None"
+2026-08-10 15:15:01,076 [INFO] --- [PRJ-0003] Jailson Lima Claro | Processo: 26070010650/2026 ---
+2026-08-10 15:15:02,699 [INFO]   → Abrindo SIGLA...
+2026-08-10 15:15:06,358 [INFO]   → Login OK.
+2026-08-10 15:15:06,359 [INFO]   → Navegação (definida manualmente): licenciamento_ambiental
+2026-08-10 15:15:46,378 [ERROR]   ✖ Locator.click: Timeout 30000ms exceeded.
+Call log:
+  - waiting for get_by_role("row", name="Requerimentos", exact=True)
+
+2026-08-10 15:15:46,717 [INFO]   ✔ Status mudou: "Constituído processo | ✅ Sem pendências" → "None"
+2026-08-10 15:15:46,725 [INFO] --- [cmrcu84ov000igwnaioig3lgz] Maurilio | Processo: 25080037650/2025 ---
+2026-08-10 15:15:48,338 [INFO]   → Abrindo SIGLA...
+2026-08-10 15:15:52,653 [INFO]   → Login OK.
+2026-08-10 15:15:52,653 [INFO]   → Navegação (definida manualmente): recursos_florestais
+2026-08-10 15:16:32,666 [ERROR]   ✖ Locator.click: Timeout 30000ms exceeded.
+Call log:
+  - waiting for get_by_role("row", name="Requerimentos", exact=True)
+
+2026-08-10 15:16:33,008 [INFO]   ✔ Status mudou: "Constituído processo | ✅ Sem pendências" → "None"
+2026-08-10 15:16:33,016 [INFO] --- [cmrcucr1q000p10txqe83wo0k] Marcos Padrasto | Processo: 26050038165/2026 ---
+2026-08-10 15:16:34,796 [INFO]   → Abrindo SIGLA...
+2026-08-10 15:16:37,830 [INFO]   → Login OK.
+2026-08-10 15:16:37,831 [INFO]   → Navegação (definida manualmente): recursos_florestais
+2026-08-10 15:17:17,846 [ERROR]   ✖ Locator.click: Timeout 30000ms exceeded.
+Call log:
+  - waiting for get_by_role("row", name="Requerimentos", exact=True)
+
+2026-08-10 15:17:18,267 [INFO]   ✔ Status mudou: "Constituído processo | ✅ Sem pendências" → "None"
+2026-08-10 15:17:18,274 [INFO] --- [cmrcu9aka000i10txcee6xxr3] Eloi | Processo: 25080037570/2025 ---
+2026-08-10 15:17:19,781 [INFO]   → Abrindo SIGLA...
+2026-08-10 15:17:23,449 [INFO]   → Login OK.
+2026-08-10 15:17:23,450 [INFO]   → Navegação (definida manualmente): recursos_florestais
+2026-08-10 15:18:03,461 [ERROR]   ✖ Locator.click: Timeout 30000ms exceeded.
+Call log:
+  - waiting for get_by_role("row", name="Requerimentos", exact=True)
+
+2026-08-10 15:18:03,937 [INFO]   ✔ Status mudou: "Constituído processo | 🔴 Em exigência" → "None"
+2026-08-10 15:18:03,944 [INFO] --- [PRJ-0016] Antônio Carlos Batista Muniz | Processo: 26070042160/2026 ---
+2026-08-10 15:18:05,564 [INFO]   → Abrindo SIGLA...
+2026-08-10 15:18:10,179 [INFO]   → Login OK.
+2026-08-10 15:18:10,179 [INFO]   → Navegação (definida manualmente): recursos_florestais
+2026-08-10 15:18:50,184 [ERROR]   ✖ Locator.click: Timeout 30000ms exceeded.
+Call log:
+  - waiting for get_by_role("row", name="Requerimentos", exact=True)
+
+2026-08-10 15:18:50,529 [INFO]   ✔ Status mudou: "Constituído processo | 🔴 Em exigência" → "None"
+2026-08-10 15:18:50,539 [INFO] --- [cmrcu8p13000pgwna48q4u5ep] Isaias | Processo: 25110049202/2025 ---
+2026-08-10 15:18:52,711 [INFO]   → Abrindo SIGLA...
+2026-08-10 15:18:57,305 [INFO]   → Login OK.
+2026-08-10 15:18:57,309 [INFO]   → Navegação (definida manualmente): recursos_florestais
+2026-08-10 15:19:37,335 [ERROR]   ✖ Locator.click: Timeout 30000ms exceeded.
+Call log:
+  - waiting for get_by_role("row", name="Requerimentos", exact=True)
+
+2026-08-10 15:19:37,734 [INFO]   ✔ Status mudou: "Constituído processo | ✅ Sem pendências" → "None"
+2026-08-10 15:19:37,873 [INFO] === Fim — 0 OK, 11 erro(s), 513s ===
