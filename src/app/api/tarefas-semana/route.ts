@@ -29,10 +29,8 @@ export async function GET(request: NextRequest) {
     }
 
     const semanaInicio = segundaFeiraDaSemana(semanaParam ? new Date(semanaParam) : new Date())
-    const semanaFim = new Date(semanaInicio)
-    semanaFim.setDate(semanaFim.getDate() + 7)
 
-    const [planejadas, backlogBruto] = await Promise.all([
+    const [planejadas, tarefasBruto, acoesBruto] = await Promise.all([
       prisma.tarefaSemana.findMany({
         where: { usuarioId, semanaInicio },
         include: {
@@ -41,9 +39,19 @@ export async function GET(request: NextRequest) {
               projeto: { select: { id: true, codigo: true, imovelNome: true, municipio: true, estado: true } },
             },
           },
+          acaoPendencia: {
+            include: {
+              pendencia: {
+                include: {
+                  projeto: { select: { id: true, codigo: true, imovelNome: true, municipio: true, estado: true } },
+                },
+              },
+            },
+          },
         },
         orderBy: { criadoEm: 'asc' },
       }),
+      // Backlog — tarefas operacionais pendentes
       prisma.tarefa.findMany({
         where: { responsavelId: usuarioId, status: { notIn: ['CONCLUIDA', 'CANCELADA'] } },
         include: {
@@ -51,23 +59,81 @@ export async function GET(request: NextRequest) {
         },
         orderBy: [{ prazo: 'asc' }, { criadoEm: 'asc' }],
       }),
+      // Backlog — ações de pendência com órgão, ainda não concluídas
+      prisma.acaoPendencia.findMany({
+        where: { responsavelId: usuarioId, concluida: false },
+        include: {
+          pendencia: {
+            include: {
+              projeto: { select: { id: true, codigo: true, imovelNome: true, municipio: true, estado: true } },
+            },
+          },
+        },
+        orderBy: [{ criadoEm: 'asc' }],
+      }),
     ])
 
-    const idsNaSemana = new Set(planejadas.map(p => p.tarefaId))
-    const backlog = backlogBruto.filter(t => !idsNaSemana.has(t.id))
+    const idsTarefaNaSemana = new Set(planejadas.filter(p => p.tarefaId).map(p => p.tarefaId))
+    const idsAcaoNaSemana   = new Set(planejadas.filter(p => p.acaoPendenciaId).map(p => p.acaoPendenciaId))
+
+    const backlogTarefas = tarefasBruto
+      .filter(t => !idsTarefaNaSemana.has(t.id))
+      .map(t => ({
+        id: t.id,
+        tipo: 'TAREFA' as const,
+        titulo: t.titulo,
+        prazo: t.prazo,
+        projeto: t.projeto,
+      }))
+
+    const backlogPendencias = acoesBruto
+      .filter(a => !idsAcaoNaSemana.has(a.id))
+      .map(a => ({
+        id: a.id,
+        tipo: 'PENDENCIA' as const,
+        titulo: a.descricao,
+        prazo: a.pendencia.prazoResposta,
+        numeroPedido: a.pendencia.numeroPedido,
+        projeto: a.pendencia.projeto,
+      }))
+
+    // Backlog unificado, ordenado por prazo (sem prazo vai por último)
+    const backlog = [...backlogTarefas, ...backlogPendencias].sort((a, b) => {
+      if (!a.prazo && !b.prazo) return 0
+      if (!a.prazo) return 1
+      if (!b.prazo) return -1
+      return new Date(a.prazo).getTime() - new Date(b.prazo).getTime()
+    })
 
     return NextResponse.json({
       semanaInicio,
       usuarioId,
       backlog,
-      planejadas: planejadas.map(p => ({
-        id: p.id,
-        tarefaId: p.tarefaId,
-        criadoEm: p.criadoEm,
-        diaSemana: p.diaSemana,
-        tarefa: p.tarefa,
-        concluida: p.tarefa.status === 'CONCLUIDA',
-      })),
+      planejadas: planejadas.map(p => {
+        if (p.tipo === 'PENDENCIA' && p.acaoPendencia) {
+          return {
+            id: p.id,
+            tipo: 'PENDENCIA' as const,
+            itemId: p.acaoPendenciaId,
+            criadoEm: p.criadoEm,
+            diaSemana: p.diaSemana,
+            titulo: p.acaoPendencia.descricao,
+            numeroPedido: p.acaoPendencia.pendencia.numeroPedido,
+            projeto: p.acaoPendencia.pendencia.projeto,
+            concluida: p.acaoPendencia.concluida,
+          }
+        }
+        return {
+          id: p.id,
+          tipo: 'TAREFA' as const,
+          itemId: p.tarefaId,
+          criadoEm: p.criadoEm,
+          diaSemana: p.diaSemana,
+          titulo: p.tarefa?.titulo,
+          projeto: p.tarefa?.projeto,
+          concluida: p.tarefa?.status === 'CONCLUIDA',
+        }
+      }),
     })
   } catch (err) {
     console.error('[tarefas-semana GET]', err)
@@ -75,15 +141,17 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// Adiciona uma tarefa ao planejamento da semana
+// Adiciona uma tarefa (ou ação de pendência) ao planejamento da semana
 export async function POST(request: NextRequest) {
   try {
     const user = await getCurrentUser()
     if (!user) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
 
     const body = await request.json()
-    const { tarefaId, semanaInicio: semanaParam, diaSemana } = body
-    if (!tarefaId) return NextResponse.json({ error: 'tarefaId é obrigatório' }, { status: 400 })
+    const { itemId, tipo, semanaInicio: semanaParam, diaSemana } = body
+    if (!itemId) return NextResponse.json({ error: 'itemId é obrigatório' }, { status: 400 })
+
+    const tipoFinal = tipo === 'PENDENCIA' ? 'PENDENCIA' : 'TAREFA'
 
     let usuarioId = body.usuarioId || user.id
     if (usuarioId !== user.id && !PODE_VER_OUTROS.includes(user.role)) {
@@ -92,11 +160,17 @@ export async function POST(request: NextRequest) {
 
     const semanaInicio = segundaFeiraDaSemana(semanaParam ? new Date(semanaParam) : new Date())
 
-    const item = await prisma.tarefaSemana.upsert({
-      where: { tarefaId_usuarioId_semanaInicio: { tarefaId, usuarioId, semanaInicio } },
-      create: { tarefaId, usuarioId, semanaInicio, diaSemana: diaSemana ?? null },
-      update: {},
-    })
+    const item = tipoFinal === 'PENDENCIA'
+      ? await prisma.tarefaSemana.upsert({
+          where: { acaoPendenciaId_usuarioId_semanaInicio: { acaoPendenciaId: itemId, usuarioId, semanaInicio } },
+          create: { tipo: 'PENDENCIA', acaoPendenciaId: itemId, usuarioId, semanaInicio, diaSemana: diaSemana ?? null },
+          update: {},
+        })
+      : await prisma.tarefaSemana.upsert({
+          where: { tarefaId_usuarioId_semanaInicio: { tarefaId: itemId, usuarioId, semanaInicio } },
+          create: { tipo: 'TAREFA', tarefaId: itemId, usuarioId, semanaInicio, diaSemana: diaSemana ?? null },
+          update: {},
+        })
 
     return NextResponse.json({ item })
   } catch (err) {
@@ -105,7 +179,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// Atualiza o dia da semana escolhido para uma tarefa já planejada
+// Atualiza o dia da semana escolhido para um item já planejado
 export async function PATCH(request: NextRequest) {
   try {
     const user = await getCurrentUser()
@@ -133,7 +207,7 @@ export async function PATCH(request: NextRequest) {
   }
 }
 
-// Remove uma tarefa do planejamento da semana (volta pro backlog)
+// Remove um item do planejamento da semana (volta pro backlog)
 export async function DELETE(request: NextRequest) {
   try {
     const user = await getCurrentUser()

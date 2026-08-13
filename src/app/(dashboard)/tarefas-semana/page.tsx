@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { toast } from 'sonner'
 import {
   Plus, X, CheckCircle2, Circle, ChevronLeft, ChevronRight, ChevronDown,
-  Calendar, Loader2, Users, TrendingUp, AlertTriangle
+  Calendar, Loader2, Users, TrendingUp, AlertTriangle, Landmark
 } from 'lucide-react'
 
 const ROLES_GESTAO = ['ADMIN', 'GESTOR_GERAL', 'GESTOR_OPERACIONAL', 'GESTOR_ADMINISTRATIVO', 'SUPERVISOR']
@@ -30,11 +30,11 @@ function formatDataCurta(d: string | Date) {
 }
 
 function agruparPorProjeto(lista: any[]) {
-  const grupos = new Map<string, { projeto: any; tarefas: any[] }>()
+  const grupos = new Map<string, { projeto: any; itens: any[] }>()
   for (const t of lista) {
     const pid = t.projeto?.id || 'sem-projeto'
-    if (!grupos.has(pid)) grupos.set(pid, { projeto: t.projeto, tarefas: [] })
-    grupos.get(pid)!.tarefas.push(t)
+    if (!grupos.has(pid)) grupos.set(pid, { projeto: t.projeto, itens: [] })
+    grupos.get(pid)!.itens.push(t)
   }
   return Array.from(grupos.values()).sort((a, b) =>
     (a.projeto?.codigo || '').localeCompare(b.projeto?.codigo || '')
@@ -105,13 +105,13 @@ export default function TarefasSemanaPage() {
 
   useEffect(() => { carregar() }, [carregar])
 
-  async function adicionarNaSemana(tarefaId: string) {
-    setProcessando(tarefaId)
+  async function adicionarNaSemana(itemId: string, tipo: 'TAREFA' | 'PENDENCIA') {
+    setProcessando(itemId)
     try {
       const res = await fetch('/api/tarefas-semana', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tarefaId, usuarioId, semanaInicio: semanaInicio.toISOString() }),
+        body: JSON.stringify({ itemId, tipo, usuarioId, semanaInicio: semanaInicio.toISOString() }),
       })
       if (!res.ok) { toast.error('Erro ao adicionar'); return }
       carregar()
@@ -147,16 +147,22 @@ export default function TarefasSemanaPage() {
     }
   }
 
-  async function marcarConcluida(tarefaId: string, concluida: boolean) {
-    setProcessando(tarefaId)
+  async function marcarConcluida(itemId: string, tipo: 'TAREFA' | 'PENDENCIA', concluida: boolean) {
+    setProcessando(itemId)
     try {
-      const res = await fetch('/api/tarefas', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: tarefaId, status: concluida ? 'PENDENTE' : 'CONCLUIDA' }),
-      })
+      const res = tipo === 'PENDENCIA'
+        ? await fetch('/api/acoes', {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: itemId, concluida: !concluida }),
+          })
+        : await fetch('/api/tarefas', {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: itemId, status: concluida ? 'PENDENTE' : 'CONCLUIDA' }),
+          })
       if (!res.ok) { toast.error('Erro ao atualizar'); return }
-      toast.success(concluida ? 'Reaberta' : 'Concluída! Também atualizado no Operacional.')
+      toast.success(concluida ? 'Reaberta' : (tipo === 'PENDENCIA' ? 'Concluída! Também atualizado em Acompanhamento.' : 'Concluída! Também atualizado no Operacional.'))
       carregar()
     } finally {
       setProcessando(null)
@@ -189,10 +195,10 @@ export default function TarefasSemanaPage() {
   const ehSemanaAtual = segundaFeiraDaSemana(new Date()).getTime() === semanaInicio.getTime()
 
   // Agrupa planejadas por dia (0-6) + "sem dia" (-1), na ordem certa
-  const gruposPorDia: { dia: number; tarefas: any[] }[] = [-1, 0, 1, 2, 3, 4, 5, 6].map(dia => ({
+  const gruposPorDia: { dia: number; itens: any[] }[] = [-1, 0, 1, 2, 3, 4, 5, 6].map(dia => ({
     dia,
-    tarefas: planejadas.filter(p => (p.diaSemana ?? -1) === dia),
-  })).filter(g => g.tarefas.length > 0)
+    itens: planejadas.filter(p => (p.diaSemana ?? -1) === dia),
+  })).filter(g => g.itens.length > 0)
 
   return (
     <div className="p-4 sm:p-6 space-y-5 max-w-7xl mx-auto">
@@ -296,7 +302,7 @@ export default function TarefasSemanaPage() {
                         <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide truncate">
                           {grupo.projeto?.codigo || 'Sem projeto'}
                           {grupo.projeto?.imovelNome && ` · ${grupo.projeto.imovelNome}`}
-                          <span className="ml-1.5 text-gray-300 font-normal normal-case">({grupo.tarefas.length})</span>
+                          <span className="ml-1.5 text-gray-300 font-normal normal-case">({grupo.itens.length})</span>
                         </span>
                         {fechado
                           ? <ChevronRight className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
@@ -304,17 +310,18 @@ export default function TarefasSemanaPage() {
                       </button>
                       {!fechado && (
                         <div className="space-y-1.5 mt-1">
-                          {grupo.tarefas.map(t => {
+                          {grupo.itens.map((t: any) => {
                             const urg = corUrgencia(t.prazo)
+                            const ehPendencia = t.tipo === 'PENDENCIA'
                             return (
                               <div
                                 key={t.id}
                                 className="flex items-stretch gap-0 rounded-xl border border-gray-100 hover:border-gray-200 hover:shadow-sm transition-all overflow-hidden"
                               >
-                                <div className={`w-1 flex-shrink-0 ${urg.barra}`} />
+                                <div className={`w-1 flex-shrink-0 ${ehPendencia ? 'bg-purple-500' : urg.barra}`} />
                                 <div className="flex items-start gap-2 p-2.5 flex-1 min-w-0">
                                   <button
-                                    onClick={() => adicionarNaSemana(t.id)}
+                                    onClick={() => adicionarNaSemana(t.id, t.tipo)}
                                     disabled={processando === t.id}
                                     className="mt-0.5 p-1 rounded-md bg-green-50 text-green-600 hover:bg-green-100 flex-shrink-0 disabled:opacity-50"
                                     title="Colocar nesta semana"
@@ -322,7 +329,14 @@ export default function TarefasSemanaPage() {
                                     {processando === t.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
                                   </button>
                                   <div className="min-w-0 flex-1">
-                                    <p className="text-sm text-gray-800 truncate">{t.titulo}</p>
+                                    <div className="flex items-center gap-1.5">
+                                      {ehPendencia && (
+                                        <span className="flex items-center gap-0.5 text-[10px] font-semibold text-purple-700 bg-purple-50 px-1.5 py-0.5 rounded-full flex-shrink-0">
+                                          <Landmark className="w-2.5 h-2.5" /> Pendência
+                                        </span>
+                                      )}
+                                      <p className="text-sm text-gray-800 truncate">{t.titulo}</p>
+                                    </div>
                                     {t.prazo && (
                                       <p className={`text-xs truncate flex items-center gap-1 ${urg.texto}`}>
                                         {urg.texto === 'text-red-600' && <AlertTriangle className="w-3 h-3" />}
@@ -373,59 +387,69 @@ export default function TarefasSemanaPage() {
                       )}
                     </div>
                     <div className="space-y-1.5">
-                      {grupo.tarefas.map((p: any) => (
-                        <div
-                          key={p.id}
-                          className={`rounded-xl border overflow-hidden ${p.concluida ? 'border-green-100 bg-green-50/40' : 'border-gray-100'}`}
-                        >
-                          <div className="flex items-start gap-2 p-2.5">
-                            <button
-                              onClick={() => marcarConcluida(p.tarefaId, p.concluida)}
-                              disabled={processando === p.tarefaId}
-                              className="mt-0.5 flex-shrink-0 disabled:opacity-50"
-                              title={p.concluida ? 'Reabrir' : 'Marcar como concluída'}
-                            >
-                              {p.concluida
-                                ? <CheckCircle2 className="w-5 h-5 text-green-600" />
-                                : <Circle className="w-5 h-5 text-gray-300 hover:text-green-500" />}
-                            </button>
-                            <div className="min-w-0 flex-1">
-                              <p className={`text-sm ${p.concluida ? 'text-gray-400 line-through' : 'text-gray-800'} truncate`}>
-                                {p.tarefa.titulo}
-                              </p>
-                              <p className="text-xs text-gray-400 truncate">
-                                {p.tarefa.projeto?.codigo} · {p.tarefa.projeto?.imovelNome || p.tarefa.projeto?.municipio || ''}
-                              </p>
-                            </div>
-                            <button
-                              onClick={() => removerDaSemana(p.id)}
-                              disabled={processando === p.id}
-                              className="p-1 text-gray-300 hover:text-red-500 flex-shrink-0"
-                              title="Tirar da semana"
-                            >
-                              <X className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
-                          {/* Pílulas de dia — Seg Ter Qua Qui Sex Sáb Dom */}
-                          <div className="flex items-center gap-1 px-2.5 pb-2 pl-9">
-                            {DIAS_LETRA.map((letra, i) => (
+                      {grupo.itens.map((p: any) => {
+                        const ehPendencia = p.tipo === 'PENDENCIA'
+                        return (
+                          <div
+                            key={p.id}
+                            className={`rounded-xl border overflow-hidden ${p.concluida ? 'border-green-100 bg-green-50/40' : ehPendencia ? 'border-purple-100' : 'border-gray-100'}`}
+                          >
+                            <div className="flex items-start gap-2 p-2.5">
                               <button
-                                key={i}
-                                onClick={() => alterarDia(p.id, p.diaSemana, i)}
-                                disabled={processando === p.id}
-                                title={DIAS_NOME[i]}
-                                className={`w-5 h-5 rounded-md text-[10px] font-bold flex items-center justify-center transition-colors disabled:opacity-50 ${
-                                  p.diaSemana === i
-                                    ? `${DIAS_COR[i]} text-white`
-                                    : 'bg-gray-100 text-gray-400 hover:bg-gray-200'
-                                }`}
+                                onClick={() => marcarConcluida(p.itemId, p.tipo, p.concluida)}
+                                disabled={processando === p.itemId}
+                                className="mt-0.5 flex-shrink-0 disabled:opacity-50"
+                                title={p.concluida ? 'Reabrir' : 'Marcar como concluída'}
                               >
-                                {letra}
+                                {p.concluida
+                                  ? <CheckCircle2 className="w-5 h-5 text-green-600" />
+                                  : <Circle className="w-5 h-5 text-gray-300 hover:text-green-500" />}
                               </button>
-                            ))}
+                              <div className="min-w-0 flex-1">
+                                <div className="flex items-center gap-1.5">
+                                  {ehPendencia && (
+                                    <span className="flex items-center gap-0.5 text-[10px] font-semibold text-purple-700 bg-purple-50 px-1.5 py-0.5 rounded-full flex-shrink-0">
+                                      <Landmark className="w-2.5 h-2.5" /> Pendência
+                                    </span>
+                                  )}
+                                  <p className={`text-sm ${p.concluida ? 'text-gray-400 line-through' : 'text-gray-800'} truncate`}>
+                                    {p.titulo}
+                                  </p>
+                                </div>
+                                <p className="text-xs text-gray-400 truncate">
+                                  {p.projeto?.codigo} · {p.projeto?.imovelNome || p.projeto?.municipio || ''}
+                                </p>
+                              </div>
+                              <button
+                                onClick={() => removerDaSemana(p.id)}
+                                disabled={processando === p.id}
+                                className="p-1 text-gray-300 hover:text-red-500 flex-shrink-0"
+                                title="Tirar da semana"
+                              >
+                                <X className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                            {/* Pílulas de dia — Seg Ter Qua Qui Sex Sáb Dom */}
+                            <div className="flex items-center gap-1 px-2.5 pb-2 pl-9">
+                              {DIAS_LETRA.map((letra, i) => (
+                                <button
+                                  key={i}
+                                  onClick={() => alterarDia(p.id, p.diaSemana, i)}
+                                  disabled={processando === p.id}
+                                  title={DIAS_NOME[i]}
+                                  className={`w-5 h-5 rounded-md text-[10px] font-bold flex items-center justify-center transition-colors disabled:opacity-50 ${
+                                    p.diaSemana === i
+                                      ? `${DIAS_COR[i]} text-white`
+                                      : 'bg-gray-100 text-gray-400 hover:bg-gray-200'
+                                  }`}
+                                >
+                                  {letra}
+                                </button>
+                              ))}
+                            </div>
                           </div>
-                        </div>
-                      ))}
+                        )
+                      })}
                     </div>
                   </div>
                 ))}

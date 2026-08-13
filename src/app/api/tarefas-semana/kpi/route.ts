@@ -34,6 +34,7 @@ export async function GET(request: NextRequest) {
       include: {
         usuario: { select: { id: true, nome: true } },
         tarefa: { select: { status: true } },
+        acaoPendencia: { select: { concluida: true } },
       },
     })
 
@@ -43,7 +44,8 @@ export async function GET(request: NextRequest) {
         porUsuario[r.usuarioId] = { nome: r.usuario.nome, planejadas: 0, concluidas: 0 }
       }
       porUsuario[r.usuarioId].planejadas++
-      if (r.tarefa.status === 'CONCLUIDA') porUsuario[r.usuarioId].concluidas++
+      const concluida = r.tipo === 'PENDENCIA' ? r.acaoPendencia?.concluida : r.tarefa?.status === 'CONCLUIDA'
+      if (concluida) porUsuario[r.usuarioId].concluidas++
     }
 
     const usuarios = Object.entries(porUsuario)
