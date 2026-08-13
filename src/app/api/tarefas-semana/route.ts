@@ -64,6 +64,7 @@ export async function GET(request: NextRequest) {
         id: p.id,
         tarefaId: p.tarefaId,
         criadoEm: p.criadoEm,
+        diaSemana: p.diaSemana,
         tarefa: p.tarefa,
         concluida: p.tarefa.status === 'CONCLUIDA',
       })),
@@ -81,7 +82,7 @@ export async function POST(request: NextRequest) {
     if (!user) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
 
     const body = await request.json()
-    const { tarefaId, semanaInicio: semanaParam } = body
+    const { tarefaId, semanaInicio: semanaParam, diaSemana } = body
     if (!tarefaId) return NextResponse.json({ error: 'tarefaId é obrigatório' }, { status: 400 })
 
     let usuarioId = body.usuarioId || user.id
@@ -93,7 +94,7 @@ export async function POST(request: NextRequest) {
 
     const item = await prisma.tarefaSemana.upsert({
       where: { tarefaId_usuarioId_semanaInicio: { tarefaId, usuarioId, semanaInicio } },
-      create: { tarefaId, usuarioId, semanaInicio },
+      create: { tarefaId, usuarioId, semanaInicio, diaSemana: diaSemana ?? null },
       update: {},
     })
 
@@ -101,6 +102,34 @@ export async function POST(request: NextRequest) {
   } catch (err) {
     console.error('[tarefas-semana POST]', err)
     return NextResponse.json({ error: 'Erro ao adicionar à semana' }, { status: 500 })
+  }
+}
+
+// Atualiza o dia da semana escolhido para uma tarefa já planejada
+export async function PATCH(request: NextRequest) {
+  try {
+    const user = await getCurrentUser()
+    if (!user) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
+
+    const body = await request.json()
+    const { id, diaSemana } = body
+    if (!id) return NextResponse.json({ error: 'id é obrigatório' }, { status: 400 })
+
+    const item = await prisma.tarefaSemana.findUnique({ where: { id } })
+    if (!item) return NextResponse.json({ error: 'Não encontrado' }, { status: 404 })
+    if (item.usuarioId !== user.id && !PODE_VER_OUTROS.includes(user.role)) {
+      return NextResponse.json({ error: 'Sem permissão' }, { status: 403 })
+    }
+
+    const atualizado = await prisma.tarefaSemana.update({
+      where: { id },
+      data: { diaSemana: diaSemana === null ? null : Number(diaSemana) },
+    })
+
+    return NextResponse.json({ item: atualizado })
+  } catch (err) {
+    console.error('[tarefas-semana PATCH]', err)
+    return NextResponse.json({ error: 'Erro ao atualizar' }, { status: 500 })
   }
 }
 
