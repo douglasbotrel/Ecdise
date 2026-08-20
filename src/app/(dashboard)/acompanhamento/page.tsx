@@ -7,16 +7,16 @@ import Link from 'next/link'
 import {
   Search, FileSearch, ChevronRight, MapPin, FileText,
   Award, AlertCircle, Upload, RefreshCw, Clock,
-  Play, Terminal, X, AlertTriangle, CheckCircle2, HelpCircle,
+  X, AlertTriangle, CheckCircle2, HelpCircle,
 } from 'lucide-react'
 
-// ── Interpreta o statusSIGLA ──
-type SiglaCategoria = 'exigencia' | 'ok' | 'sem_consulta'
+// ── Categoriza pelo status das pendências registradas manualmente ──
+// (Não depende mais do robô/verificação automática do SIGLA.)
+type PendenciaCategoria = 'pendente' | 'ok'
 
-function categorizarSIGLA(statusSIGLA: string | null): SiglaCategoria {
-  if (!statusSIGLA) return 'sem_consulta'
-  if (statusSIGLA.includes('Em exigência')) return 'exigencia'
-  return 'ok'
+function categorizarPendencia(projeto: any): PendenciaCategoria {
+  const temAberta = (projeto.pendencias || []).some((p: any) => p.status === 'ABERTA')
+  return temAberta ? 'pendente' : 'ok'
 }
 
 export default function AcompanhamentoPage() {
@@ -24,7 +24,6 @@ export default function AcompanhamentoPage() {
   const [projetos, setProjetos]       = useState<any[]>([])
   const [loading, setLoading]         = useState(true)
   const [search, setSearch]           = useState('')
-  const [modalRodar, setModalRodar]   = useState(false)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -77,16 +76,16 @@ export default function AcompanhamentoPage() {
   }
 
   const visiveis     = projetos.filter(filtrar)
-  // Coluna 1 — processos com exigência aberta no SIGLA
-  const pendentes    = visiveis.filter(p => categorizarSIGLA(p.statusSIGLA) === 'exigencia')
-  // Coluna 2 — sem pendência no SIGLA, ainda sem licença emitida + aguardando consulta
-  const statusOk     = visiveis.filter(p => !p.licenca && categorizarSIGLA(p.statusSIGLA) !== 'exigencia')
+  // Coluna 1 — processos com pendência aberta registrada
+  const pendentes    = visiveis.filter(p => categorizarPendencia(p) === 'pendente')
+  // Coluna 2 — sem pendência aberta, ainda sem licença emitida
+  const statusOk     = visiveis.filter(p => !p.licenca && categorizarPendencia(p) !== 'pendente')
   // Coluna 3 — licença registrada no sistema
   const licenciados  = visiveis.filter(p => !!p.licenca)
 
   const total        = projetos.length
-  const emExigencia  = projetos.filter(p => categorizarSIGLA(p.statusSIGLA) === 'exigencia').length
-  const semPend      = projetos.filter(p => categorizarSIGLA(p.statusSIGLA) === 'ok' && !p.licenca).length
+  const emExigencia  = projetos.filter(p => categorizarPendencia(p) === 'pendente').length
+  const semPend      = projetos.filter(p => categorizarPendencia(p) === 'ok' && !p.licenca).length
   const totalLicenc  = projetos.filter(p => !!p.licenca).length
 
   // ── Resumo de pendências formais (Pendencia/AcaoPendencia) por projeto ──
@@ -129,17 +128,10 @@ export default function AcompanhamentoPage() {
         <div className="flex-1">
           <h1 className="text-2xl font-bold text-gray-900">Acompanhamento de Processos</h1>
           <p className="text-gray-500 text-sm mt-1">
-            Monitoramento automático via SIGLA — status atualizado diariamente
+            Registre as pendências de cada processo — a categorização aqui embaixo segue o que estiver aberto
           </p>
         </div>
         <div className="flex gap-2 w-full sm:w-auto">
-          <button
-            onClick={() => setModalRodar(true)}
-            className="flex items-center gap-2 px-4 py-2.5 bg-gray-800 hover:bg-gray-900 text-white text-sm font-semibold rounded-xl transition-colors flex-1 sm:flex-none justify-center"
-          >
-            <Play className="w-4 h-4" />
-            Verificar agora
-          </button>
           <Link
             href="/acompanhamento/importar"
             className="flex items-center gap-2 px-4 py-2.5 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold rounded-xl transition-colors flex-1 sm:flex-none justify-center"
@@ -159,7 +151,7 @@ export default function AcompanhamentoPage() {
           </div>
           <div className="bg-red-50 rounded-xl border border-red-100 p-4 text-center">
             <p className="text-2xl font-bold text-red-600">{emExigencia}</p>
-            <p className="text-xs text-red-500 mt-0.5">Em exigência</p>
+            <p className="text-xs text-red-500 mt-0.5">Com pendência aberta</p>
           </div>
           <div className="bg-green-50 rounded-xl border border-green-100 p-4 text-center">
             <p className="text-2xl font-bold text-green-600">{semPend}</p>
@@ -324,64 +316,6 @@ export default function AcompanhamentoPage() {
 
         </div>
       )}
-
-      {/* ══ MODAL VERIFICAR AGORA ══════════════════════════ */}
-      {modalRodar && (
-        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-gray-100 rounded-xl">
-                  <Terminal className="w-4 h-4 text-gray-600" />
-                </div>
-                <div>
-                  <h2 className="font-bold text-gray-900">Verificar todos agora</h2>
-                  <p className="text-xs text-gray-500 mt-0.5">O robô SIGLA roda no seu computador</p>
-                </div>
-              </div>
-              <button onClick={() => setModalRodar(false)}
-                className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg">
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            <div className="px-6 py-5 space-y-4">
-              <p className="text-sm text-gray-600">
-                Não precisa abrir o VS Code nem digitar nada. Basta clicar duas vezes no arquivo abaixo:
-              </p>
-              <div className="bg-gray-900 rounded-xl px-4 py-4 flex items-start gap-3">
-                <div className="text-2xl">📁</div>
-                <div>
-                  <p className="text-white text-sm font-semibold font-mono">verificar_agora.bat</p>
-                  <p className="text-gray-400 text-xs mt-1">
-                    Pasta: <span className="font-mono">Ecdise\sigla_checker\</span>
-                  </p>
-                </div>
-              </div>
-              <div className="bg-amber-50 border border-amber-100 rounded-xl px-4 py-3 text-xs text-amber-800 space-y-1">
-                <p className="font-semibold">📌 Como encontrar o arquivo</p>
-                <p>Abra o explorador de arquivos → vá até a pasta do projeto Ecdise → entre em <span className="font-mono">sigla_checker</span> → clique duas vezes em <span className="font-mono">verificar_agora.bat</span></p>
-              </div>
-              <p className="text-xs text-gray-400">
-                Uma janela vai abrir e mostrar o progresso. Ao terminar, clique em <strong>Atualizar</strong> nesta página.
-              </p>
-            </div>
-
-            <div className="px-6 pb-5 flex gap-2">
-              <button
-                onClick={() => setModalRodar(false)}
-                className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-gray-900 hover:bg-gray-800 text-white rounded-xl text-sm font-semibold transition-colors"
-              >
-                Entendido
-              </button>
-              <button onClick={() => setModalRodar(false)}
-                className="px-5 py-2.5 border border-gray-200 text-gray-600 hover:bg-gray-50 rounded-xl text-sm font-medium">
-                Fechar
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   )
 }
@@ -393,29 +327,28 @@ function ProjetoCard({ projeto, servicoPrestado, formatDataConsulta }: {
   formatDataConsulta: (dt: string | null) => string | null
 }) {
   const licenciado   = !!projeto.licenca
-  const pendencias   = (projeto.pendencias || []).filter((p: any) => p.status === 'ABERTA').length
-  const categoria    = (() => {
-    if (!projeto.statusSIGLA) return 'sem_consulta'
-    if (projeto.statusSIGLA.includes('Em exigência')) return 'exigencia'
-    return 'ok'
-  })()
+  const pendenciasAbertas = (projeto.pendencias || []).filter((p: any) => p.status === 'ABERTA')
+  const pendencias   = pendenciasAbertas.length
+  const categoria: PendenciaCategoria = pendencias > 0 ? 'pendente' : 'ok'
 
-  const statusTexto  = projeto.statusSIGLA ? projeto.statusSIGLA.split('|')[0].trim() : null
+  // Pega a pendência mais urgente (prazo mais próximo) para mostrar no card
+  const pendenciaMaisUrgente = pendenciasAbertas.length > 0
+    ? [...pendenciasAbertas].sort((a: any, b: any) =>
+        new Date(a.prazoResposta).getTime() - new Date(b.prazoResposta).getTime()
+      )[0]
+    : null
 
   const bordas: Record<string, string> = {
-    exigencia:    'border-l-4 border-l-red-400',
-    ok:           'border-l-4 border-l-green-400',
-    sem_consulta: 'border-l-4 border-l-gray-200',
+    pendente: 'border-l-4 border-l-red-400',
+    ok:       'border-l-4 border-l-green-400',
   }
   const badges: Record<string, string> = {
-    exigencia:    'bg-red-50 text-red-700 border border-red-100',
-    ok:           'bg-green-50 text-green-700 border border-green-100',
-    sem_consulta: 'bg-gray-50 text-gray-500 border border-gray-100',
+    pendente: 'bg-red-50 text-red-700 border border-red-100',
+    ok:       'bg-green-50 text-green-700 border border-green-100',
   }
   const labels: Record<string, string> = {
-    exigencia:    '🔴 Em exigência',
-    ok:           '✅ Sem pendências',
-    sem_consulta: '⏳ Aguardando consulta',
+    pendente: pendencias === 1 ? '🔴 1 pendência aberta' : `🔴 ${pendencias} pendências abertas`,
+    ok:       '✅ Sem pendências',
   }
 
   return (
@@ -454,20 +387,16 @@ function ProjetoCard({ projeto, servicoPrestado, formatDataConsulta }: {
           </div>
         </div>
 
-        {/* Status SIGLA */}
+        {/* Status de pendências (registro manual) */}
         <div className={`rounded-lg px-3 py-2 flex items-center justify-between gap-2 ${badges[categoria]}`}>
           <div className="min-w-0">
             <p className="text-xs font-semibold">{labels[categoria]}</p>
-            {statusTexto && (
-              <p className="text-xs opacity-75 truncate mt-0.5">{statusTexto}</p>
+            {pendenciaMaisUrgente && (
+              <p className="text-xs opacity-75 truncate mt-0.5">
+                Nº {pendenciaMaisUrgente.numeroPedido} · prazo {formatDataConsulta(pendenciaMaisUrgente.prazoResposta)?.split(' ')[0]}
+              </p>
             )}
           </div>
-          {projeto.ultimaConsultaSIGLA && (
-            <span className="flex items-center gap-1 text-xs opacity-60 flex-shrink-0">
-              <Clock className="w-3 h-3" />
-              {formatDataConsulta(projeto.ultimaConsultaSIGLA)}
-            </span>
-          )}
         </div>
 
         {/* Info secundária */}
