@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { getCurrentUser } from '@/lib/auth'
 
 export async function POST(req: Request) {
   try {
@@ -23,6 +24,12 @@ export async function POST(req: Request) {
 
 export async function GET() {
   try {
+    const user = await getCurrentUser()
+    if (!user) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
+    if (!['ADMIN', 'GESTOR_GERAL'].includes(user.role)) {
+      return NextResponse.json({ error: 'Sem permissão' }, { status: 403 })
+    }
+
     const cadastros = await prisma.cadastroTeste.findMany({
       orderBy: { criadoEm: 'desc' },
     })

@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation'
 import {
   LayoutDashboard, Briefcase, FileText, Settings,
   ClipboardList, MapPin, DollarSign, CheckSquare,
-  BarChart3, ChevronLeft, ChevronRight, X, FileSearch, Users, ListChecks
+  BarChart3, ChevronLeft, ChevronRight, X, FileSearch, Users, ListChecks, Users2
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -91,6 +91,12 @@ const configItems = [
     label: 'Cadastro Base',
     icon: Settings,
     modulo: 'configuracoes',
+  },
+  {
+    href: '/cadastros-teste',
+    label: 'Acesso Grátis (Cadastros)',
+    icon: Users2,
+    modulo: 'cadastros-teste',
   },
 ]
 
