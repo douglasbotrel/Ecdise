@@ -297,7 +297,13 @@ export default function OperacionalPage() {
     try {
       const params = new URLSearchParams()
       params.set('etapas', ETAPAS_OPERACIONAL)
-      params.set('emAcompanhamento', 'false')   // exclui projetos importados só para monitoramento
+      // Exclui projetos importados só para monitoramento — EXCETO na aba
+      // "Concluído", onde queremos ver também os que já foram protocolados
+      // e seguiram para Acompanhamento (senão eles somem sem nunca aparecer
+      // como concluídos aqui no Operacional).
+      if (filtro !== 'CONCLUIDO') {
+        params.set('emAcompanhamento', 'false')
+      }
       if (filtro) params.set('statusOperacional', filtro)
       if (search)  params.set('search', search)
       const res = await fetch(`/api/projetos?${params}`)

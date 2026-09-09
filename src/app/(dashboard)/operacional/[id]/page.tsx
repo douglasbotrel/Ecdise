@@ -301,6 +301,7 @@ export default function ProjetoDetalhe() {
         body: JSON.stringify({
           protocoloData: protocoloForm.data,
           protocoloCodigoOrgao: protocoloForm.codigoOrgao.trim(),
+          statusOperacional: 'CONCLUIDO',
           emAcompanhamento: true,
         }),
       })
