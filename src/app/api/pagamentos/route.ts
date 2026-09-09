@@ -28,12 +28,24 @@ export async function GET(request: NextRequest) {
       orderBy: { dataVencimento: 'asc' },
     })
 
+    // Os totais SEMPRE consideram todos os status — independente do filtro de
+    // aba aplicado acima — para não variarem/zerarem conforme o usuário troca
+    // de aba (bug relatado: "Pendente"/"Pago"/"Vencido" mudavam ao trocar de filtro).
+    const whereTotais: any = {}
+    if (contratoId) whereTotais.contratoId = contratoId
+    const paraTotais = status
+      ? await prisma.pagamento.findMany({
+          where: whereTotais,
+          select: { status: true, valor: true, valorRecebido: true, residual: true },
+        })
+      : pagamentos
+
     const totais = {
-      totalPendente: pagamentos.filter(p => p.status === 'PENDENTE').reduce((s, p) => s + p.valor, 0),
-      totalPago:     pagamentos.filter(p => p.status === 'PAGO').reduce((s, p) => s + p.valor, 0)
-                   + pagamentos.filter(p => p.status === 'PARCIAL').reduce((s, p) => s + (p.valorRecebido ?? p.valor), 0),
-      totalVencido:  pagamentos.filter(p => p.status === 'VENCIDO').reduce((s, p) => s + p.valor, 0),
-      totalResidual: pagamentos.filter(p => p.status === 'PARCIAL').reduce((s, p) => s + (p.residual ?? 0), 0),
+      totalPendente: paraTotais.filter(p => p.status === 'PENDENTE').reduce((s, p) => s + p.valor, 0),
+      totalPago:     paraTotais.filter(p => p.status === 'PAGO').reduce((s, p) => s + p.valor, 0)
+                   + paraTotais.filter(p => p.status === 'PARCIAL').reduce((s, p) => s + (p.valorRecebido ?? p.valor), 0),
+      totalVencido:  paraTotais.filter(p => p.status === 'VENCIDO').reduce((s, p) => s + p.valor, 0),
+      totalResidual: paraTotais.filter(p => p.status === 'PARCIAL').reduce((s, p) => s + (p.residual ?? 0), 0),
     }
 
     return NextResponse.json({ pagamentos, totais })

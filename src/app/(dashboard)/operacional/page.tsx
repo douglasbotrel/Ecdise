@@ -248,6 +248,7 @@ function PainelGestao({ data, loading, onRefresh }: { data: any; loading: boolea
 export default function OperacionalPage() {
   const router = useRouter()
   const [projetos, setProjetos]           = useState<any[]>([])
+  const [contagens, setContagens]         = useState<Record<string, number>>({})
   const [loading, setLoading]             = useState(true)
   const [search, setSearch]               = useState('')
   const [filtro, setFiltro]               = useState('')
@@ -317,10 +318,54 @@ export default function OperacionalPage() {
     }
   }, [filtro, search])
 
+  // Contadores das abas — busca INDEPENDENTE da aba selecionada, para que o
+  // número de cada aba não mude conforme o usuário clica em outra (bug
+  // relatado: "Todos" mostrava 3 numa aba e 16 noutra).
+  const carregarContagens = useCallback(async () => {
+    try {
+      const base = new URLSearchParams()
+      base.set('etapas', ETAPAS_OPERACIONAL)
+      if (search) base.set('search', search)
+
+      const paramsAtivos = new URLSearchParams(base)
+      paramsAtivos.set('emAcompanhamento', 'false')
+
+      const paramsConcluidos = new URLSearchParams(base)
+      paramsConcluidos.set('statusOperacional', 'CONCLUIDO')
+      // sem emAcompanhamento aqui — conta também os já protocolados/em Acompanhamento
+
+      const [resAtivos, resConcluidos] = await Promise.all([
+        fetch(`/api/projetos?${paramsAtivos}`),
+        fetch(`/api/projetos?${paramsConcluidos}`),
+      ])
+      const [dataAtivos, dataConcluidos] = await Promise.all([
+        resAtivos.ok ? resAtivos.json() : { projetos: [] },
+        resConcluidos.ok ? resConcluidos.json() : { projetos: [] },
+      ])
+
+      const porStatus: Record<string, number> = {}
+      for (const p of dataAtivos.projetos || []) {
+        porStatus[p.statusOperacional] = (porStatus[p.statusOperacional] || 0) + 1
+      }
+      const totalTodos = Object.values(porStatus).reduce((a: number, b: number) => a + b, 0)
+      porStatus['CONCLUIDO'] = (dataConcluidos.projetos || []).length
+      porStatus[''] = totalTodos
+
+      setContagens(porStatus)
+    } catch {
+      // contadores não são críticos — falha silenciosa
+    }
+  }, [search])
+
   useEffect(() => {
     const t = setTimeout(load, 300)
     return () => clearTimeout(t)
   }, [load])
+
+  useEffect(() => {
+    const t = setTimeout(carregarContagens, 300)
+    return () => clearTimeout(t)
+  }, [carregarContagens])
 
   // Carrega usuário atual
   useEffect(() => {
@@ -383,7 +428,7 @@ export default function OperacionalPage() {
       {/* Filtros */}
       <div className="flex flex-wrap gap-2">
         {FILTROS.map(f => {
-          const count = projetos.filter(p => f.value ? p.statusOperacional === f.value : true).length
+          const count = contagens[f.value] ?? 0
           return (
             <button
               key={f.value}
