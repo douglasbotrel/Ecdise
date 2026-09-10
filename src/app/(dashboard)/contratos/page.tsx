@@ -455,10 +455,20 @@ export default function ContratosPage() {
               {/* ── EDITAR / COMPLEMENTAR DADOS ───────────────────── */}
               {!['DESISTENCIA', 'CANCELADO', 'FINALIZADO'].includes(contratoAcao.statusContrato) && (
                 <div className="border border-gray-200 rounded-xl overflow-hidden">
-                  <div className="w-full flex items-center gap-2 px-4 py-3 text-sm text-gray-400 bg-gray-50">
-                    <AlertCircle className="w-4 h-4 flex-shrink-0" />
-                    <span>Contratos não podem ser editados. Ajustes de valor devem ser tratados via <strong>pagamento parcial</strong> no Financeiro.</span>
-                  </div>
+                  {!editandoDados && (
+                    <div className="w-full flex items-center justify-between gap-2 px-4 py-3 text-sm bg-gray-50">
+                      <span className="flex items-center gap-2 text-gray-500">
+                        <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                        Valores e dados podem ser ajustados aqui — o valor negociado pode ficar acima ou abaixo do sugerido.
+                      </span>
+                      <button
+                        onClick={() => setEditandoDados(true)}
+                        className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-lg flex-shrink-0"
+                      >
+                        <Edit2 className="w-3.5 h-3.5" /> Editar valores
+                      </button>
+                    </div>
+                  )}
 
                   {editandoDados && formEdicao && (() => {
                     const vTotal    = parseFloat(formEdicao.valorTotal    || '0') || 0
