@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback, Fragment } from 'react'
+import { useLockBodyScroll } from '@/hooks/useLockBodyScroll'
 import { toast } from 'sonner'
 import { Plus, Search, Edit2, X, Users, Loader2, ChevronDown, ChevronUp, MapPin, Home } from 'lucide-react'
 
@@ -46,6 +47,7 @@ export default function ClientesPage() {
   const [salvando, setSalvando]               = useState(false)
   const [expandido, setExpandido]             = useState<Record<string, boolean>>({})
   const [fazendaEditando, setFazendaEditando] = useState<any | null>(null)
+  useLockBodyScroll(!!(modalOpen || fazendaEditando))
   const [formFazenda, setFormFazenda]         = useState({ nome: '', municipio: '', estado: '', car: '', area: '' })
   const [salvandoFazenda, setSalvandoFazenda] = useState(false)
 

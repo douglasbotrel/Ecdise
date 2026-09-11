@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback, useRef } from 'react'
+import { useLockBodyScroll } from '@/hooks/useLockBodyScroll'
 import { toast } from 'sonner'
 import { Plus, FileText, Clock, AlertCircle, X, Upload, CheckCircle2, XCircle, Loader2, Edit2, Save } from 'lucide-react'
 import { formatDate, formatCurrency } from '@/lib/utils'
@@ -55,6 +56,7 @@ export default function ContratosPage() {
   const [modalProjetoOpen, setModalProjetoOpen]     = useState(false)
   // Popup de ações no contrato
   const [contratoAcao, setContratoAcao]             = useState<any | null>(null)
+  useLockBodyScroll(!!contratoAcao)
   const [uploading, setUploading]                   = useState(false)
   const [confirmDesistencia, setConfirmDesistencia] = useState(false)
   const [salvandoAcao, setSalvandoAcao]             = useState(false)

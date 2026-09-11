@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
+import { useLockBodyScroll } from '@/hooks/useLockBodyScroll'
 import { toast } from 'sonner'
 import { Plus, X, Loader2, Check, ChevronDown, ChevronUp, Trash2, Edit2, ToggleLeft, ToggleRight } from 'lucide-react'
 import { ROLE_LABELS, DEPARTAMENTO_LABELS, MODULOS_POR_ROLE } from '@/lib/utils'
@@ -109,6 +110,7 @@ export default function ConfiguracoesPage() {
 
   // Edição de usuário existente
   const [usuarioEditando, setUsuarioEditando] = useState<any | null>(null)
+  useLockBodyScroll(!!(servicoEditando || usuarioEditando || modalUsuario))
   const [formEdit, setFormEdit] = useState({
     nome: '', cargo: '', telefone: '',
     role: 'ANALISTA', departamento: 'OPERACIONAL_AMBIENTAL',

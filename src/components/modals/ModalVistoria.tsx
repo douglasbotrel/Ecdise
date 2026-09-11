@@ -1,5 +1,6 @@
 'use client'
 
+import { useLockBodyScroll } from '@/hooks/useLockBodyScroll'
 import { useState, useEffect } from 'react'
 import { toast } from 'sonner'
 import { X, Loader2 } from 'lucide-react'
@@ -21,6 +22,7 @@ const TIPOS_VISTORIA = [
 ]
 
 export function ModalVistoria({ open, onClose, onSalvo, projetoId }: ModalVistoriaProps) {
+  useLockBodyScroll(open)
   const [projetos, setProjetos]   = useState<any[]>([])
   const [usuarios, setUsuarios]   = useState<any[]>([])
   const [equipes, setEquipes]     = useState<any[]>([])

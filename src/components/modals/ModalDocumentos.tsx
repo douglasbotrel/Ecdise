@@ -1,5 +1,6 @@
 'use client'
 
+import { useLockBodyScroll } from '@/hooks/useLockBodyScroll'
 import { useState, useEffect, useRef } from 'react'
 import { toast } from 'sonner'
 import { X, Upload, FileText, Trash2, ExternalLink, Loader2, FolderOpen } from 'lucide-react'
@@ -38,6 +39,7 @@ interface ModalDocumentosProps {
 }
 
 export function ModalDocumentos({ open, onClose, projeto }: ModalDocumentosProps) {
+  useLockBodyScroll(open)
   const [documentos, setDocumentos] = useState<any[]>([])
   const [loading, setLoading] = useState(false)
   const [uploading, setUploading] = useState(false)

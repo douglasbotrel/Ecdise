@@ -1,5 +1,6 @@
 'use client'
 
+import { useLockBodyScroll } from '@/hooks/useLockBodyScroll'
 import { useState, useEffect } from 'react'
 import { toast } from 'sonner'
 import { X, Loader2, AlertCircle } from 'lucide-react'
@@ -12,6 +13,7 @@ interface ModalContratoProps {
 }
 
 export function ModalContrato({ open, onClose, onSalvo }: ModalContratoProps) {
+  useLockBodyScroll(open)
   const [projetos, setProjetos]   = useState<any[]>([])
   const [loading, setLoading]     = useState(false)
   const [erros, setErros]         = useState<Record<string, string>>({})

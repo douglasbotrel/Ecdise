@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import { useLockBodyScroll } from '@/hooks/useLockBodyScroll'
 import { useParams, useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import {
@@ -152,6 +153,7 @@ export default function AcompanhamentoDetalhe() {
 
   // Modal Licença Concedida
   const [modalLicenca, setModalLicenca]   = useState(false)
+  useLockBodyScroll(!!(modalPendencia || modalRodar || modalLicenca))
   const [licencaForm, setLicencaForm]     = useState({
     numero: '', dataEmissao: '', dataValidade: '', condicionantes: '', documentoUrl: '',
   })

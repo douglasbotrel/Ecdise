@@ -411,7 +411,7 @@ export default function TarefasSemanaPage() {
       ) : (
         <div className="grid grid-cols-1 xl:grid-cols-[1fr_320px] gap-5">
           {/* ── Mini-calendário: blocos horizontais por dia ── */}
-          <div className="bg-white rounded-2xl border border-gray-100 p-4 shadow-sm">
+          <div className="bg-white rounded-2xl border border-gray-100 p-4 shadow-sm min-w-0">
             <h2 className="text-sm font-semibold text-gray-900 mb-3">Sua semana</h2>
 
             {/* Faixa "Sem dia definido" — também é alvo de drop, pra tirar o dia */}
@@ -485,7 +485,7 @@ export default function TarefasSemanaPage() {
           </div>
 
           {/* ── Pendentes (backlog) — painel da direita ── */}
-          <div className="bg-white rounded-2xl border border-gray-100 p-4 shadow-sm xl:max-h-[calc(100vh-14rem)] xl:overflow-y-auto">
+          <div className="bg-white rounded-2xl border border-gray-100 p-4 shadow-sm xl:max-h-[calc(100vh-14rem)] xl:overflow-y-auto min-w-0">
             <h2 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-1.5">
               Minhas tarefas pendentes
               <span className="text-xs font-normal text-gray-400">({backlog.length})</span>

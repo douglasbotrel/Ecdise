@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useLockBodyScroll } from '@/hooks/useLockBodyScroll'
 import { useParams, useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import {
@@ -63,6 +64,7 @@ export default function ProjetoDetalhe() {
   const [salvandoCred, setSalvandoCred]           = useState(false)
   // Modal de Protocolo (data + código do processo no órgão)
   const [modalProtocolo, setModalProtocolo]       = useState(false)
+  useLockBodyScroll(!!(modalCredencial || modalProtocolo))
   const [protocoloForm, setProtocoloForm]         = useState({ data: '', codigoOrgao: '' })
   const [salvandoProtocolo, setSalvandoProtocolo] = useState(false)
 

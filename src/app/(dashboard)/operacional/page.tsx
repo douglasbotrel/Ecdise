@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback, useRef } from 'react'
+import { useLockBodyScroll } from '@/hooks/useLockBodyScroll'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import {
@@ -254,6 +255,7 @@ export default function OperacionalPage() {
   const [filtro, setFiltro]               = useState('')
   // Quick view drawer
   const [quickView, setQuickView]         = useState<any | null>(null)
+  useLockBodyScroll(!!quickView)
   const [loadingDetail, setLoadingDetail] = useState(false)
   const drawerRef = useRef<HTMLDivElement>(null)
   // Gestão de Projetos
