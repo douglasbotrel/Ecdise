@@ -54,7 +54,7 @@ export async function GET(request: NextRequest) {
           responsavel: { select: { id: true, nome: true } },
           supervisor: { select: { id: true, nome: true } },
           analistaRapido: { select: { id: true, nome: true } },
-          contrato: { select: { id: true, statusContrato: true, valorTotal: true } },
+          contrato: { select: { id: true, codigo: true, statusContrato: true, valorTotal: true, valorRestante: true } },
           licenca: { select: { id: true, numero: true, dataEmissao: true, dataValidade: true } },
           pendencias: { select: { id: true, status: true, prazoResposta: true, numeroPedido: true, data: true } },
           _count: { select: { tarefas: true, vistorias: true, documentos: true } },

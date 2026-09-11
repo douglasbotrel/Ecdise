@@ -2,22 +2,43 @@
 
 import { useState, useEffect } from 'react'
 import { toast } from 'sonner'
-import { CheckSquare, Check, X } from 'lucide-react'
-import { formatDate, formatCurrency } from '@/lib/utils'
+import { CheckSquare, Check, Lock } from 'lucide-react'
+import { formatCurrency } from '@/lib/utils'
 
+// Itens com `auto: true` são calculados a partir de dados reais do sistema —
+// ninguém precisa lembrar de marcar, e não dá pra desmarcar manualmente
+// (refletem o estado de verdade do projeto). Os demais são confirmações que
+// só uma pessoa pode dar (ex: "laudo assinado", "cliente notificado") e ficam
+// como checkbox manual, salvo no banco.
 const CHECKLIST_ENCERRAMENTO = [
-  { id: 'contrato_assinado', label: 'Contrato assinado pelo cliente' },
-  { id: 'documentos_entregues', label: 'Documentos técnicos entregues' },
-  { id: 'pagamento_quitado', label: 'Pagamento totalmente quitado' },
-  { id: 'protocolo_emitido', label: 'Protocolo/licença emitido' },
-  { id: 'laudo_assinado', label: 'Laudo técnico assinado pelo responsável' },
-  { id: 'arquivo_organizado', label: 'Arquivos organizados no sistema' },
-  { id: 'cliente_notificado', label: 'Cliente notificado sobre conclusão' },
+  { id: 'contrato_assinado',   label: 'Contrato assinado pelo cliente',              auto: true },
+  { id: 'pagamento_quitado',   label: 'Pagamento totalmente quitado',                 auto: true },
+  { id: 'protocolo_emitido',   label: 'Protocolo/licença emitido',                    auto: true },
+  { id: 'documentos_entregues', label: 'Documentos técnicos entregues',              auto: false },
+  { id: 'laudo_assinado',      label: 'Laudo técnico assinado pelo responsável',      auto: false },
+  { id: 'arquivo_organizado',  label: 'Arquivos organizados no sistema',              auto: false },
+  { id: 'cliente_notificado',  label: 'Cliente notificado sobre conclusão',           auto: false },
 ]
+
+// Calcula o valor "de verdade" dos itens automáticos, a partir do projeto
+function valorAutomatico(projeto: any, itemId: string): boolean {
+  switch (itemId) {
+    case 'contrato_assinado':
+      return ['ASSINADO', 'ATIVO', 'FINALIZADO'].includes(projeto.contrato?.statusContrato)
+    case 'pagamento_quitado':
+      return projeto.contrato != null && Number(projeto.contrato.valorRestante ?? projeto.contrato.valorTotal) <= 0
+    case 'protocolo_emitido':
+      return !!projeto.protocoloData || !!projeto.licenca
+    default:
+      return false
+  }
+}
 
 export default function EncerramentoPage() {
   const [projetos, setProjetos] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  // Só os itens MANUAIS ficam nesse estado — os automáticos são recalculados
+  // direto do projeto a cada render, nunca ficam "desatualizados".
   const [checklist, setChecklist] = useState<Record<string, Record<string, boolean>>>({})
 
   useEffect(() => {
@@ -26,8 +47,16 @@ export default function EncerramentoPage() {
         const res = await fetch('/api/projetos?statusOperacional=EM_ANDAMENTO')
         if (!res.ok) throw new Error()
         const data = await res.json()
-        // Filtra projetos próximos da conclusão (tem contrato)
-        setProjetos(data.projetos.filter((p: any) => p.contrato))
+        const filtrados = data.projetos.filter((p: any) => p.contrato)
+        setProjetos(filtrados)
+
+        const checklistInicial: Record<string, Record<string, boolean>> = {}
+        for (const p of filtrados) {
+          if (p.checklistEncerramento) {
+            try { checklistInicial[p.id] = JSON.parse(p.checklistEncerramento) } catch {}
+          }
+        }
+        setChecklist(checklistInicial)
       } catch {
         toast.error('Erro ao carregar projetos')
       } finally {
@@ -37,25 +66,33 @@ export default function EncerramentoPage() {
     load()
   }, [])
 
-  function toggleCheck(projetoId: string, itemId: string) {
-    setChecklist(prev => ({
-      ...prev,
-      [projetoId]: {
-        ...prev[projetoId],
-        [itemId]: !prev[projetoId]?.[itemId]
-      }
-    }))
+  async function toggleCheck(projetoId: string, itemId: string) {
+    const novoChecklistDoProjeto = {
+      ...checklist[projetoId],
+      [itemId]: !checklist[projetoId]?.[itemId],
+    }
+    setChecklist(prev => ({ ...prev, [projetoId]: novoChecklistDoProjeto }))
+    try {
+      const res = await fetch(`/api/projetos/${projetoId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ checklistEncerramento: JSON.stringify(novoChecklistDoProjeto) }),
+      })
+      if (!res.ok) throw new Error()
+    } catch {
+      toast.error('Não foi possível salvar essa marcação — tente novamente')
+      setChecklist(prev => ({
+        ...prev,
+        [projetoId]: { ...prev[projetoId], [itemId]: !novoChecklistDoProjeto[itemId] },
+      }))
+    }
   }
 
-  async function encerrarProjeto(projetoId: string) {
-    const projetoChecklist = checklist[projetoId] || {}
-    const itensNaoConcluidos = CHECKLIST_ENCERRAMENTO.filter(item => !projetoChecklist[item.id])
-
-    if (itensNaoConcluidos.length > 0) {
-      toast.error(`Ainda há ${itensNaoConcluidos.length} item(ns) pendente(s) no checklist`)
+  async function encerrarProjeto(projetoId: string, itensPendentes: number) {
+    if (itensPendentes > 0) {
+      toast.error(`Ainda há ${itensPendentes} item(ns) pendente(s) no checklist`)
       return
     }
-
     try {
       const res = await fetch(`/api/projetos/${projetoId}`, {
         method: 'PATCH',
@@ -94,8 +131,12 @@ export default function EncerramentoPage() {
       ) : (
         <div className="space-y-4">
           {projetos.map((projeto) => {
-            const projetoChecklist = checklist[projeto.id] || {}
-            const concluidos = CHECKLIST_ENCERRAMENTO.filter(i => projetoChecklist[i.id]).length
+            const manual = checklist[projeto.id] || {}
+            const estados = CHECKLIST_ENCERRAMENTO.map(item => ({
+              ...item,
+              checked: item.auto ? valorAutomatico(projeto, item.id) : !!manual[item.id],
+            }))
+            const concluidos = estados.filter(i => i.checked).length
             const total = CHECKLIST_ENCERRAMENTO.length
             const pct = Math.round((concluidos / total) * 100)
 
@@ -129,30 +170,37 @@ export default function EncerramentoPage() {
                 {/* Checklist */}
                 <div className="p-6">
                   <div className="space-y-2 mb-6">
-                    {CHECKLIST_ENCERRAMENTO.map((item) => {
-                      const checked = projetoChecklist[item.id] || false
-                      return (
-                        <label
-                          key={item.id}
-                          className="flex items-center gap-3 cursor-pointer group"
+                    {estados.map((item) => (
+                      <div
+                        key={item.id}
+                        className={`flex items-center gap-3 ${item.auto ? '' : 'cursor-pointer group'}`}
+                        onClick={() => !item.auto && toggleCheck(projeto.id, item.id)}
+                      >
+                        <button
+                          type="button"
+                          disabled={item.auto}
+                          onClick={(e) => { e.stopPropagation(); if (!item.auto) toggleCheck(projeto.id, item.id) }}
+                          className={`w-5 h-5 rounded flex items-center justify-center flex-shrink-0 border-2 transition-colors ${
+                            item.checked
+                              ? 'bg-green-600 border-green-600'
+                              : 'border-gray-300 group-hover:border-green-400'
+                          } ${item.auto ? 'cursor-default' : ''}`}
                         >
-                          <button
-                            type="button"
-                            onClick={() => toggleCheck(projeto.id, item.id)}
-                            className={`w-5 h-5 rounded flex items-center justify-center flex-shrink-0 border-2 transition-colors ${
-                              checked
-                                ? 'bg-green-600 border-green-600'
-                                : 'border-gray-300 group-hover:border-green-400'
-                            }`}
-                          >
-                            {checked && <Check className="w-3 h-3 text-white" />}
-                          </button>
-                          <span className={`text-sm ${checked ? 'text-gray-400 line-through' : 'text-gray-700'}`}>
-                            {item.label}
-                          </span>
-                        </label>
-                      )
-                    })}
+                          {item.checked && <Check className="w-3 h-3 text-white" />}
+                        </button>
+                        <span className={`text-sm flex items-center gap-1.5 ${item.checked ? 'text-gray-400 line-through' : 'text-gray-700'}`}>
+                          {item.label}
+                          {item.auto && (
+                            <span
+                              className="flex items-center gap-0.5 text-[10px] font-medium text-gray-400 bg-gray-50 border border-gray-100 px-1.5 py-0.5 rounded-full no-underline"
+                              title="Detectado automaticamente pelo sistema — não precisa marcar"
+                            >
+                              <Lock className="w-2.5 h-2.5" /> automático
+                            </span>
+                          )}
+                        </span>
+                      </div>
+                    ))}
                   </div>
 
                   {/* Dados do contrato */}
@@ -178,7 +226,7 @@ export default function EncerramentoPage() {
                   )}
 
                   <button
-                    onClick={() => encerrarProjeto(projeto.id)}
+                    onClick={() => encerrarProjeto(projeto.id, total - concluidos)}
                     disabled={pct < 100}
                     className={`w-full py-3 rounded-xl font-semibold text-sm transition-colors ${
                       pct === 100

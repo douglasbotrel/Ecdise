@@ -288,6 +288,7 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
         ...(body.dataAprovacao !== undefined && { dataAprovacao: body.dataAprovacao ? new Date(body.dataAprovacao) : null }),
         ...(body.protocoloData !== undefined && { protocoloData: body.protocoloData ? new Date(body.protocoloData) : null }),
         ...(body.protocoloCodigoOrgao !== undefined && { protocoloCodigoOrgao: body.protocoloCodigoOrgao || null }),
+        ...(body.checklistEncerramento !== undefined && { checklistEncerramento: body.checklistEncerramento }),
         ...(body.emAcompanhamento !== undefined && { emAcompanhamento: body.emAcompanhamento === true }),
       },
       include: {

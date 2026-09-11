@@ -116,6 +116,7 @@ model Projeto {
   // Protocolo / Acompanhamento de Processos
   protocoloData        DateTime?
   protocoloCodigoOrgao String?
+  checklistEncerramento String? // JSON: só itens manuais — {"documentos_entregues": true, ...}
   emAcompanhamento     Boolean  @default(false)
   // Consulta automática SIGLA
   caminhoSIGLA         String?   // Caminho explícito de verificação: recursos_florestais | licenciamento_ambiental | recursos_hidricos | null (não verifica)
