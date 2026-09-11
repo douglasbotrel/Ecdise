@@ -1,15 +1,17 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { toast } from 'sonner'
 import {
   Plus, X, CheckCircle2, Circle, ChevronLeft, ChevronRight, ChevronDown,
-  Calendar, Loader2, Users, TrendingUp, AlertTriangle, Landmark
+  Calendar, Loader2, Users, TrendingUp, AlertTriangle, Landmark, GripVertical
 } from 'lucide-react'
+import { useLockBodyScroll } from '@/hooks/useLockBodyScroll'
 
 const ROLES_GESTAO = ['ADMIN', 'GESTOR_GERAL', 'GESTOR_OPERACIONAL', 'GESTOR_ADMINISTRATIVO', 'SUPERVISOR']
 
 const DIAS_LETRA = ['S', 'T', 'Q', 'Q', 'S', 'S', 'D']
+const DIAS_CURTO = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom']
 const DIAS_NOME  = ['Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado', 'Domingo']
 const DIAS_COR   = [
   'bg-indigo-500', 'bg-blue-500', 'bg-cyan-500', 'bg-teal-500',
@@ -49,6 +51,9 @@ function corUrgencia(prazo: string | null | undefined): { barra: string; texto: 
   return { barra: 'bg-emerald-400', texto: 'text-gray-400' }
 }
 
+// Payload transportado durante o arraste
+type DragPayload = { origem: 'backlog' | 'planejada'; id: string; tipo: 'TAREFA' | 'PENDENCIA' }
+
 export default function TarefasSemanaPage() {
   const [me, setMe] = useState<any>(null)
   const [usuarios, setUsuarios] = useState<any[]>([])
@@ -59,13 +64,16 @@ export default function TarefasSemanaPage() {
   const [planejadas, setPlanejadas] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [processando, setProcessando] = useState<string | null>(null)
+  const [diaSobreDrag, setDiaSobreDrag] = useState<number | null>(null)
 
   const [verPainelEquipe, setVerPainelEquipe] = useState(false)
   const [kpi, setKpi] = useState<any>(null)
   const [carregandoKpi, setCarregandoKpi] = useState(false)
+  useLockBodyScroll(verPainelEquipe)
   const [colapsados, setColapsados] = useState<Record<string, boolean>>({})
 
   const podeGerenciarEquipe = me && ROLES_GESTAO.includes(me.role)
+  const hojeBlocoRef = useRef<HTMLDivElement>(null)
 
   const carregar = useCallback(async () => {
     if (!usuarioId) return
@@ -105,13 +113,20 @@ export default function TarefasSemanaPage() {
 
   useEffect(() => { carregar() }, [carregar])
 
-  async function adicionarNaSemana(itemId: string, tipo: 'TAREFA' | 'PENDENCIA') {
+  // Rola a faixa de dias para começar em "hoje" (quando está na semana atual)
+  useEffect(() => {
+    if (!loading && hojeBlocoRef.current) {
+      hojeBlocoRef.current.scrollIntoView({ inline: 'start', block: 'nearest', behavior: 'smooth' })
+    }
+  }, [loading, semanaInicio])
+
+  async function adicionarNaSemana(itemId: string, tipo: 'TAREFA' | 'PENDENCIA', diaSemana: number | null = null) {
     setProcessando(itemId)
     try {
       const res = await fetch('/api/tarefas-semana', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ itemId, tipo, usuarioId, semanaInicio: semanaInicio.toISOString() }),
+        body: JSON.stringify({ itemId, tipo, usuarioId, semanaInicio: semanaInicio.toISOString(), diaSemana }),
       })
       if (!res.ok) { toast.error('Erro ao adicionar'); return }
       carregar()
@@ -181,6 +196,51 @@ export default function TarefasSemanaPage() {
     }
   }
 
+  // ── Drag & drop (desktop). No touch/mobile, as pílulas de dia continuam
+  // funcionando como alternativa rápida — arrastar é sempre opcional. ──
+  function onDragStartBacklog(e: React.DragEvent, item: any) {
+    const payload: DragPayload = { origem: 'backlog', id: item.id, tipo: item.tipo }
+    e.dataTransfer.setData('application/json', JSON.stringify(payload))
+    e.dataTransfer.effectAllowed = 'move'
+  }
+
+  function onDragStartPlanejada(e: React.DragEvent, item: any) {
+    const payload: DragPayload = { origem: 'planejada', id: item.id, tipo: item.tipo }
+    e.dataTransfer.setData('application/json', JSON.stringify(payload))
+    e.dataTransfer.effectAllowed = 'move'
+  }
+
+  async function soltarNoDia(e: React.DragEvent, dia: number | null) {
+    e.preventDefault()
+    setDiaSobreDrag(null)
+    let payload: DragPayload
+    try {
+      payload = JSON.parse(e.dataTransfer.getData('application/json'))
+    } catch {
+      return
+    }
+    if (payload.origem === 'backlog') {
+      await adicionarNaSemana(payload.id, payload.tipo, dia)
+    } else {
+      await alterarDiaDireto(payload.id, dia)
+    }
+  }
+
+  async function alterarDiaDireto(itemId: string, dia: number | null) {
+    setProcessando(itemId)
+    try {
+      const res = await fetch('/api/tarefas-semana', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: itemId, diaSemana: dia }),
+      })
+      if (!res.ok) { toast.error('Erro ao mover'); return }
+      carregar()
+    } finally {
+      setProcessando(null)
+    }
+  }
+
   const totalPlanejadas = planejadas.length
   const totalConcluidas = planejadas.filter(p => p.concluida).length
   const progresso = totalPlanejadas > 0 ? Math.round((totalConcluidas / totalPlanejadas) * 100) : 0
@@ -194,11 +254,81 @@ export default function TarefasSemanaPage() {
   })()
   const ehSemanaAtual = segundaFeiraDaSemana(new Date()).getTime() === semanaInicio.getTime()
 
-  // Agrupa planejadas por dia (0-6) + "sem dia" (-1), na ordem certa
-  const gruposPorDia: { dia: number; itens: any[] }[] = [-1, 0, 1, 2, 3, 4, 5, 6].map(dia => ({
-    dia,
-    itens: planejadas.filter(p => (p.diaSemana ?? -1) === dia),
-  })).filter(g => g.itens.length > 0)
+  const semDia = planejadas.filter(p => p.diaSemana == null)
+  const diasDoBloco = [0, 1, 2, 3, 4, 5, 6].map(dia => {
+    const data = new Date(semanaInicio)
+    data.setDate(data.getDate() + dia)
+    return {
+      dia,
+      data,
+      itens: planejadas.filter(p => p.diaSemana === dia),
+      ehHoje: ehSemanaAtual && dia === hojeDiaIdx,
+      ehAmanha: ehSemanaAtual && dia === hojeDiaIdx + 1,
+    }
+  })
+
+  function TaskCard({ item, draggable, onDragStart }: { item: any; draggable: boolean; onDragStart?: (e: React.DragEvent) => void }) {
+    const ehPendencia = item.tipo === 'PENDENCIA'
+    const concluida = !!item.concluida
+    return (
+      <div
+        draggable={draggable}
+        onDragStart={onDragStart}
+        className={`rounded-lg border overflow-hidden bg-white cursor-grab active:cursor-grabbing ${
+          concluida ? 'border-green-100 bg-green-50/40' : ehPendencia ? 'border-purple-100' : 'border-gray-100'
+        }`}
+      >
+        <div className="flex items-start gap-1.5 p-2">
+          {draggable && <GripVertical className="w-3 h-3 text-gray-200 mt-0.5 flex-shrink-0 hidden sm:block" />}
+          <button
+            onClick={() => marcarConcluida(item.itemId, item.tipo, concluida)}
+            disabled={processando === item.itemId}
+            className="mt-0.5 flex-shrink-0 disabled:opacity-50"
+            title={concluida ? 'Reabrir' : 'Marcar como concluída'}
+          >
+            {concluida
+              ? <CheckCircle2 className="w-4 h-4 text-green-600" />
+              : <Circle className="w-4 h-4 text-gray-300 hover:text-green-500" />}
+          </button>
+          <div className="min-w-0 flex-1">
+            {ehPendencia && (
+              <span className="flex items-center gap-0.5 text-[9px] font-semibold text-purple-700 bg-purple-50 px-1 py-0.5 rounded-full w-fit mb-0.5">
+                <Landmark className="w-2 h-2" /> Pendência
+              </span>
+            )}
+            <p className={`text-xs leading-tight ${concluida ? 'text-gray-400 line-through' : 'text-gray-800'} truncate`}>
+              {item.titulo}
+            </p>
+            <p className="text-[10px] text-gray-400 truncate">{item.projeto?.codigo}</p>
+          </div>
+          <button
+            onClick={() => removerDaSemana(item.id)}
+            disabled={processando === item.id}
+            className="p-0.5 text-gray-300 hover:text-red-500 flex-shrink-0"
+            title="Tirar da semana"
+          >
+            <X className="w-3 h-3" />
+          </button>
+        </div>
+        {/* Pílulas de dia — alternativa ao arraste (essencial no toque/mobile) */}
+        <div className="flex items-center gap-0.5 px-2 pb-1.5 pl-6">
+          {DIAS_LETRA.map((letra, i) => (
+            <button
+              key={i}
+              onClick={() => alterarDia(item.id, item.diaSemana, i)}
+              disabled={processando === item.id}
+              title={DIAS_NOME[i]}
+              className={`w-4 h-4 rounded text-[9px] font-bold flex items-center justify-center transition-colors disabled:opacity-50 ${
+                item.diaSemana === i ? `${DIAS_COR[i]} text-white` : 'bg-gray-100 text-gray-400 hover:bg-gray-200'
+              }`}
+            >
+              {letra}
+            </button>
+          ))}
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="p-4 sm:p-6 space-y-5 max-w-7xl mx-auto">
@@ -206,7 +336,7 @@ export default function TarefasSemanaPage() {
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Tarefas da Semana</h1>
           <p className="text-sm text-gray-500 mt-0.5">
-            Escolha o que você vai fazer, defina o dia, e marque conforme for concluindo.
+            Arraste uma pendente pro dia (ou toque nas letrinhas S T Q Q S S D) e marque conforme for concluindo.
           </p>
         </div>
         {podeGerenciarEquipe && (
@@ -279,9 +409,83 @@ export default function TarefasSemanaPage() {
       {loading ? (
         <div className="flex justify-center py-16"><Loader2 className="w-6 h-6 animate-spin text-gray-300" /></div>
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-          {/* Backlog */}
+        <div className="grid grid-cols-1 xl:grid-cols-[1fr_320px] gap-5">
+          {/* ── Mini-calendário: blocos horizontais por dia ── */}
           <div className="bg-white rounded-2xl border border-gray-100 p-4 shadow-sm">
+            <h2 className="text-sm font-semibold text-gray-900 mb-3">Sua semana</h2>
+
+            {/* Faixa "Sem dia definido" — também é alvo de drop, pra tirar o dia */}
+            <div
+              onDragOver={e => { e.preventDefault(); setDiaSobreDrag(-1) }}
+              onDragLeave={() => setDiaSobreDrag(null)}
+              onDrop={e => soltarNoDia(e, null)}
+              className={`mb-3 rounded-xl border-2 border-dashed p-2 transition-colors ${
+                diaSobreDrag === -1 ? 'border-gray-400 bg-gray-50' : 'border-gray-200'
+              }`}
+            >
+              <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide mb-1.5 px-1">
+                Sem dia definido — arraste aqui pra tirar de um dia
+              </p>
+              {semDia.length === 0 ? (
+                <p className="text-xs text-gray-300 px-1 py-1">Nada solto por aqui.</p>
+              ) : (
+                <div className="flex flex-wrap gap-2">
+                  {semDia.map(item => (
+                    <div key={item.id} className="w-48">
+                      <TaskCard item={item} draggable onDragStart={e => onDragStartPlanejada(e, item)} />
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Blocos dos 7 dias, rolando a partir de hoje */}
+            <div className="flex gap-3 overflow-x-auto pb-2 -mx-1 px-1">
+              {diasDoBloco.map(bloco => (
+                <div
+                  key={bloco.dia}
+                  ref={bloco.ehHoje ? hojeBlocoRef : undefined}
+                  onDragOver={e => { e.preventDefault(); setDiaSobreDrag(bloco.dia) }}
+                  onDragLeave={() => setDiaSobreDrag(null)}
+                  onDrop={e => soltarNoDia(e, bloco.dia)}
+                  className={`flex-shrink-0 w-44 rounded-xl border-2 p-2 transition-colors ${
+                    diaSobreDrag === bloco.dia
+                      ? 'border-gray-400 bg-gray-50'
+                      : bloco.ehHoje
+                        ? 'border-green-400 bg-green-50/40'
+                        : bloco.ehAmanha
+                          ? 'border-blue-300 bg-blue-50/30'
+                          : 'border-gray-100'
+                  }`}
+                >
+                  <div className="flex items-center justify-between mb-2 px-0.5">
+                    <div>
+                      <p className={`text-xs font-bold ${bloco.ehHoje ? 'text-green-700' : bloco.ehAmanha ? 'text-blue-700' : 'text-gray-600'}`}>
+                        {DIAS_CURTO[bloco.dia]}
+                      </p>
+                      <p className="text-[10px] text-gray-400">{formatDataCurta(bloco.data)}</p>
+                    </div>
+                    {bloco.ehHoje && <span className="text-[9px] bg-green-600 text-white font-bold px-1.5 py-0.5 rounded-full">HOJE</span>}
+                    {bloco.ehAmanha && <span className="text-[9px] bg-blue-500 text-white font-bold px-1.5 py-0.5 rounded-full">AMANHÃ</span>}
+                  </div>
+                  <div className="space-y-1.5 min-h-[3rem]">
+                    {bloco.itens.length === 0 ? (
+                      <div className="text-[10px] text-gray-300 text-center py-3 border border-dashed border-gray-100 rounded-lg">
+                        arraste aqui
+                      </div>
+                    ) : (
+                      bloco.itens.map(item => (
+                        <TaskCard key={item.id} item={item} draggable onDragStart={e => onDragStartPlanejada(e, item)} />
+                      ))
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* ── Pendentes (backlog) — painel da direita ── */}
+          <div className="bg-white rounded-2xl border border-gray-100 p-4 shadow-sm xl:max-h-[calc(100vh-14rem)] xl:overflow-y-auto">
             <h2 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-1.5">
               Minhas tarefas pendentes
               <span className="text-xs font-normal text-gray-400">({backlog.length})</span>
@@ -316,15 +520,18 @@ export default function TarefasSemanaPage() {
                             return (
                               <div
                                 key={t.id}
-                                className="flex items-stretch gap-0 rounded-xl border border-gray-100 hover:border-gray-200 hover:shadow-sm transition-all overflow-hidden"
+                                draggable
+                                onDragStart={e => onDragStartBacklog(e, t)}
+                                className="flex items-stretch gap-0 rounded-xl border border-gray-100 hover:border-gray-200 hover:shadow-sm transition-all overflow-hidden cursor-grab active:cursor-grabbing"
                               >
                                 <div className={`w-1 flex-shrink-0 ${ehPendencia ? 'bg-purple-500' : urg.barra}`} />
                                 <div className="flex items-start gap-2 p-2.5 flex-1 min-w-0">
+                                  <GripVertical className="w-3.5 h-3.5 text-gray-200 mt-0.5 flex-shrink-0 hidden sm:block" />
                                   <button
                                     onClick={() => adicionarNaSemana(t.id, t.tipo)}
                                     disabled={processando === t.id}
                                     className="mt-0.5 p-1 rounded-md bg-green-50 text-green-600 hover:bg-green-100 flex-shrink-0 disabled:opacity-50"
-                                    title="Colocar nesta semana"
+                                    title="Colocar nesta semana (sem dia definido)"
                                   >
                                     {processando === t.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
                                   </button>
@@ -353,106 +560,6 @@ export default function TarefasSemanaPage() {
                     </div>
                   )
                 })}
-              </div>
-            )}
-          </div>
-
-          {/* Esta semana — agrupado por dia, estilo Bitrix */}
-          <div className="bg-white rounded-2xl border border-gray-100 p-4 shadow-sm">
-            <h2 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-1.5">
-              Planejado para esta semana
-              <span className="text-xs font-normal text-gray-400">({planejadas.length})</span>
-            </h2>
-            {planejadas.length === 0 ? (
-              <p className="text-sm text-gray-400 py-6 text-center">
-                Nada planejado ainda — adicione tarefas do lado esquerdo.
-              </p>
-            ) : (
-              <div className="space-y-4">
-                {gruposPorDia.map(grupo => (
-                  <div key={grupo.dia}>
-                    <div className="flex items-center gap-2 mb-1.5">
-                      {grupo.dia >= 0 ? (
-                        <>
-                          <span className={`w-2 h-2 rounded-full ${DIAS_COR[grupo.dia]}`} />
-                          <span className="text-xs font-semibold text-gray-600">
-                            {DIAS_NOME[grupo.dia]}
-                          </span>
-                          {ehSemanaAtual && grupo.dia === hojeDiaIdx && (
-                            <span className="text-[10px] bg-green-100 text-green-700 font-semibold px-1.5 py-0.5 rounded-full">HOJE</span>
-                          )}
-                        </>
-                      ) : (
-                        <span className="text-xs font-semibold text-gray-400">Sem dia definido</span>
-                      )}
-                    </div>
-                    <div className="space-y-1.5">
-                      {grupo.itens.map((p: any) => {
-                        const ehPendencia = p.tipo === 'PENDENCIA'
-                        return (
-                          <div
-                            key={p.id}
-                            className={`rounded-xl border overflow-hidden ${p.concluida ? 'border-green-100 bg-green-50/40' : ehPendencia ? 'border-purple-100' : 'border-gray-100'}`}
-                          >
-                            <div className="flex items-start gap-2 p-2.5">
-                              <button
-                                onClick={() => marcarConcluida(p.itemId, p.tipo, p.concluida)}
-                                disabled={processando === p.itemId}
-                                className="mt-0.5 flex-shrink-0 disabled:opacity-50"
-                                title={p.concluida ? 'Reabrir' : 'Marcar como concluída'}
-                              >
-                                {p.concluida
-                                  ? <CheckCircle2 className="w-5 h-5 text-green-600" />
-                                  : <Circle className="w-5 h-5 text-gray-300 hover:text-green-500" />}
-                              </button>
-                              <div className="min-w-0 flex-1">
-                                <div className="flex items-center gap-1.5">
-                                  {ehPendencia && (
-                                    <span className="flex items-center gap-0.5 text-[10px] font-semibold text-purple-700 bg-purple-50 px-1.5 py-0.5 rounded-full flex-shrink-0">
-                                      <Landmark className="w-2.5 h-2.5" /> Pendência
-                                    </span>
-                                  )}
-                                  <p className={`text-sm ${p.concluida ? 'text-gray-400 line-through' : 'text-gray-800'} truncate`}>
-                                    {p.titulo}
-                                  </p>
-                                </div>
-                                <p className="text-xs text-gray-400 truncate">
-                                  {p.projeto?.codigo} · {p.projeto?.imovelNome || p.projeto?.municipio || ''}
-                                </p>
-                              </div>
-                              <button
-                                onClick={() => removerDaSemana(p.id)}
-                                disabled={processando === p.id}
-                                className="p-1 text-gray-300 hover:text-red-500 flex-shrink-0"
-                                title="Tirar da semana"
-                              >
-                                <X className="w-3.5 h-3.5" />
-                              </button>
-                            </div>
-                            {/* Pílulas de dia — Seg Ter Qua Qui Sex Sáb Dom */}
-                            <div className="flex items-center gap-1 px-2.5 pb-2 pl-9">
-                              {DIAS_LETRA.map((letra, i) => (
-                                <button
-                                  key={i}
-                                  onClick={() => alterarDia(p.id, p.diaSemana, i)}
-                                  disabled={processando === p.id}
-                                  title={DIAS_NOME[i]}
-                                  className={`w-5 h-5 rounded-md text-[10px] font-bold flex items-center justify-center transition-colors disabled:opacity-50 ${
-                                    p.diaSemana === i
-                                      ? `${DIAS_COR[i]} text-white`
-                                      : 'bg-gray-100 text-gray-400 hover:bg-gray-200'
-                                  }`}
-                                >
-                                  {letra}
-                                </button>
-                              ))}
-                            </div>
-                          </div>
-                        )
-                      })}
-                    </div>
-                  </div>
-                ))}
               </div>
             )}
           </div>
