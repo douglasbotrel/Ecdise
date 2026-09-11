@@ -493,27 +493,35 @@ export default function TarefasSemanaPage() {
             {backlog.length === 0 ? (
               <p className="text-sm text-gray-400 py-6 text-center">Nenhuma tarefa pendente fora da semana.</p>
             ) : (
-              <div>
+              <div className="space-y-2">
                 {agruparPorProjeto(backlog).map(grupo => {
                   const pid = grupo.projeto?.id || 'sem-projeto'
-                  const fechado = colapsados[pid]
+                  const aberto = colapsados[pid] === true
                   return (
-                    <div key={pid} className="mb-3 last:mb-0">
+                    <div key={pid} className="border border-gray-100 rounded-xl overflow-hidden">
                       <button
-                        onClick={() => setColapsados(p => ({ ...p, [pid]: !p[pid] }))}
-                        className="w-full flex items-center justify-between py-1.5 px-0.5 text-left"
+                        onClick={() => setColapsados(p => ({ ...p, [pid]: !aberto }))}
+                        className="w-full flex items-center justify-between gap-2 py-2.5 px-3 text-left bg-gray-50 hover:bg-gray-100 transition-colors"
                       >
-                        <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide truncate">
-                          {grupo.projeto?.codigo || 'Sem projeto'}
-                          {grupo.projeto?.imovelNome && ` · ${grupo.projeto.imovelNome}`}
-                          <span className="ml-1.5 text-gray-300 font-normal normal-case">({grupo.itens.length})</span>
+                        <span className="min-w-0">
+                          <span className="block text-sm font-semibold text-gray-800 truncate">
+                            {grupo.projeto?.imovelNome || grupo.projeto?.codigo || 'Sem projeto'}
+                          </span>
+                          <span className="block text-[11px] text-gray-400 truncate">
+                            {grupo.projeto?.codigo}{grupo.projeto?.imovelNome ? ` · ${grupo.itens.length} pendente(s)` : ` — ${grupo.itens.length} pendente(s)`}
+                          </span>
                         </span>
-                        {fechado
-                          ? <ChevronRight className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
-                          : <ChevronDown className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />}
+                        <span className="flex items-center gap-1.5 flex-shrink-0">
+                          <span className="text-xs font-bold text-white bg-gray-400 rounded-full w-5 h-5 flex items-center justify-center">
+                            {grupo.itens.length}
+                          </span>
+                          {aberto
+                            ? <ChevronDown className="w-4 h-4 text-gray-400" />
+                            : <ChevronRight className="w-4 h-4 text-gray-400" />}
+                        </span>
                       </button>
-                      {!fechado && (
-                        <div className="space-y-1.5 mt-1">
+                      {aberto && (
+                        <div className="p-2 space-y-2 bg-white">
                           {grupo.itens.map((t: any) => {
                             const urg = corUrgencia(t.prazo)
                             const ehPendencia = t.tipo === 'PENDENCIA'
@@ -525,28 +533,26 @@ export default function TarefasSemanaPage() {
                                 className="flex items-stretch gap-0 rounded-xl border border-gray-100 hover:border-gray-200 hover:shadow-sm transition-all overflow-hidden cursor-grab active:cursor-grabbing"
                               >
                                 <div className={`w-1 flex-shrink-0 ${ehPendencia ? 'bg-purple-500' : urg.barra}`} />
-                                <div className="flex items-start gap-2 p-2.5 flex-1 min-w-0">
+                                <div className="flex items-start gap-2 p-3 flex-1 min-w-0">
                                   <GripVertical className="w-3.5 h-3.5 text-gray-200 mt-0.5 flex-shrink-0 hidden sm:block" />
                                   <button
                                     onClick={() => adicionarNaSemana(t.id, t.tipo)}
                                     disabled={processando === t.id}
-                                    className="mt-0.5 p-1 rounded-md bg-green-50 text-green-600 hover:bg-green-100 flex-shrink-0 disabled:opacity-50"
+                                    className="mt-0.5 p-1.5 rounded-md bg-green-50 text-green-600 hover:bg-green-100 flex-shrink-0 disabled:opacity-50"
                                     title="Colocar nesta semana (sem dia definido)"
                                   >
                                     {processando === t.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
                                   </button>
-                                  <div className="min-w-0 flex-1">
-                                    <div className="flex items-center gap-1.5">
-                                      {ehPendencia && (
-                                        <span className="flex items-center gap-0.5 text-[10px] font-semibold text-purple-700 bg-purple-50 px-1.5 py-0.5 rounded-full flex-shrink-0">
-                                          <Landmark className="w-2.5 h-2.5" /> Pendência
-                                        </span>
-                                      )}
-                                      <p className="text-sm text-gray-800 truncate">{t.titulo}</p>
-                                    </div>
+                                  <div className="min-w-0 flex-1 space-y-1">
+                                    {ehPendencia && (
+                                      <span className="flex items-center gap-0.5 text-[10px] font-semibold text-purple-700 bg-purple-50 px-1.5 py-0.5 rounded-full w-fit">
+                                        <Landmark className="w-2.5 h-2.5" /> Pendência
+                                      </span>
+                                    )}
+                                    <p className="text-sm text-gray-800 leading-snug break-words">{t.titulo}</p>
                                     {t.prazo && (
-                                      <p className={`text-xs truncate flex items-center gap-1 ${urg.texto}`}>
-                                        {urg.texto === 'text-red-600' && <AlertTriangle className="w-3 h-3" />}
+                                      <p className={`text-xs flex items-center gap-1 ${urg.texto}`}>
+                                        {urg.texto === 'text-red-600' && <AlertTriangle className="w-3 h-3 flex-shrink-0" />}
                                         prazo {formatDataCurta(t.prazo)}
                                       </p>
                                     )}
