@@ -330,6 +330,82 @@ export default function TarefasSemanaPage() {
     )
   }
 
+  function GrupoProjeto({ grupo, prefixo }: { grupo: { projeto: any; itens: any[] }; prefixo: string }) {
+    const pid = `${prefixo}:${grupo.projeto?.id || 'sem-projeto'}`
+    const aberto = colapsados[pid] === true
+    return (
+      <div className="border border-gray-100 rounded-xl overflow-hidden">
+        <button
+          onClick={() => setColapsados(p => ({ ...p, [pid]: !aberto }))}
+          className="w-full flex items-center justify-between gap-2 py-2.5 px-3 text-left bg-gray-50 hover:bg-gray-100 transition-colors"
+        >
+          <span className="min-w-0">
+            <span className="block text-sm font-semibold text-gray-800 truncate">
+              {grupo.projeto?.imovelNome || grupo.projeto?.codigo || 'Sem projeto'}
+            </span>
+            <span className="block text-[11px] text-gray-400 truncate">
+              {grupo.projeto?.codigo}{grupo.projeto?.imovelNome ? ` · ${grupo.itens.length} pendente(s)` : ` — ${grupo.itens.length} pendente(s)`}
+            </span>
+          </span>
+          <span className="flex items-center gap-1.5 flex-shrink-0">
+            <span className="text-xs font-bold text-white bg-gray-400 rounded-full w-5 h-5 flex items-center justify-center">
+              {grupo.itens.length}
+            </span>
+            {aberto
+              ? <ChevronDown className="w-4 h-4 text-gray-400" />
+              : <ChevronRight className="w-4 h-4 text-gray-400" />}
+          </span>
+        </button>
+        {aberto && (
+          <div className="p-2 space-y-2 bg-white">
+            {grupo.itens.map((t: any) => {
+              const urg = corUrgencia(t.prazo)
+              const ehPendencia = t.tipo === 'PENDENCIA'
+              return (
+                <div
+                  key={t.id}
+                  draggable
+                  onDragStart={e => onDragStartBacklog(e, t)}
+                  className="flex items-stretch gap-0 rounded-xl border border-gray-100 hover:border-gray-200 hover:shadow-sm transition-all overflow-hidden cursor-grab active:cursor-grabbing"
+                >
+                  <div className={`w-1 flex-shrink-0 ${ehPendencia ? 'bg-purple-500' : urg.barra}`} />
+                  <div className="flex items-start gap-2 p-3 flex-1 min-w-0">
+                    <GripVertical className="w-3.5 h-3.5 text-gray-200 mt-0.5 flex-shrink-0 hidden sm:block" />
+                    <button
+                      onClick={() => adicionarNaSemana(t.id, t.tipo)}
+                      disabled={processando === t.id}
+                      className="mt-0.5 p-1.5 rounded-md bg-green-50 text-green-600 hover:bg-green-100 flex-shrink-0 disabled:opacity-50"
+                      title="Colocar nesta semana (sem dia definido)"
+                    >
+                      {processando === t.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
+                    </button>
+                    <div className="min-w-0 flex-1 space-y-1">
+                      {ehPendencia && (
+                        <span className="flex items-center gap-0.5 text-[10px] font-semibold text-purple-700 bg-purple-50 px-1.5 py-0.5 rounded-full w-fit">
+                          <Landmark className="w-2.5 h-2.5" /> Pendência
+                        </span>
+                      )}
+                      <p className="text-sm text-gray-800 leading-snug break-words">{t.titulo}</p>
+                      {t.prazo && (
+                        <p className={`text-xs flex items-center gap-1 ${urg.texto}`}>
+                          {urg.texto === 'text-red-600' && <AlertTriangle className="w-3 h-3 flex-shrink-0" />}
+                          prazo {formatDataCurta(t.prazo)}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )}
+      </div>
+    )
+  }
+
+  const backlogTarefas    = backlog.filter(t => t.tipo === 'TAREFA')
+  const backlogPendencias = backlog.filter(t => t.tipo === 'PENDENCIA')
+
   return (
     <div className="p-4 sm:p-6 space-y-5 max-w-7xl mx-auto">
       <div className="flex items-center justify-between flex-wrap gap-3">
@@ -485,89 +561,38 @@ export default function TarefasSemanaPage() {
           </div>
 
           {/* ── Pendentes (backlog) — painel da direita ── */}
-          <div className="bg-white rounded-2xl border border-gray-100 p-4 shadow-sm xl:max-h-[calc(100vh-14rem)] xl:overflow-y-auto min-w-0">
-            <h2 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-1.5">
-              Minhas tarefas pendentes
-              <span className="text-xs font-normal text-gray-400">({backlog.length})</span>
-            </h2>
-            {backlog.length === 0 ? (
-              <p className="text-sm text-gray-400 py-6 text-center">Nenhuma tarefa pendente fora da semana.</p>
-            ) : (
-              <div className="space-y-2">
-                {agruparPorProjeto(backlog).map(grupo => {
-                  const pid = grupo.projeto?.id || 'sem-projeto'
-                  const aberto = colapsados[pid] === true
-                  return (
-                    <div key={pid} className="border border-gray-100 rounded-xl overflow-hidden">
-                      <button
-                        onClick={() => setColapsados(p => ({ ...p, [pid]: !aberto }))}
-                        className="w-full flex items-center justify-between gap-2 py-2.5 px-3 text-left bg-gray-50 hover:bg-gray-100 transition-colors"
-                      >
-                        <span className="min-w-0">
-                          <span className="block text-sm font-semibold text-gray-800 truncate">
-                            {grupo.projeto?.imovelNome || grupo.projeto?.codigo || 'Sem projeto'}
-                          </span>
-                          <span className="block text-[11px] text-gray-400 truncate">
-                            {grupo.projeto?.codigo}{grupo.projeto?.imovelNome ? ` · ${grupo.itens.length} pendente(s)` : ` — ${grupo.itens.length} pendente(s)`}
-                          </span>
-                        </span>
-                        <span className="flex items-center gap-1.5 flex-shrink-0">
-                          <span className="text-xs font-bold text-white bg-gray-400 rounded-full w-5 h-5 flex items-center justify-center">
-                            {grupo.itens.length}
-                          </span>
-                          {aberto
-                            ? <ChevronDown className="w-4 h-4 text-gray-400" />
-                            : <ChevronRight className="w-4 h-4 text-gray-400" />}
-                        </span>
-                      </button>
-                      {aberto && (
-                        <div className="p-2 space-y-2 bg-white">
-                          {grupo.itens.map((t: any) => {
-                            const urg = corUrgencia(t.prazo)
-                            const ehPendencia = t.tipo === 'PENDENCIA'
-                            return (
-                              <div
-                                key={t.id}
-                                draggable
-                                onDragStart={e => onDragStartBacklog(e, t)}
-                                className="flex items-stretch gap-0 rounded-xl border border-gray-100 hover:border-gray-200 hover:shadow-sm transition-all overflow-hidden cursor-grab active:cursor-grabbing"
-                              >
-                                <div className={`w-1 flex-shrink-0 ${ehPendencia ? 'bg-purple-500' : urg.barra}`} />
-                                <div className="flex items-start gap-2 p-3 flex-1 min-w-0">
-                                  <GripVertical className="w-3.5 h-3.5 text-gray-200 mt-0.5 flex-shrink-0 hidden sm:block" />
-                                  <button
-                                    onClick={() => adicionarNaSemana(t.id, t.tipo)}
-                                    disabled={processando === t.id}
-                                    className="mt-0.5 p-1.5 rounded-md bg-green-50 text-green-600 hover:bg-green-100 flex-shrink-0 disabled:opacity-50"
-                                    title="Colocar nesta semana (sem dia definido)"
-                                  >
-                                    {processando === t.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
-                                  </button>
-                                  <div className="min-w-0 flex-1 space-y-1">
-                                    {ehPendencia && (
-                                      <span className="flex items-center gap-0.5 text-[10px] font-semibold text-purple-700 bg-purple-50 px-1.5 py-0.5 rounded-full w-fit">
-                                        <Landmark className="w-2.5 h-2.5" /> Pendência
-                                      </span>
-                                    )}
-                                    <p className="text-sm text-gray-800 leading-snug break-words">{t.titulo}</p>
-                                    {t.prazo && (
-                                      <p className={`text-xs flex items-center gap-1 ${urg.texto}`}>
-                                        {urg.texto === 'text-red-600' && <AlertTriangle className="w-3 h-3 flex-shrink-0" />}
-                                        prazo {formatDataCurta(t.prazo)}
-                                      </p>
-                                    )}
-                                  </div>
-                                </div>
-                              </div>
-                            )
-                          })}
-                        </div>
-                      )}
-                    </div>
-                  )
-                })}
-              </div>
-            )}
+          <div className="bg-white rounded-2xl border border-gray-100 p-4 shadow-sm xl:max-h-[calc(100vh-14rem)] xl:overflow-y-auto min-w-0 space-y-5">
+            <div>
+              <h2 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-1.5">
+                📋 Operacional
+                <span className="text-xs font-normal text-gray-400">({backlogTarefas.length})</span>
+              </h2>
+              {backlogTarefas.length === 0 ? (
+                <p className="text-xs text-gray-400 py-3 text-center">Nenhuma tarefa operacional pendente.</p>
+              ) : (
+                <div className="space-y-2">
+                  {agruparPorProjeto(backlogTarefas).map(grupo => (
+                    <GrupoProjeto key={grupo.projeto?.id || 'sem-projeto'} grupo={grupo} prefixo="op" />
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="pt-4 border-t border-gray-100">
+              <h2 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-1.5">
+                <Landmark className="w-3.5 h-3.5 text-purple-500" /> Pendências (com órgão)
+                <span className="text-xs font-normal text-gray-400">({backlogPendencias.length})</span>
+              </h2>
+              {backlogPendencias.length === 0 ? (
+                <p className="text-xs text-gray-400 py-3 text-center">Nenhuma pendência de órgão sob sua responsabilidade.</p>
+              ) : (
+                <div className="space-y-2">
+                  {agruparPorProjeto(backlogPendencias).map(grupo => (
+                    <GrupoProjeto key={grupo.projeto?.id || 'sem-projeto'} grupo={grupo} prefixo="pend" />
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}
