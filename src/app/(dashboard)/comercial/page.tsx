@@ -256,10 +256,10 @@ export default function ComercialPage() {
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-1.5">
                         <BotaoAcaoEtapa projeto={p} onAcao={abrirAcao} />
-                        <a href={`/operacional/${p.id}`}
+                        <button onClick={() => abrirEditar(p)}
                           className="p-1.5 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors" title="Ver detalhes">
                           <Eye className="w-4 h-4" />
-                        </a>
+                        </button>
                         <button onClick={() => abrirDocumentos(p)}
                           className="p-1.5 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors" title="Documentos">
                           <FolderOpen className="w-4 h-4" />
