@@ -161,15 +161,44 @@ export async function POST(request: NextRequest) {
 
     const semanaInicio = segundaFeiraDaSemana(semanaParam ? new Date(semanaParam) : new Date())
 
+    // Se ninguém escolheu um dia explicitamente (botão "+", sem arrastar/tocar
+    // numa pílula), tenta descobrir sozinho a partir do prazo que a tarefa ou
+    // a pendência já tem — evita pedir pra "redefinir" uma data que já existe.
+    // Se o prazo cair fora da semana atual (ou não existir), fica "sem dia
+    // definido" mesmo, do jeito que já era — o usuário só ajusta se precisar.
+    let diaFinal: number | null = diaSemana ?? null
+    if (diaFinal === null) {
+      let prazoReal: Date | null = null
+      if (tipoFinal === 'TAREFA') {
+        const tarefa = await prisma.tarefa.findUnique({ where: { id: itemId }, select: { prazo: true } })
+        prazoReal = tarefa?.prazo ?? null
+      } else {
+        const acao = await prisma.acaoPendencia.findUnique({
+          where: { id: itemId },
+          include: { pendencia: { select: { prazoResposta: true } } },
+        })
+        prazoReal = acao?.pendencia?.prazoResposta ?? null
+      }
+
+      if (prazoReal) {
+        const semanaFim = new Date(semanaInicio)
+        semanaFim.setDate(semanaFim.getDate() + 7)
+        if (prazoReal >= semanaInicio && prazoReal < semanaFim) {
+          const diaSemanaJs = prazoReal.getDay() // 0=domingo..6=sábado
+          diaFinal = diaSemanaJs === 0 ? 6 : diaSemanaJs - 1 // 0=Segunda..6=Domingo
+        }
+      }
+    }
+
     const item = tipoFinal === 'PENDENCIA'
       ? await prisma.tarefaSemana.upsert({
           where: { acaoPendenciaId_usuarioId_semanaInicio: { acaoPendenciaId: itemId, usuarioId, semanaInicio } },
-          create: { tipo: 'PENDENCIA', acaoPendenciaId: itemId, usuarioId, semanaInicio, diaSemana: diaSemana ?? null },
+          create: { tipo: 'PENDENCIA', acaoPendenciaId: itemId, usuarioId, semanaInicio, diaSemana: diaFinal },
           update: {},
         })
       : await prisma.tarefaSemana.upsert({
           where: { tarefaId_usuarioId_semanaInicio: { tarefaId: itemId, usuarioId, semanaInicio } },
-          create: { tipo: 'TAREFA', tarefaId: itemId, usuarioId, semanaInicio, diaSemana: diaSemana ?? null },
+          create: { tipo: 'TAREFA', tarefaId: itemId, usuarioId, semanaInicio, diaSemana: diaFinal },
           update: {},
         })
 
