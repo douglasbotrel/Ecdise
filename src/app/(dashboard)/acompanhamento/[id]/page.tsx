@@ -47,6 +47,9 @@ export default function AcompanhamentoDetalhe() {
 
   // Toggle de ação individual (mostra spinner na linha)
   const [togglingId, setTogglingId] = useState<string | null>(null)
+  const [acaoEditando, setAcaoEditando] = useState<string | null>(null)
+  const [formAcaoEdicao, setFormAcaoEdicao] = useState({ descricao: '', responsavelId: '' })
+  const [salvandoAcao, setSalvandoAcao] = useState(false)
 
   // Credenciais de acesso ao SIGLA (CPF + senha do cliente)
   const [editandoCredSigla, setEditandoCredSigla] = useState(false)
@@ -247,6 +250,48 @@ export default function AcompanhamentoDetalhe() {
       loadProjeto()
     } finally {
       setTogglingId(null)
+    }
+  }
+
+  // ── Editar descrição e/ou responsável de uma ação ──────────────
+  function abrirEdicaoAcao(acao: any) {
+    setFormAcaoEdicao({ descricao: acao.descricao, responsavelId: acao.responsavelId || '' })
+    setAcaoEditando(acao.id)
+  }
+
+  async function salvarEdicaoAcao(acaoId: string, pendenciaStatus: string) {
+    if (pendenciaStatus === 'CONCLUIDA') {
+      toast.info('Esta pendência já foi concluída e está disponível apenas para leitura')
+      setAcaoEditando(null)
+      return
+    }
+    if (!formAcaoEdicao.descricao.trim()) {
+      toast.error('A descrição não pode ficar vazia')
+      return
+    }
+    setSalvandoAcao(true)
+    try {
+      const res = await fetch('/api/acoes', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: acaoId,
+          descricao: formAcaoEdicao.descricao.trim(),
+          responsavelId: formAcaoEdicao.responsavelId || null,
+        }),
+      })
+      if (!res.ok) {
+        const d = await res.json()
+        toast.error(d.error || 'Erro ao salvar a ação')
+        return
+      }
+      toast.success('Ação atualizada!')
+      setAcaoEditando(null)
+      loadProjeto()
+    } catch {
+      toast.error('Erro ao salvar a ação')
+    } finally {
+      setSalvandoAcao(false)
     }
   }
 
@@ -771,29 +816,72 @@ export default function AcompanhamentoDetalhe() {
                         {/* Lista de ações */}
                         <div className="px-4 sm:px-6 py-3 space-y-2">
                           {(pendencia.acoes || []).map((acao: any) => (
-                            <div key={acao.id} className="flex items-start gap-3 py-1.5">
-                              <button
-                                onClick={() => toggleAcao(acao.id, acao.concluida, pendencia.status)}
-                                disabled={isConcluida || togglingId === acao.id}
-                                className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 mt-0.5 transition-colors ${
-                                  acao.concluida
-                                    ? 'bg-green-600 border-green-600'
-                                    : 'border-gray-300 hover:border-green-500'
-                                } ${isConcluida ? 'cursor-default opacity-80' : 'cursor-pointer'}`}
-                              >
-                                {togglingId === acao.id
-                                  ? <Loader2 className="w-3 h-3 text-gray-400 animate-spin" />
-                                  : acao.concluida && <Check className="w-3 h-3 text-white" />}
-                              </button>
-                              <div className="flex-1 min-w-0">
-                                <p className={`text-sm leading-snug ${acao.concluida ? 'text-gray-400 line-through' : 'text-gray-900'}`}>
-                                  {acao.descricao}
-                                </p>
-                                {acao.responsavel && (
-                                  <span className="text-xs text-gray-400">{acao.responsavel.nome}</span>
+                            acaoEditando === acao.id ? (
+                              <div key={acao.id} className="flex flex-col gap-2 py-2 px-2 bg-gray-50 rounded-lg">
+                                <input
+                                  value={formAcaoEdicao.descricao}
+                                  onChange={e => setFormAcaoEdicao(f => ({ ...f, descricao: e.target.value }))}
+                                  className="w-full px-2.5 py-1.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                                  placeholder="Descrição da ação"
+                                />
+                                <select
+                                  value={formAcaoEdicao.responsavelId}
+                                  onChange={e => setFormAcaoEdicao(f => ({ ...f, responsavelId: e.target.value }))}
+                                  className="w-full px-2.5 py-1.5 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-green-500"
+                                >
+                                  <option value="">Sem responsável definido</option>
+                                  {usuarios.map(u => <option key={u.id} value={u.id}>{labelUsuario(u)}</option>)}
+                                </select>
+                                <div className="flex justify-end gap-2">
+                                  <button
+                                    onClick={() => setAcaoEditando(null)}
+                                    className="px-3 py-1.5 text-xs font-medium text-gray-500 hover:bg-gray-100 rounded-lg"
+                                  >
+                                    Cancelar
+                                  </button>
+                                  <button
+                                    onClick={() => salvarEdicaoAcao(acao.id, pendencia.status)}
+                                    disabled={salvandoAcao}
+                                    className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50"
+                                  >
+                                    <Save className="w-3 h-3" /> {salvandoAcao ? 'Salvando...' : 'Salvar'}
+                                  </button>
+                                </div>
+                              </div>
+                            ) : (
+                              <div key={acao.id} className="flex items-start gap-3 py-1.5 group">
+                                <button
+                                  onClick={() => toggleAcao(acao.id, acao.concluida, pendencia.status)}
+                                  disabled={isConcluida || togglingId === acao.id}
+                                  className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 mt-0.5 transition-colors ${
+                                    acao.concluida
+                                      ? 'bg-green-600 border-green-600'
+                                      : 'border-gray-300 hover:border-green-500'
+                                  } ${isConcluida ? 'cursor-default opacity-80' : 'cursor-pointer'}`}
+                                >
+                                  {togglingId === acao.id
+                                    ? <Loader2 className="w-3 h-3 text-gray-400 animate-spin" />
+                                    : acao.concluida && <Check className="w-3 h-3 text-white" />}
+                                </button>
+                                <div className="flex-1 min-w-0">
+                                  <p className={`text-sm leading-snug ${acao.concluida ? 'text-gray-400 line-through' : 'text-gray-900'}`}>
+                                    {acao.descricao}
+                                  </p>
+                                  {acao.responsavel && (
+                                    <span className="text-xs text-gray-400">{acao.responsavel.nome}</span>
+                                  )}
+                                </div>
+                                {!isConcluida && (
+                                  <button
+                                    onClick={() => abrirEdicaoAcao(acao)}
+                                    className="p-1 text-gray-300 hover:text-blue-600 hover:bg-blue-50 rounded-md flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                                    title="Editar ação / trocar responsável"
+                                  >
+                                    <Pencil className="w-3.5 h-3.5" />
+                                  </button>
                                 )}
                               </div>
-                            </div>
+                            )
                           ))}
                         </div>
                       </>

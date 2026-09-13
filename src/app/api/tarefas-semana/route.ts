@@ -59,14 +59,10 @@ export async function GET(request: NextRequest) {
         },
         orderBy: [{ prazo: 'asc' }, { criadoEm: 'asc' }],
       }),
-      // Backlog — ações de pendência com órgão, ainda não concluídas.
-      // Para ADMIN/gestores vendo a PRÓPRIA lista, também traz ações sem
-      // responsável definido — senão pendências criadas sem indicar quem
-      // cuida delas nunca aparecem pra ninguém (ficam "órfãs" pra sempre).
+      // Backlog — ações de pendência com órgão, ainda não concluídas — só as
+      // que estão sob a responsabilidade do usuário que está vendo a lista.
       prisma.acaoPendencia.findMany({
-        where: usuarioId === user.id && PODE_VER_OUTROS.includes(user.role)
-          ? { concluida: false, OR: [{ responsavelId: usuarioId }, { responsavelId: null }, { responsavelId: '' }] }
-          : { responsavelId: usuarioId, concluida: false },
+        where: { responsavelId: usuarioId, concluida: false },
         include: {
           pendencia: {
             include: {

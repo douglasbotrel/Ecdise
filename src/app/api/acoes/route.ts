@@ -12,7 +12,7 @@ export async function PATCH(request: NextRequest) {
     if (!user) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
 
     const body = await request.json()
-    const { id, concluida } = body
+    const { id, concluida, descricao, responsavelId } = body
     if (!id) return NextResponse.json({ error: 'ID da ação é obrigatório' }, { status: 400 })
 
     const acaoAtual = await prisma.acaoPendencia.findUnique({
@@ -26,6 +26,20 @@ export async function PATCH(request: NextRequest) {
         { error: 'Esta pendência já foi concluída e está disponível apenas para leitura.' },
         { status: 403 }
       )
+    }
+
+    // Edição de texto/responsável (não mexe em conclusão) — usada pela tela
+    // de Acompanhamento para corrigir a descrição ou trocar quem cuida da ação.
+    if (descricao !== undefined || responsavelId !== undefined) {
+      const acaoEditada = await prisma.acaoPendencia.update({
+        where: { id },
+        data: {
+          ...(descricao !== undefined && { descricao: String(descricao).trim() }),
+          ...(responsavelId !== undefined && { responsavelId: responsavelId || null }),
+        },
+        include: { responsavel: { select: { id: true, nome: true } } },
+      })
+      return NextResponse.json({ acao: acaoEditada, pendencia: null })
     }
 
     const novoValor = concluida !== undefined ? concluida === true : !acaoAtual.concluida
