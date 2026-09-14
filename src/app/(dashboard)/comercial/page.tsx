@@ -102,7 +102,7 @@ export default function ComercialPage() {
   const [currentUser, setCurrentUser] = useState<any>(null)
   const [excluindoId, setExcluindoId] = useState<string | null>(null)
 
-  const isAdmin = ['ADMIN', 'GESTOR_GERAL'].includes(currentUser?.role)
+  const isAdmin = currentUser?.role === 'ADMIN'
 
   useEffect(() => {
     fetch('/api/auth/me').then(r => r.json()).then(d => setCurrentUser(d.usuario || null))
@@ -134,13 +134,19 @@ export default function ComercialPage() {
   function abrirDocumentos(projeto: any) { setProjetoDocumentos(projeto); setDocModalOpen(true) }
 
   async function excluirProjeto(projeto: any) {
-    const confirmado = window.confirm(
-      `Excluir definitivamente a solicitação ${projeto.codigo} (${projeto.cliente?.nome || 'sem cliente'})? Esta ação não pode ser desfeita.`
+    const motivo = window.prompt(
+      `Excluir a solicitação ${projeto.codigo} (${projeto.cliente?.nome || 'sem cliente'})?\n\nInforme o motivo da exclusão (obrigatório):`
     )
-    if (!confirmado) return
+    if (motivo === null) return // cancelou
+    if (!motivo.trim()) { toast.error('É obrigatório informar o motivo da exclusão'); return }
+
     setExcluindoId(projeto.id)
     try {
-      const res = await fetch(`/api/projetos/${projeto.id}`, { method: 'DELETE' })
+      const res = await fetch(`/api/projetos/${projeto.id}`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ motivo: motivo.trim() }),
+      })
       if (!res.ok) { const d = await res.json().catch(() => ({})); toast.error(d.error || 'Erro ao excluir'); return }
       toast.success('Solicitação excluída')
       load()

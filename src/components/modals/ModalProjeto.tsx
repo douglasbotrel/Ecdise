@@ -107,6 +107,41 @@ interface ModalProjetoProps {
 
 export function ModalProjeto({ open, onClose, projeto, onSalvo, modoAcao = 'editar' }: ModalProjetoProps) {
   useLockBodyScroll(open)
+  const [meRole, setMeRole] = useState<string | null>(null)
+  const [excluindo, setExcluindo] = useState(false)
+
+  useEffect(() => {
+    if (!open) return
+    fetch('/api/auth/me').then(r => r.json()).then(d => setMeRole((d.usuario || d)?.role || null)).catch(() => {})
+  }, [open])
+
+  async function excluirProjetoAgora() {
+    if (!projeto?.id) return
+    const motivo = window.prompt(
+      `Excluir o projeto ${projeto.codigo || ''} (${projeto.cliente?.nome || projeto.imovelNome || 'sem nome'})?\n\nInforme o motivo da exclusão (obrigatório):`
+    )
+    if (motivo === null) return // cancelou
+    if (!motivo.trim()) { toast.error('É obrigatório informar o motivo da exclusão'); return }
+
+    setExcluindo(true)
+    try {
+      const res = await fetch(`/api/projetos/${projeto.id}`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ motivo: motivo.trim() }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) { toast.error(data.error || 'Erro ao excluir'); return }
+      toast.success('Projeto excluído')
+      onSalvo?.()
+      onClose()
+    } catch {
+      toast.error('Erro ao excluir')
+    } finally {
+      setExcluindo(false)
+    }
+  }
+
   const [clientes, setClientes] = useState<any[]>([])
   const [servicos, setServicos] = useState<any[]>([])
   const [usuarios, setUsuarios] = useState<any[]>([])
@@ -1139,7 +1174,15 @@ export function ModalProjeto({ open, onClose, projeto, onSalvo, modoAcao = 'edit
           </>)}
 
           {/* Botões */}
-          <div className="flex justify-end gap-3 pt-2 border-t border-gray-100">
+          <div className="flex justify-between items-center gap-3 pt-2 border-t border-gray-100">
+            {meRole === 'ADMIN' && projeto?.id && modoReal !== 'criar' ? (
+              <button type="button" onClick={excluirProjetoAgora} disabled={excluindo || loading}
+                className="flex items-center gap-1.5 px-3 py-2.5 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-xl text-sm font-medium disabled:opacity-50">
+                {excluindo ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                Excluir Projeto
+              </button>
+            ) : <div />}
+            <div className="flex gap-3">
             <button type="button" onClick={onClose} disabled={loading}
               className="px-5 py-2.5 border border-gray-200 rounded-xl text-gray-700 hover:bg-gray-50 font-medium text-sm">
               Cancelar
@@ -1173,6 +1216,7 @@ export function ModalProjeto({ open, onClose, projeto, onSalvo, modoAcao = 'edit
                 {modoReal === 'editar'        && 'Salvar Alterações'}
               </button>
             )}
+            </div>
           </div>
         </form>
       </div>

@@ -376,12 +376,46 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
   try {
     const user = await getCurrentUser()
     if (!user) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
-    if (!['ADMIN', 'GESTOR_GERAL'].includes(user.role)) {
-      return NextResponse.json({ error: 'Sem permissão' }, { status: 403 })
+    if (user.role !== 'ADMIN') {
+      return NextResponse.json({ error: 'Apenas o Administrador pode excluir projetos' }, { status: 403 })
     }
-    await prisma.projeto.delete({ where: { id: params.id } })
+
+    const body = await request.json().catch(() => ({}))
+    const motivo = (body.motivo || '').trim()
+    if (!motivo) {
+      return NextResponse.json({ error: 'É obrigatório informar o motivo da exclusão' }, { status: 400 })
+    }
+
+    const projeto = await prisma.projeto.findUnique({ where: { id: params.id } })
+    if (!projeto) return NextResponse.json({ error: 'Projeto não encontrado' }, { status: 404 })
+
+    // Exclusão lógica — o projeto some de todas as listagens, mas o registro
+    // (com motivo, quem excluiu e quando) fica preservado para auditoria.
+    // Contratos, pagamentos, tarefas e histórico ligados a ele continuam
+    // intactos no banco, só deixam de aparecer nas telas normais.
+    await prisma.projeto.update({
+      where: { id: params.id },
+      data: {
+        excluido: true,
+        motivoExclusao: motivo,
+        excluidoEm: new Date(),
+        excluidoPor: user.id,
+      },
+    })
+
+    await prisma.log.create({
+      data: {
+        usuarioId: user.id,
+        acao: 'EXCLUSAO_PROJETO',
+        entidade: 'Projeto',
+        entidadeId: params.id,
+        detalhes: `Projeto ${projeto.codigo} excluído. Motivo: ${motivo}`,
+      },
+    }).catch(() => {}) // log é best-effort — não deve travar a exclusão em si
+
     return NextResponse.json({ success: true })
   } catch (error) {
+    console.error('[projetos DELETE]', error)
     return NextResponse.json({ error: 'Erro interno' }, { status: 500 })
   }
 }

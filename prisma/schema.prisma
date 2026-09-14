@@ -117,6 +117,10 @@ model Projeto {
   protocoloData        DateTime?
   protocoloCodigoOrgao String?
   checklistEncerramento String? // JSON: só itens manuais — {"documentos_entregues": true, ...}
+  excluido             Boolean   @default(false)
+  motivoExclusao       String?
+  excluidoEm           DateTime?
+  excluidoPor          String?
   emAcompanhamento     Boolean  @default(false)
   // Consulta automática SIGLA
   caminhoSIGLA         String?   // Caminho explícito de verificação: recursos_florestais | licenciamento_ambiental | recursos_hidricos | null (não verifica)

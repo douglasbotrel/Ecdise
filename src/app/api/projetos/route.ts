@@ -22,6 +22,10 @@ export async function GET(request: NextRequest) {
     const etapasParam = searchParams.get('etapas')
 
     const where: any = {}
+    // Projetos excluídos (soft-delete) nunca aparecem nas listagens normais
+    if (searchParams.get('incluirExcluidos') !== 'true') {
+      where.excluido = false
+    }
     if (statusComercial) where.statusComercial = statusComercial
     if (etapaPipeline) where.etapaPipeline = etapaPipeline
     if (etapasParam) where.etapaPipeline = { in: etapasParam.split(',').map(e => e.trim()) }
