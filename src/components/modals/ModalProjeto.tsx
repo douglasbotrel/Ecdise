@@ -957,6 +957,13 @@ export function ModalProjeto({ open, onClose, projeto, onSalvo, modoAcao = 'edit
                 {calcularValorTotal(form.servicosContratados).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
               </p>
             </div>
+            {form.servicosContratados.length > 0 && calcularValorTotal(form.servicosContratados) <= 0 && (
+              <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 -mt-2">
+                ⚠️ O valor deu R$ 0,00 mesmo com serviço(s) selecionado(s) — provavelmente esse tipo de serviço
+                está sem valor cadastrado em <strong>Configurações → Tipos de Serviço</strong>. Se não corrigir,
+                o contrato também nascerá zerado e o projeto pulará direto pro Operacional sem passar pelo Financeiro.
+              </p>
+            )}
             <p className="text-xs text-gray-400 -mt-2 pl-1">
               O parcelamento (sinal + parcelas) será definido depois, na elaboração do contrato — podendo ficar igual, maior ou menor que este valor.
             </p>
