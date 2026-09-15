@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
     const status            = searchParams.get('status')
     const solicitadasCampo  = searchParams.get('solicitadasCampo') // campo page
 
-    const where: any = {}
+    const where: any = { projeto: { excluido: false } }
     if (projetoId)    where.projetoId     = projetoId
     if (responsavelId) where.responsavelId = responsavelId
     if (status)       where.status        = status

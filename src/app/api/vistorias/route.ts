@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
     const dataInicio         = searchParams.get('dataInicio')
     const dataFim            = searchParams.get('dataFim')
 
-    const where: any = {}
+    const where: any = { projeto: { excluido: false } }
     if (projetoId) where.projetoId = projetoId
     if (status) where.status = status
     if (responsavelId) where.responsavelId = responsavelId

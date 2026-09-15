@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getCurrentUser } from '@/lib/auth'
 
+// Filtro reutilizado em toda consulta de Pagamento — ignora projetos excluídos
+const PROJETO_ATIVO = { contrato: { projeto: { excluido: false } } }
+
 export async function GET(request: NextRequest) {
   try {
     const user = await getCurrentUser()
@@ -26,6 +29,7 @@ export async function GET(request: NextRequest) {
           where: {
             status: 'PAGO',
             dataPagamento: { gte: inicioMes, lte: fimMes },
+            ...PROJETO_ATIVO,
           },
           _sum: { valor: true },
         }),
@@ -34,6 +38,7 @@ export async function GET(request: NextRequest) {
           where: {
             status: { in: ['PENDENTE', 'VENCIDO'] },
             dataVencimento: { gte: inicioMes, lte: fimMes },
+            ...PROJETO_ATIVO,
           },
           _sum: { valor: true },
         }),
@@ -54,24 +59,24 @@ export async function GET(request: NextRequest) {
       pagamentosPorForma,
     ] = await Promise.all([
       prisma.pagamento.aggregate({
-        where: { status: 'PAGO' },
+        where: { status: 'PAGO', ...PROJETO_ATIVO },
         _sum: { valor: true },
         _count: true,
       }),
       prisma.pagamento.aggregate({
-        where: { status: 'PENDENTE' },
+        where: { status: 'PENDENTE', ...PROJETO_ATIVO },
         _sum: { valor: true },
         _count: true,
       }),
       prisma.pagamento.aggregate({
-        where: { status: 'PENDENTE', dataVencimento: { lt: hoje } },
+        where: { status: 'PENDENTE', dataVencimento: { lt: hoje }, ...PROJETO_ATIVO },
         _sum: { valor: true },
         _count: true,
       }),
       // Distribuição por forma de pagamento
       prisma.pagamento.groupBy({
         by: ['formaPagamento'],
-        where: { status: 'PAGO', formaPagamento: { not: null } },
+        where: { status: 'PAGO', formaPagamento: { not: null }, ...PROJETO_ATIVO },
         _sum: { valor: true },
         _count: true,
         orderBy: { _sum: { valor: 'desc' } },
@@ -84,6 +89,7 @@ export async function GET(request: NextRequest) {
       where: {
         servicosContratados: { not: null },
         etapaPipeline: { not: 'CANCELADO' },
+        excluido: false,
       },
       select: {
         servicosContratados: true,
@@ -111,7 +117,8 @@ export async function GET(request: NextRequest) {
 
     // ── Panorama de Pendências (Acompanhamento de Processos) ────────────────
     // Considera apenas pendências de projetos atualmente em acompanhamento
-    const filtroProjetoAcompanhamento = { projeto: { emAcompanhamento: true } }
+    // (e não excluídos, senão continuariam contando no painel para sempre)
+    const filtroProjetoAcompanhamento = { projeto: { emAcompanhamento: true, excluido: false } }
 
     const [
       pendenciasAbertas,
@@ -153,17 +160,17 @@ export async function GET(request: NextRequest) {
     const [projetosOperacional, projetosComLicenca, pendenciasResolvidas] = await Promise.all([
       // Tempo médio operacional: do início da execução (dataInicio) até o protocolo no órgão
       prisma.projeto.findMany({
-        where: { dataInicio: { not: null }, protocoloData: { not: null } },
+        where: { dataInicio: { not: null }, protocoloData: { not: null }, excluido: false },
         select: { dataInicio: true, protocoloData: true },
       }),
       // Tempo médio até a licença: do protocolo até a emissão da licença
       prisma.projeto.findMany({
-        where: { protocoloData: { not: null }, licenca: { isNot: null } },
+        where: { protocoloData: { not: null }, licenca: { isNot: null }, excluido: false },
         select: { protocoloData: true, licenca: { select: { dataEmissao: true } } },
       }),
       // Tempo médio de tratativa de pendência: da abertura até a entrega da resposta
       prisma.pendencia.findMany({
-        where: { dataEntrega: { not: null } },
+        where: { dataEntrega: { not: null }, projeto: { excluido: false } },
         select: { data: true, dataEntrega: true },
       }),
     ])

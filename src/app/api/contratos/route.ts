@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
     const statusContrato = searchParams.get('statusContrato')
     const clienteId = searchParams.get('clienteId')
 
-    const where: any = {}
+    const where: any = { projeto: { excluido: false } }
     if (statusContrato) where.statusContrato = statusContrato
     if (clienteId) where.clienteId = clienteId
 

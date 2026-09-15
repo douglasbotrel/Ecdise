@@ -53,7 +53,7 @@ export async function GET(request: NextRequest) {
       }),
       // Backlog — tarefas operacionais pendentes
       prisma.tarefa.findMany({
-        where: { responsavelId: usuarioId, status: { notIn: ['CONCLUIDA', 'CANCELADA'] } },
+        where: { responsavelId: usuarioId, status: { notIn: ['CONCLUIDA', 'CANCELADA'] }, projeto: { excluido: false } },
         include: {
           projeto: { select: { id: true, codigo: true, imovelNome: true, municipio: true, estado: true } },
         },
@@ -62,7 +62,7 @@ export async function GET(request: NextRequest) {
       // Backlog — ações de pendência com órgão, ainda não concluídas — só as
       // que estão sob a responsabilidade do usuário que está vendo a lista.
       prisma.acaoPendencia.findMany({
-        where: { responsavelId: usuarioId, concluida: false },
+        where: { responsavelId: usuarioId, concluida: false, pendencia: { projeto: { excluido: false } } },
         include: {
           pendencia: {
             include: {

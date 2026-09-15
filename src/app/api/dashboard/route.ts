@@ -13,13 +13,14 @@ export async function GET(request: NextRequest) {
     // ── ANALISTA DE SERVIÇO RÁPIDO ──────────────────────────────
     if (user.role === 'ANALISTA_RAPIDO') {
       const [aguardando, emAnalise, concluidos, projetos] = await Promise.all([
-        prisma.projeto.count({ where: { analistaRapidoId: user.id, etapaPipeline: 'SOLICITACAO' } }),
-        prisma.projeto.count({ where: { analistaRapidoId: user.id, etapaPipeline: 'EM_ANALISE_RAPIDA' } }),
-        prisma.projeto.count({ where: { analistaRapidoId: user.id, etapaPipeline: 'ANALISE_CONCLUIDA' } }),
+        prisma.projeto.count({ where: { analistaRapidoId: user.id, etapaPipeline: 'SOLICITACAO', excluido: false } }),
+        prisma.projeto.count({ where: { analistaRapidoId: user.id, etapaPipeline: 'EM_ANALISE_RAPIDA', excluido: false } }),
+        prisma.projeto.count({ where: { analistaRapidoId: user.id, etapaPipeline: 'ANALISE_CONCLUIDA', excluido: false } }),
         prisma.projeto.findMany({
           where: {
             analistaRapidoId: user.id,
-            etapaPipeline: { in: ['SOLICITACAO', 'EM_ANALISE_RAPIDA', 'ANALISE_CONCLUIDA'] }
+            etapaPipeline: { in: ['SOLICITACAO', 'EM_ANALISE_RAPIDA', 'ANALISE_CONCLUIDA'] },
+            excluido: false,
           },
           include: { cliente: { select: { nome: true } } },
           orderBy: { criadoEm: 'desc' },
@@ -37,16 +38,16 @@ export async function GET(request: NextRequest) {
     if (user.role === 'ANALISTA') {
       // Tarefas atribuídas a este usuário
       const minhasTarefas = await prisma.tarefa.findMany({
-        where: { responsavelId: user.id, status: { not: 'CONCLUIDA' } },
+        where: { responsavelId: user.id, status: { not: 'CONCLUIDA' }, projeto: { excluido: false } },
         select: { projetoId: true, status: true },
       })
       const projetoIdsComTarefas = Array.from(new Set(minhasTarefas.map(t => t.projetoId)))
 
       const [ativos, concluidos, proximasVistorias, projetos, tarefasList] = await Promise.all([
-        prisma.projeto.count({ where: { etapaPipeline: 'EM_EXECUCAO', id: { in: projetoIdsComTarefas } } }),
-        prisma.projeto.count({ where: { responsavelId: user.id, etapaPipeline: 'CONCLUIDO' } }),
+        prisma.projeto.count({ where: { etapaPipeline: 'EM_EXECUCAO', id: { in: projetoIdsComTarefas }, excluido: false } }),
+        prisma.projeto.count({ where: { responsavelId: user.id, etapaPipeline: 'CONCLUIDO', excluido: false } }),
         prisma.vistoria.findMany({
-          where: { responsavelId: user.id, status: 'AGENDADA', dataAgendada: { gte: hoje, lte: proximos30 } },
+          where: { responsavelId: user.id, status: 'AGENDADA', dataAgendada: { gte: hoje, lte: proximos30 }, projeto: { excluido: false } },
           include: { projeto: { select: { codigo: true, imovelNome: true } } },
           orderBy: { dataAgendada: 'asc' },
           take: 5,
@@ -55,6 +56,7 @@ export async function GET(request: NextRequest) {
         prisma.projeto.findMany({
           where: {
             etapaPipeline: { in: ['OPERACIONAL', 'EM_EXECUCAO'] },
+            excluido: false,
             OR: [
               { responsavelId: user.id },
               { id: { in: projetoIdsComTarefas } },
@@ -66,7 +68,7 @@ export async function GET(request: NextRequest) {
         }),
         // Minhas tarefas pendentes com contexto
         prisma.tarefa.findMany({
-          where: { responsavelId: user.id, status: { not: 'CONCLUIDA' } },
+          where: { responsavelId: user.id, status: { not: 'CONCLUIDA' }, projeto: { excluido: false } },
           include: { projeto: { select: { id: true, codigo: true, imovelNome: true } } },
           orderBy: [{ prazo: 'asc' }, { criadoEm: 'asc' }],
           take: 15,
@@ -88,11 +90,11 @@ export async function GET(request: NextRequest) {
       const etapasOperacionais: string[] = ['OPERACIONAL', 'EM_EXECUCAO']
 
       const [novos, andamento, concluidos, projetos, proximasVistorias, tarefasAtrasadas, tarefasConcluidas, tarefasTotais] = await Promise.all([
-        prisma.projeto.count({ where: { etapaPipeline: 'OPERACIONAL' } }),
-        prisma.projeto.count({ where: { etapaPipeline: 'EM_EXECUCAO' } }),
-        prisma.projeto.count({ where: { etapaPipeline: 'CONCLUIDO' } }),
+        prisma.projeto.count({ where: { etapaPipeline: 'OPERACIONAL', excluido: false } }),
+        prisma.projeto.count({ where: { etapaPipeline: 'EM_EXECUCAO', excluido: false } }),
+        prisma.projeto.count({ where: { etapaPipeline: 'CONCLUIDO', excluido: false } }),
         prisma.projeto.findMany({
-          where: { etapaPipeline: { in: etapasOperacionais } },
+          where: { etapaPipeline: { in: etapasOperacionais }, excluido: false },
           include: {
             cliente: { select: { nome: true } },
             responsavel: { select: { nome: true } },
@@ -105,6 +107,7 @@ export async function GET(request: NextRequest) {
           where: {
             status: 'AGENDADA',
             dataAgendada: { gte: hoje, lte: proximos30 },
+            projeto: { excluido: false },
           },
           include: { projeto: { select: { codigo: true, imovelNome: true } }, responsavel: { select: { nome: true } } },
           orderBy: { dataAgendada: 'asc' },
@@ -112,17 +115,18 @@ export async function GET(request: NextRequest) {
         }),
         // Eficiência: tarefas atrasadas
         prisma.tarefa.count({
-          where: { status: 'PENDENTE', prazo: { lt: hoje }, projeto: { etapaPipeline: { in: etapasOperacionais } } }
+          where: { status: 'PENDENTE', prazo: { lt: hoje }, projeto: { etapaPipeline: { in: etapasOperacionais }, excluido: false } }
         }),
         // Tarefas concluídas no mês atual
         prisma.tarefa.count({
           where: {
             status: 'CONCLUIDA',
             dataConclusao: { gte: new Date(hoje.getFullYear(), hoje.getMonth(), 1) },
+            projeto: { excluido: false },
           }
         }),
         // Total de tarefas em aberto
-        prisma.tarefa.count({ where: { status: 'PENDENTE', projeto: { etapaPipeline: { in: etapasOperacionais } } } }),
+        prisma.tarefa.count({ where: { status: 'PENDENTE', projeto: { etapaPipeline: { in: etapasOperacionais }, excluido: false } } }),
       ])
 
       // Taxa de eficiência: tarefas concluídas / (concluídas + pendentes)
@@ -142,18 +146,18 @@ export async function GET(request: NextRequest) {
     // ── FINANCEIRO ──────────────────────────────────────────────
     if (user.departamento === 'FINANCEIRO') {
       const [aguardandoSinal, pagamentosPendentes, pagamentosVencidos, projetosAguardando] = await Promise.all([
-        prisma.projeto.count({ where: { etapaPipeline: 'AGUARDANDO_SINAL' } }),
-        prisma.pagamento.aggregate({ where: { status: 'PENDENTE' }, _sum: { valor: true }, _count: true }),
-        prisma.pagamento.aggregate({ where: { status: 'PENDENTE', dataVencimento: { lt: hoje } }, _sum: { valor: true }, _count: true }),
+        prisma.projeto.count({ where: { etapaPipeline: 'AGUARDANDO_SINAL', excluido: false } }),
+        prisma.pagamento.aggregate({ where: { status: 'PENDENTE', contrato: { projeto: { excluido: false } } }, _sum: { valor: true }, _count: true }),
+        prisma.pagamento.aggregate({ where: { status: 'PENDENTE', dataVencimento: { lt: hoje }, contrato: { projeto: { excluido: false } } }, _sum: { valor: true }, _count: true }),
         prisma.projeto.findMany({
-          where: { etapaPipeline: { in: ['AGUARDANDO_SINAL', 'OPERACIONAL', 'EM_EXECUCAO'] } },
+          where: { etapaPipeline: { in: ['AGUARDANDO_SINAL', 'OPERACIONAL', 'EM_EXECUCAO'] }, excluido: false },
           include: { cliente: { select: { nome: true } }, contrato: { select: { valorTotal: true, statusContrato: true } } },
           orderBy: { criadoEm: 'desc' },
           take: 20,
         }),
       ])
       const pagamentosProximos = await prisma.pagamento.findMany({
-        where: { status: 'PENDENTE', dataVencimento: { gte: hoje, lte: proximos30 } },
+        where: { status: 'PENDENTE', dataVencimento: { gte: hoje, lte: proximos30 }, contrato: { projeto: { excluido: false } } },
         include: { contrato: { include: { cliente: { select: { nome: true } } } } },
         orderBy: { dataVencimento: 'asc' },
         take: 10,
@@ -175,10 +179,10 @@ export async function GET(request: NextRequest) {
     // ── CONTRATOS ───────────────────────────────────────────────
     if (user.departamento === 'CONTRATOS') {
       const [aguardando, emContrato, projetos] = await Promise.all([
-        prisma.projeto.count({ where: { etapaPipeline: 'AGUARDANDO_CONTRATO' } }),
-        prisma.projeto.count({ where: { etapaPipeline: 'EM_CONTRATO' } }),
+        prisma.projeto.count({ where: { etapaPipeline: 'AGUARDANDO_CONTRATO', excluido: false } }),
+        prisma.projeto.count({ where: { etapaPipeline: 'EM_CONTRATO', excluido: false } }),
         prisma.projeto.findMany({
-          where: { etapaPipeline: { in: ['AGUARDANDO_CONTRATO', 'EM_CONTRATO'] } },
+          where: { etapaPipeline: { in: ['AGUARDANDO_CONTRATO', 'EM_CONTRATO'] }, excluido: false },
           include: { cliente: { select: { nome: true } }, contrato: true },
           orderBy: { criadoEm: 'desc' },
           take: 20,
@@ -202,24 +206,25 @@ export async function GET(request: NextRequest) {
       proximasVistorias,
       pagamentosProximos,
     ] = await Promise.all([
-      prisma.projeto.count(),
-      prisma.projeto.count({ where: { etapaPipeline: { in: ['EM_ANALISE_RAPIDA', 'EM_NEGOCIACAO', 'EM_CONTRATO', 'EM_EXECUCAO'] } } }),
-      prisma.projeto.count({ where: { etapaPipeline: 'CONCLUIDO' } }),
-      prisma.tarefa.count({ where: { status: 'PENDENTE', prazo: { lt: hoje } } }),
-      prisma.projeto.groupBy({ by: ['etapaPipeline'], _count: true }),
+      prisma.projeto.count({ where: { excluido: false } }),
+      prisma.projeto.count({ where: { etapaPipeline: { in: ['EM_ANALISE_RAPIDA', 'EM_NEGOCIACAO', 'EM_CONTRATO', 'EM_EXECUCAO'] }, excluido: false } }),
+      prisma.projeto.count({ where: { etapaPipeline: 'CONCLUIDO', excluido: false } }),
+      prisma.tarefa.count({ where: { status: 'PENDENTE', prazo: { lt: hoje }, projeto: { excluido: false } } }),
+      prisma.projeto.groupBy({ by: ['etapaPipeline'], _count: true, where: { excluido: false } }),
       prisma.projeto.findMany({
+        where: { excluido: false },
         take: 6,
         orderBy: { criadoEm: 'desc' },
         include: { cliente: { select: { nome: true } }, analistaRapido: { select: { nome: true } } },
       }),
       prisma.vistoria.findMany({
-        where: { dataAgendada: { gte: hoje, lte: proximos30 }, status: 'AGENDADA' },
+        where: { dataAgendada: { gte: hoje, lte: proximos30 }, status: 'AGENDADA', projeto: { excluido: false } },
         take: 5,
         orderBy: { dataAgendada: 'asc' },
         include: { projeto: { select: { codigo: true, imovelNome: true } }, responsavel: { select: { nome: true } } },
       }),
       prisma.pagamento.findMany({
-        where: { status: 'PENDENTE', dataVencimento: { gte: hoje, lte: proximos30 } },
+        where: { status: 'PENDENTE', dataVencimento: { gte: hoje, lte: proximos30 }, contrato: { projeto: { excluido: false } } },
         take: 5,
         orderBy: { dataVencimento: 'asc' },
         include: { contrato: { include: { cliente: { select: { nome: true } } } } },
@@ -231,12 +236,12 @@ export async function GET(request: NextRequest) {
     for (let i = 5; i >= 0; i--) {
       const mes = new Date(hoje.getFullYear(), hoje.getMonth() - i, 1)
       const fimDoMes = new Date(hoje.getFullYear(), hoje.getMonth() - i + 1, 0)
-      const count = await prisma.projeto.count({ where: { criadoEm: { gte: mes, lte: fimDoMes } } })
+      const count = await prisma.projeto.count({ where: { criadoEm: { gte: mes, lte: fimDoMes }, excluido: false } })
       evolucaoMensal.push({ mes: mes.toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' }), projetos: count })
     }
 
-    const pagamentosPendentes = await prisma.pagamento.aggregate({ where: { status: 'PENDENTE' }, _sum: { valor: true } })
-    const pagamentosVencidos = await prisma.pagamento.aggregate({ where: { status: 'PENDENTE', dataVencimento: { lt: hoje } }, _sum: { valor: true } })
+    const pagamentosPendentes = await prisma.pagamento.aggregate({ where: { status: 'PENDENTE', contrato: { projeto: { excluido: false } } }, _sum: { valor: true } })
+    const pagamentosVencidos = await prisma.pagamento.aggregate({ where: { status: 'PENDENTE', dataVencimento: { lt: hoje }, contrato: { projeto: { excluido: false } } }, _sum: { valor: true } })
 
     return NextResponse.json({
       tipoView: 'admin',

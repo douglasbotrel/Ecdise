@@ -11,7 +11,7 @@ export async function GET(request: NextRequest) {
     const contratoId = searchParams.get('contratoId')
     const status     = searchParams.get('status')
 
-    const where: any = {}
+    const where: any = { contrato: { projeto: { excluido: false } } }
     if (contratoId) where.contratoId = contratoId
     if (status)     where.status = status
 
@@ -31,7 +31,7 @@ export async function GET(request: NextRequest) {
     // Os totais SEMPRE consideram todos os status — independente do filtro de
     // aba aplicado acima — para não variarem/zerarem conforme o usuário troca
     // de aba (bug relatado: "Pendente"/"Pago"/"Vencido" mudavam ao trocar de filtro).
-    const whereTotais: any = {}
+    const whereTotais: any = { contrato: { projeto: { excluido: false } } }
     if (contratoId) whereTotais.contratoId = contratoId
     const paraTotais = status
       ? await prisma.pagamento.findMany({

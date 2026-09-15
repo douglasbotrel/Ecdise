@@ -11,7 +11,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const projetoId = searchParams.get('projetoId')
 
-    const where: any = {}
+    const where: any = { projeto: { excluido: false } }
     if (projetoId) where.projetoId = projetoId
 
     const pendencias = await prisma.pendencia.findMany({

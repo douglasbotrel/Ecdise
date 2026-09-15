@@ -6,6 +6,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { Briefcase, FileText, MapPin, DollarSign, TrendingUp, AlertTriangle, Clock, CheckCircle, Search, ArrowRight, User } from 'lucide-react'
 import { formatDate, formatCurrency } from '@/lib/utils'
 import Link from 'next/link'
+import { ModalProjeto } from '@/components/modals/ModalProjeto'
 
 // Labels e cores do pipeline
 const ETAPA_LABELS: Record<string, string> = {
@@ -513,6 +514,8 @@ function ViewContratos({ dados }: { dados: any }) {
 
 function ViewAdmin({ dados }: { dados: any }) {
   const { estatisticas, porEtapa, projetosRecentes, proximasVistorias, pagamentosProximos, evolucaoMensal } = dados
+  const [modalOpen, setModalOpen] = useState(false)
+  const [projetoSelecionado, setProjetoSelecionado] = useState<any>(null)
 
   const ETAPAS_PIPELINE = [
     'SOLICITACAO', 'EM_ANALISE_RAPIDA', 'ANALISE_CONCLUIDA', 'EM_NEGOCIACAO',
@@ -613,7 +616,11 @@ function ViewAdmin({ dados }: { dados: any }) {
           </div>
           <div className="divide-y divide-gray-50">
             {projetosRecentes?.map((p: any) => (
-              <Link key={p.id} href={`/operacional/${p.id}`} className="flex items-center gap-3 px-6 py-3 hover:bg-gray-50">
+              <button
+                key={p.id}
+                onClick={() => { setProjetoSelecionado(p); setModalOpen(true) }}
+                className="w-full flex items-center gap-3 px-6 py-3 hover:bg-gray-50 text-left"
+              >
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-gray-900 truncate">{p.imovelNome || p.tipoServico}</p>
                   <p className="text-xs text-gray-400">{p.cliente?.nome}</p>
@@ -624,7 +631,7 @@ function ViewAdmin({ dados }: { dados: any }) {
                   </span>
                   <p className="text-xs text-gray-400 mt-1">{formatDate(p.criadoEm)}</p>
                 </div>
-              </Link>
+              </button>
             ))}
           </div>
         </div>
@@ -675,6 +682,14 @@ function ViewAdmin({ dados }: { dados: any }) {
           </div>
         </div>
       )}
+
+      <ModalProjeto
+        open={modalOpen}
+        onClose={() => { setModalOpen(false); setProjetoSelecionado(null) }}
+        projeto={projetoSelecionado}
+        modoAcao="editar"
+        onSalvo={() => { setModalOpen(false); setProjetoSelecionado(null) }}
+      />
     </div>
   )
 }
