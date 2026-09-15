@@ -41,9 +41,13 @@ export async function POST(request: NextRequest) {
     }
 
     // Salva em public/uploads/
+    // O nome inclui um componente aleatório (não previsível) além do timestamp —
+    // como a pasta é servida publicamente pelo Next.js (sem exigir login para
+    // baixar), um nome adivinhável seria a única barreira contra acesso indevido.
     const timestamp        = Date.now()
+    const aleatorio         = Math.random().toString(36).slice(2, 10)
     const nomeSanitizado   = arquivo.name.replace(/[^a-zA-Z0-9._\-()]/g, '_')
-    const nomeArquivoFinal = `${timestamp}_${nomeSanitizado}`
+    const nomeArquivoFinal = `${timestamp}_${aleatorio}_${nomeSanitizado}`
     const uploadDir        = path.join(process.cwd(), 'public', 'uploads')
 
     await mkdir(uploadDir, { recursive: true })
