@@ -616,7 +616,7 @@ export default function ProjetoDetalhe() {
               <div className="flex items-center gap-2">
                 {modoGestor && tarefas.length > 0 && (
                   <button
-                    onClick={e => { e.stopPropagation(); setAba('tarefas'); setNovaT(true) }}
+                    onClick={e => { e.stopPropagation(); setNovaT(true) }}
                     className="flex items-center gap-1 text-xs text-green-600 hover:text-green-700 font-medium px-2 py-1 rounded-lg hover:bg-green-50 transition-colors"
                   >
                     <Plus className="w-3.5 h-3.5" /> Tarefa
@@ -701,7 +701,7 @@ export default function ProjetoDetalhe() {
                     Gerar dos Serviços
                   </button>
                   <button
-                    onClick={() => { setAba('tarefas'); setNovaT(true) }}
+                    onClick={() => setNovaT(true)}
                     className="flex items-center justify-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-lg text-sm font-medium"
                   >
                     <Plus className="w-4 h-4" /> Tarefa Manual
@@ -994,7 +994,7 @@ export default function ProjetoDetalhe() {
             <h3 className="font-semibold text-gray-900">Linha do Tempo</h3>
             {modoGestor && (
               <button
-                onClick={() => { setAba('tarefas'); setNovaT(true) }}
+                onClick={() => setNovaT(true)}
                 className="flex items-center gap-1.5 text-sm text-green-600 hover:text-green-700 font-medium"
               >
                 <Plus className="w-4 h-4" /> Adicionar
@@ -1095,60 +1095,62 @@ export default function ProjetoDetalhe() {
               ))
             )}
           </div>
+        </div>
+      )}
 
-          {/* Form nova tarefa (gestores podem adicionar a qualquer momento) */}
-          {novaT && modoGestor && (
-            <div className="mt-4 p-4 border-2 border-dashed border-green-200 rounded-xl bg-green-50/50">
-              <h4 className="text-sm font-semibold text-gray-700 mb-3">Nova Tarefa</h4>
-              <div className="space-y-3">
-                <input
-                  type="text"
-                  value={formTarefa.titulo}
-                  onChange={e => setFormTarefa(p => ({ ...p, titulo: e.target.value }))}
-                  placeholder="Título da tarefa *"
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
-                  autoFocus
-                />
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                  <input
-                    type="text"
-                    value={formTarefa.etapa}
-                    onChange={e => setFormTarefa(p => ({ ...p, etapa: e.target.value }))}
-                    placeholder="Etapa / serviço"
-                    className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
-                  />
-                  <input
-                    type="date"
-                    value={formTarefa.prazo}
-                    min={HOJE_STR}
-                    max={MAX_DATE_STR}
-                    onChange={e => setFormTarefa(p => ({ ...p, prazo: e.target.value }))}
-                    className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
-                  />
-                  <select
-                    value={formTarefa.responsavelId}
-                    onChange={e => setFormTarefa(p => ({ ...p, responsavelId: e.target.value }))}
-                    className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500 bg-white"
-                  >
-                    <option value="">Responsável</option>
-                    {usuarios.map(u => (
-                      <option key={u.id} value={u.id}>{labelUsuario(u)}</option>
-                    ))}
-                  </select>
-                </div>
-                <div className="flex gap-2">
-                  <button onClick={criarTarefa} disabled={salvandoT}
-                    className="flex items-center gap-1.5 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-medium transition-colors">
-                    {salvandoT && <Loader2 className="w-3 h-3 animate-spin" />} Salvar
-                  </button>
-                  <button onClick={() => setNovaT(false)}
-                    className="px-4 py-2 border border-gray-200 rounded-lg text-sm text-gray-600 hover:bg-gray-50 transition-colors">
-                    Cancelar
-                  </button>
-                </div>
-              </div>
+      {/* Form nova tarefa — fora das abas de propósito: qualquer um dos
+          botões "+ Nova"/"+ Tarefa" (em qualquer aba) abre ele aqui, sem
+          precisar trocar de aba pra ver o formulário aparecer. */}
+      {novaT && modoGestor && (
+        <div className="mt-4 p-4 border-2 border-dashed border-green-200 rounded-xl bg-green-50/50">
+          <h4 className="text-sm font-semibold text-gray-700 mb-3">Nova Tarefa</h4>
+          <div className="space-y-3">
+            <input
+              type="text"
+              value={formTarefa.titulo}
+              onChange={e => setFormTarefa(p => ({ ...p, titulo: e.target.value }))}
+              placeholder="Título da tarefa *"
+              className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+              autoFocus
+            />
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+              <input
+                type="text"
+                value={formTarefa.etapa}
+                onChange={e => setFormTarefa(p => ({ ...p, etapa: e.target.value }))}
+                placeholder="Etapa / serviço"
+                className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+              />
+              <input
+                type="date"
+                value={formTarefa.prazo}
+                min={HOJE_STR}
+                max={MAX_DATE_STR}
+                onChange={e => setFormTarefa(p => ({ ...p, prazo: e.target.value }))}
+                className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+              />
+              <select
+                value={formTarefa.responsavelId}
+                onChange={e => setFormTarefa(p => ({ ...p, responsavelId: e.target.value }))}
+                className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500 bg-white"
+              >
+                <option value="">Responsável</option>
+                {usuarios.map(u => (
+                  <option key={u.id} value={u.id}>{labelUsuario(u)}</option>
+                ))}
+              </select>
             </div>
-          )}
+            <div className="flex gap-2">
+              <button onClick={criarTarefa} disabled={salvandoT}
+                className="flex items-center gap-1.5 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-medium transition-colors">
+                {salvandoT && <Loader2 className="w-3 h-3 animate-spin" />} Salvar
+              </button>
+              <button onClick={() => setNovaT(false)}
+                className="px-4 py-2 border border-gray-200 rounded-lg text-sm text-gray-600 hover:bg-gray-50 transition-colors">
+                Cancelar
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
@@ -1164,7 +1166,7 @@ export default function ProjetoDetalhe() {
               </p>
             </div>
             {modoGestor && (
-              <button onClick={() => { setAba('tarefas'); setNovaT(true) }} className="flex items-center gap-1.5 text-sm text-green-600 font-medium">
+              <button onClick={() => setNovaT(true)} className="flex items-center gap-1.5 text-sm text-green-600 font-medium">
                 <Plus className="w-4 h-4" /> Nova
               </button>
             )}
@@ -1187,7 +1189,7 @@ export default function ProjetoDetalhe() {
                   Gerar Atividades
                 </button>
                 <button
-                  onClick={() => { setAba('tarefas'); setNovaT(true) }}
+                  onClick={() => setNovaT(true)}
                   className="flex items-center justify-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-lg text-sm font-medium"
                 >
                   <Plus className="w-4 h-4" /> Tarefa Manual
