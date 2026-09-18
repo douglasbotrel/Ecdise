@@ -132,7 +132,7 @@ export default function ProjetoDetalhe() {
       const e = editando[tarefaId]
       const tarefa = (projeto?.tarefas || []).find((t: any) => t.id === tarefaId)
       const podeEnviarPrazo = !tarefa?.requerVistoriaCampo || tarefa?.statusVistoria === null
-      await fetch('/api/tarefas', {
+      const res = await fetch('/api/tarefas', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -141,6 +141,11 @@ export default function ProjetoDetalhe() {
           responsavelId: e.responsavelId || null,
         }),
       })
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}))
+        toast.error(d.error || 'Erro ao salvar')
+        return
+      }
       // Fecha a linha automaticamente após salvar
       setExpandido(prev => ({ ...prev, [tarefaId]: false }))
       toast.success('Atribuição salva!')
@@ -215,11 +220,16 @@ export default function ProjetoDetalhe() {
   // ── Atualizar status operacional ──────────────────────────
   async function atualizarStatus(novoStatus: string) {
     try {
-      await fetch(`/api/projetos/${id}`, {
+      const res = await fetch(`/api/projetos/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ statusOperacional: novoStatus }),
       })
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}))
+        toast.error(d.error || 'Erro ao atualizar status')
+        return
+      }
       toast.success('Status atualizado')
       loadProjeto({ silent: true })
     } catch { toast.error('Erro') }
@@ -237,11 +247,17 @@ export default function ProjetoDetalhe() {
       ),
     }))
     try {
-      await fetch('/api/tarefas', {
+      const res = await fetch('/api/tarefas', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: tarefaId, status: novoStatus }),
       })
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}))
+        toast.error(d.error || 'Erro ao atualizar tarefa')
+        loadProjeto({ silent: true }) // desfaz a atualização otimista, volta ao estado real
+        return
+      }
       // ── Abre modal de credenciais ao concluir tarefas SIGLA/CTF ──
       if (novoStatus === 'CONCLUIDA' && tarefa) {
         const titulo = tarefa.titulo.toUpperCase()
@@ -277,11 +293,16 @@ export default function ProjetoDetalhe() {
         ...credsAtuais,
         [modalCredencial.sistema]: { login: credForm.login, senha: credForm.senha },
       }
-      await fetch(`/api/projetos/${id}`, {
+      const res = await fetch(`/api/projetos/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ credenciais: JSON.stringify(novasCreds) }),
       })
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}))
+        toast.error(d.error || 'Erro ao salvar credenciais')
+        return
+      }
       toast.success(`Credenciais do ${modalCredencial.sistema} salvas!`)
       setModalCredencial(null)
       loadProjeto({ silent: true })
@@ -297,7 +318,7 @@ export default function ProjetoDetalhe() {
     }
     setSalvandoProtocolo(true)
     try {
-      await fetch(`/api/projetos/${id}`, {
+      const res = await fetch(`/api/projetos/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -307,6 +328,11 @@ export default function ProjetoDetalhe() {
           emAcompanhamento: true,
         }),
       })
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}))
+        toast.error(d.error || 'Erro ao salvar protocolo')
+        return
+      }
       toast.success('Protocolo registrado! Projeto movido para Acompanhamento de Processos.')
       setModalProtocolo(false)
       router.push(`/acompanhamento/${id}`)
@@ -319,7 +345,7 @@ export default function ProjetoDetalhe() {
     if (!formTarefa.titulo) { toast.error('Título obrigatório'); return }
     setSalvandoT(true)
     try {
-      await fetch('/api/tarefas', {
+      const res = await fetch('/api/tarefas', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -331,6 +357,11 @@ export default function ProjetoDetalhe() {
           ordem: (projeto?.tarefas?.length || 0) + 1,
         }),
       })
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}))
+        toast.error(d.error || 'Erro ao criar tarefa')
+        return
+      }
       toast.success('Tarefa criada')
       setNovaT(false)
       setFormTarefa({ titulo: '', etapa: '', prazo: '', responsavelId: '' })

@@ -18,6 +18,7 @@ export async function GET() {
     const projetos = await prisma.projeto.findMany({
       where: {
         etapaPipeline: { in: ['OPERACIONAL', 'EM_EXECUCAO'] },
+        excluido: false,
       },
       include: {
         cliente:    { select: { id: true, nome: true } },

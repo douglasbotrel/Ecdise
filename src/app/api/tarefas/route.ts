@@ -53,12 +53,15 @@ export async function POST(request: NextRequest) {
     }
 
     // ── Validação: prazo não pode ser no passado ───────────────────────────
+    // Comparação por STRING de data (AAAA-MM-DD), não por objeto Date — evita
+    // o bug de fuso horário em que o servidor (UTC) já considerava "hoje" um
+    // dia adiante do calendário real no Brasil (UTC-3), rejeitando prazos que
+    // na prática ainda eram hoje para quem estava usando o sistema à noite.
     if (prazo) {
-      const dataPrazo = new Date(prazo)
-      const hoje = new Date()
-      hoje.setHours(0, 0, 0, 0)
-      dataPrazo.setHours(0, 0, 0, 0)
-      if (dataPrazo < hoje) {
+      const prazoStr = String(prazo).slice(0, 10)
+      const agoraBR  = new Date(Date.now() - 3 * 60 * 60 * 1000) // UTC-3 fixo (Brasil não tem mais horário de verão)
+      const hojeStr  = agoraBR.toISOString().slice(0, 10)
+      if (prazoStr < hojeStr) {
         return NextResponse.json(
           { error: 'O prazo da tarefa não pode ser uma data passada.' },
           { status: 400 }

@@ -26,6 +26,7 @@ export async function GET(req: NextRequest) {
         emAcompanhamento: true,
         protocoloCodigoOrgao: { not: null },
         credenciais: { not: null },
+        excluido: false,
       },
       select: {
         id: true,
