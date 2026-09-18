@@ -616,7 +616,7 @@ export default function ProjetoDetalhe() {
               <div className="flex items-center gap-2">
                 {modoGestor && tarefas.length > 0 && (
                   <button
-                    onClick={e => { e.stopPropagation(); setNovaT(true) }}
+                    onClick={e => { e.stopPropagation(); setAba('tarefas'); setNovaT(true) }}
                     className="flex items-center gap-1 text-xs text-green-600 hover:text-green-700 font-medium px-2 py-1 rounded-lg hover:bg-green-50 transition-colors"
                   >
                     <Plus className="w-3.5 h-3.5" /> Tarefa
@@ -701,7 +701,7 @@ export default function ProjetoDetalhe() {
                     Gerar dos Serviços
                   </button>
                   <button
-                    onClick={() => setNovaT(true)}
+                    onClick={() => { setAba('tarefas'); setNovaT(true) }}
                     className="flex items-center justify-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-lg text-sm font-medium"
                   >
                     <Plus className="w-4 h-4" /> Tarefa Manual
@@ -994,7 +994,7 @@ export default function ProjetoDetalhe() {
             <h3 className="font-semibold text-gray-900">Linha do Tempo</h3>
             {modoGestor && (
               <button
-                onClick={() => setNovaT(true)}
+                onClick={() => { setAba('tarefas'); setNovaT(true) }}
                 className="flex items-center gap-1.5 text-sm text-green-600 hover:text-green-700 font-medium"
               >
                 <Plus className="w-4 h-4" /> Adicionar
@@ -1164,7 +1164,7 @@ export default function ProjetoDetalhe() {
               </p>
             </div>
             {modoGestor && (
-              <button onClick={() => setNovaT(true)} className="flex items-center gap-1.5 text-sm text-green-600 font-medium">
+              <button onClick={() => { setAba('tarefas'); setNovaT(true) }} className="flex items-center gap-1.5 text-sm text-green-600 font-medium">
                 <Plus className="w-4 h-4" /> Nova
               </button>
             )}
@@ -1187,7 +1187,7 @@ export default function ProjetoDetalhe() {
                   Gerar Atividades
                 </button>
                 <button
-                  onClick={() => setNovaT(true)}
+                  onClick={() => { setAba('tarefas'); setNovaT(true) }}
                   className="flex items-center justify-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-lg text-sm font-medium"
                 >
                   <Plus className="w-4 h-4" /> Tarefa Manual
