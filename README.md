@@ -1,5 +1,6 @@
 # Ecdise — Sistema de Gestão de Licenciamento Ambiental
 
+<!-- redeploy forçado -->
 Sistema ERP/CRM completo para empresas de consultoria ambiental, cobrindo toda a jornada do projeto: do lead comercial ao encerramento do contrato.
 
 ## 🚀 Como Rodar o Projeto
