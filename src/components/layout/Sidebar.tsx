@@ -48,18 +48,6 @@ const navItems = [
     modulo: 'operacional',
   },
   {
-    href: '/acompanhamento',
-    label: 'Acompanhamento de Processos',
-    icon: FileSearch,
-    modulo: 'acompanhamento',
-  },
-  {
-    href: '/licencas',
-    label: 'Licenças',
-    icon: Award,
-    modulo: 'licencas',
-  },
-  {
     href: '/campo',
     label: 'Gestão Campo',
     icon: MapPin,
@@ -70,6 +58,18 @@ const navItems = [
     label: 'Minhas Vistorias',
     icon: MapPin,
     modulo: 'tecnico',
+  },
+  {
+    href: '/acompanhamento',
+    label: 'Acompanhamento de Processos',
+    icon: FileSearch,
+    modulo: 'acompanhamento',
+  },
+  {
+    href: '/licencas',
+    label: 'Licenças',
+    icon: Award,
+    modulo: 'licencas',
   },
   {
     href: '/financeiro',

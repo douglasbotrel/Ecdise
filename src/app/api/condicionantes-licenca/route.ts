@@ -13,7 +13,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { licencaId, descricao, comoSeraFeito, responsavelId, prazo } = body
+    const { licencaId, descricao, comoSeraFeito, responsavelId, prazo, nota } = body
 
     if (!licencaId || !descricao?.trim()) {
       return NextResponse.json({ error: 'Licença e descrição são obrigatórios' }, { status: 400 })
@@ -26,6 +26,7 @@ export async function POST(request: NextRequest) {
         comoSeraFeito: comoSeraFeito || null,
         responsavelId: responsavelId || null,
         prazo: prazo ? new Date(prazo) : null,
+        nota: nota || null,
       },
       include: { responsavel: { select: { id: true, nome: true } } },
     })
@@ -56,20 +57,23 @@ export async function PATCH(request: NextRequest) {
     if (!user) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
 
     const body = await request.json()
-    const { id, concluida, descricao, comoSeraFeito, responsavelId, prazo } = body
+    const { id, concluida, descricao, comoSeraFeito, responsavelId, prazo, nota } = body
     if (!id) return NextResponse.json({ error: 'ID é obrigatório' }, { status: 400 })
 
     const atual = await prisma.condicionanteLicenca.findUnique({ where: { id } })
     if (!atual) return NextResponse.json({ error: 'Não encontrado' }, { status: 404 })
 
-    // Marcar/desmarcar concluída: o próprio responsável pode fazer isso
-    // (aparece pra ele em Tarefas da Semana). Editar texto/responsável/prazo
-    // é restrito a quem gerencia o módulo de Licenças.
-    const apenasToggle = concluida !== undefined && descricao === undefined && comoSeraFeito === undefined && responsavelId === undefined && prazo === undefined
-    if (!apenasToggle && !PODE_GERENCIAR_LICENCAS.includes(user.role)) {
+    // Marcar/desmarcar concluída e anotar uma nota: o próprio responsável pode
+    // fazer isso (aparece pra ele em Tarefas da Semana). Editar descrição,
+    // como-será-feito, responsável ou prazo é restrito a quem gerencia o
+    // módulo de Licenças.
+    const apenasAcaoDoResponsavel =
+      (concluida !== undefined || nota !== undefined) &&
+      descricao === undefined && comoSeraFeito === undefined && responsavelId === undefined && prazo === undefined
+    if (!apenasAcaoDoResponsavel && !PODE_GERENCIAR_LICENCAS.includes(user.role)) {
       return NextResponse.json({ error: 'Sem permissão para editar este item' }, { status: 403 })
     }
-    if (apenasToggle && atual.responsavelId !== user.id && !PODE_GERENCIAR_LICENCAS.includes(user.role)) {
+    if (apenasAcaoDoResponsavel && atual.responsavelId !== user.id && !PODE_GERENCIAR_LICENCAS.includes(user.role)) {
       return NextResponse.json({ error: 'Sem permissão' }, { status: 403 })
     }
 
@@ -81,6 +85,7 @@ export async function PATCH(request: NextRequest) {
         ...(comoSeraFeito !== undefined && { comoSeraFeito: comoSeraFeito || null }),
         ...(responsavelId !== undefined && { responsavelId: responsavelId || null }),
         ...(prazo !== undefined && { prazo: prazo ? new Date(prazo) : null }),
+        ...(nota !== undefined && { nota: nota || null }),
       },
       include: { responsavel: { select: { id: true, nome: true } } },
     })

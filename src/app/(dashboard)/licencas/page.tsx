@@ -72,6 +72,11 @@ export default function LicencasPage() {
   const [criandoCliente, setCriandoCliente] = useState(false)
   const [formNovoCliente, setFormNovoCliente] = useState({ nome: '', cpfCnpj: '', telefone: '' })
   const [salvandoCliente, setSalvandoCliente] = useState(false)
+  const [editandoCondicionanteId, setEditandoCondicionanteId] = useState<string | null>(null)
+  const [formEdicaoCondicionante, setFormEdicaoCondicionante] = useState({
+    descricao: '', comoSeraFeito: '', responsavelId: '', prazo: '', nota: '',
+  })
+  const [salvandoCondicionante, setSalvandoCondicionante] = useState(false)
   const [expandidas, setExpandidas] = useState<Record<string, boolean>>({})
   useLockBodyScroll(modalOpen)
 
@@ -177,6 +182,44 @@ export default function LicencasPage() {
       if (!res.ok) { const d = await res.json(); toast.error(d.error || 'Erro'); return }
       setPlanoAcao(p => p.map(item => item.id === itemId ? { ...item, concluida: !atual } : item))
     } catch { toast.error('Erro ao atualizar') }
+  }
+
+  function abrirEdicaoCondicionante(c: any) {
+    setFormEdicaoCondicionante({
+      descricao: c.descricao,
+      comoSeraFeito: c.comoSeraFeito || '',
+      responsavelId: c.responsavelId || '',
+      prazo: c.prazo ? c.prazo.split('T')[0] : '',
+      nota: c.nota || '',
+    })
+    setEditandoCondicionanteId(c.id)
+  }
+
+  async function salvarEdicaoCondicionante(itemId: string) {
+    if (!formEdicaoCondicionante.descricao.trim()) {
+      toast.error('A descrição não pode ficar vazia')
+      return
+    }
+    setSalvandoCondicionante(true)
+    try {
+      const res = await fetch('/api/condicionantes-licenca', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: itemId,
+          descricao: formEdicaoCondicionante.descricao.trim(),
+          comoSeraFeito: formEdicaoCondicionante.comoSeraFeito || null,
+          responsavelId: formEdicaoCondicionante.responsavelId || null,
+          prazo: formEdicaoCondicionante.prazo || null,
+          nota: formEdicaoCondicionante.nota || null,
+        }),
+      })
+      if (!res.ok) { const d = await res.json(); toast.error(d.error || 'Erro ao salvar'); return }
+      toast.success('Condicionante atualizada!')
+      setEditandoCondicionanteId(null)
+      carregar()
+    } catch { toast.error('Erro ao salvar') }
+    finally { setSalvandoCondicionante(false) }
   }
 
   async function salvar() {
@@ -345,19 +388,84 @@ export default function LicencasPage() {
                   </div>
                 </div>
                 {aberto && total > 0 && (
-                  <div className="px-4 pb-4 space-y-1.5 border-t border-gray-50 pt-3">
+                  <div className="px-4 pb-4 space-y-2 border-t border-gray-50 pt-3">
                     {l.planoAcao.map((c: any) => (
-                      <div key={c.id} className="flex items-start gap-2 text-sm">
-                        <button onClick={() => toggleItemExistente(c.id, c.concluida)} className="mt-0.5 flex-shrink-0">
-                          {c.concluida ? <Check className="w-4 h-4 text-green-600" /> : <Circle className="w-4 h-4 text-gray-300" />}
-                        </button>
-                        <div className="min-w-0">
-                          <p className={c.concluida ? 'text-gray-400 line-through' : 'text-gray-800'}>{c.descricao}</p>
-                          <p className="text-xs text-gray-400">
-                            {c.responsavel?.nome || 'Sem responsável'}{c.prazo ? ` · prazo ${formatData(c.prazo)}` : ''}
-                          </p>
+                      editandoCondicionanteId === c.id ? (
+                        <div key={c.id} className="p-3 bg-gray-50 rounded-lg space-y-2">
+                          <input
+                            value={formEdicaoCondicionante.descricao}
+                            onChange={e => setFormEdicaoCondicionante(f => ({ ...f, descricao: e.target.value }))}
+                            placeholder="O que precisa ser feito"
+                            className="w-full px-2.5 py-1.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                          />
+                          <div className="grid grid-cols-2 gap-2">
+                            <select
+                              value={formEdicaoCondicionante.responsavelId}
+                              onChange={e => setFormEdicaoCondicionante(f => ({ ...f, responsavelId: e.target.value }))}
+                              className="px-2.5 py-1.5 border border-gray-200 rounded-lg text-xs bg-white focus:outline-none focus:ring-2 focus:ring-green-500"
+                            >
+                              <option value="">Sem responsável</option>
+                              {usuarios.map(u => <option key={u.id} value={u.id}>{u.nome}</option>)}
+                            </select>
+                            <input
+                              type="date"
+                              value={formEdicaoCondicionante.prazo}
+                              onChange={e => setFormEdicaoCondicionante(f => ({ ...f, prazo: e.target.value }))}
+                              className="px-2.5 py-1.5 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-green-500"
+                            />
+                          </div>
+                          <input
+                            value={formEdicaoCondicionante.comoSeraFeito}
+                            onChange={e => setFormEdicaoCondicionante(f => ({ ...f, comoSeraFeito: e.target.value }))}
+                            placeholder="Como será feito (opcional)"
+                            className="w-full px-2.5 py-1.5 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-green-500"
+                          />
+                          <textarea
+                            value={formEdicaoCondicionante.nota}
+                            onChange={e => setFormEdicaoCondicionante(f => ({ ...f, nota: e.target.value }))}
+                            placeholder="Nota / observação (opcional)"
+                            rows={2}
+                            className="w-full px-2.5 py-1.5 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-green-500 resize-none"
+                          />
+                          <div className="flex justify-end gap-2">
+                            <button
+                              onClick={() => setEditandoCondicionanteId(null)}
+                              className="px-3 py-1.5 text-xs font-medium text-gray-500 hover:bg-gray-100 rounded-lg"
+                            >
+                              Cancelar
+                            </button>
+                            <button
+                              onClick={() => salvarEdicaoCondicionante(c.id)}
+                              disabled={salvandoCondicionante}
+                              className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50"
+                            >
+                              {salvandoCondicionante && <Loader2 className="w-3 h-3 animate-spin" />} Salvar
+                            </button>
+                          </div>
                         </div>
-                      </div>
+                      ) : (
+                        <div key={c.id} className="flex items-start gap-2 text-sm group">
+                          <button onClick={() => toggleItemExistente(c.id, c.concluida)} className="mt-0.5 flex-shrink-0">
+                            {c.concluida ? <Check className="w-4 h-4 text-green-600" /> : <Circle className="w-4 h-4 text-gray-300" />}
+                          </button>
+                          <div className="min-w-0 flex-1">
+                            <p className={c.concluida ? 'text-gray-400 line-through' : 'text-gray-800'}>{c.descricao}</p>
+                            <p className="text-xs text-gray-400">
+                              {c.responsavel?.nome || 'Sem responsável'}{c.prazo ? ` · prazo ${formatData(c.prazo)}` : ''}
+                            </p>
+                            {c.nota && (
+                              <p className="text-xs text-gray-500 bg-gray-50 rounded px-2 py-1 mt-1">📝 {c.nota}</p>
+                            )}
+                          </div>
+                          <button
+                            onClick={() => abrirEdicaoCondicionante(c)}
+                            className="p-1 text-gray-300 hover:text-blue-600 hover:bg-blue-50 rounded-md flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                            title="Editar condicionante"
+                          >
+                            <Pencil className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      )
                     ))}
                   </div>
                 )}

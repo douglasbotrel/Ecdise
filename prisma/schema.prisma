@@ -291,6 +291,7 @@ model CondicionanteLicenca {
   prazo          DateTime?
   concluida      Boolean   @default(false)
   dataConclusao  DateTime?
+  nota           String?   // observação livre, atualizável a qualquer momento
   criadoEm       DateTime  @default(now())
 
   licenca     Licenca  @relation(fields: [licencaId], references: [id])
