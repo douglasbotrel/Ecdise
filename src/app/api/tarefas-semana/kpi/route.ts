@@ -35,6 +35,7 @@ export async function GET(request: NextRequest) {
         usuario: { select: { id: true, nome: true } },
         tarefa: { select: { status: true } },
         acaoPendencia: { select: { concluida: true } },
+        condicionanteLicenca: { select: { concluida: true } },
       },
     })
 
@@ -44,7 +45,11 @@ export async function GET(request: NextRequest) {
         porUsuario[r.usuarioId] = { nome: r.usuario.nome, planejadas: 0, concluidas: 0 }
       }
       porUsuario[r.usuarioId].planejadas++
-      const concluida = r.tipo === 'PENDENCIA' ? r.acaoPendencia?.concluida : r.tarefa?.status === 'CONCLUIDA'
+      const concluida = r.tipo === 'PENDENCIA'
+        ? r.acaoPendencia?.concluida
+        : r.tipo === 'CONDICIONANTE_LICENCA'
+          ? r.condicionanteLicenca?.concluida
+          : r.tarefa?.status === 'CONCLUIDA'
       if (concluida) porUsuario[r.usuarioId].concluidas++
     }
 

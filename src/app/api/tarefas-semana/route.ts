@@ -30,7 +30,7 @@ export async function GET(request: NextRequest) {
 
     const semanaInicio = segundaFeiraDaSemana(semanaParam ? new Date(semanaParam) : new Date())
 
-    const [planejadas, tarefasBruto, acoesBruto] = await Promise.all([
+    const [planejadas, tarefasBruto, acoesBruto, condicionantesBruto] = await Promise.all([
       prisma.tarefaSemana.findMany({
         where: { usuarioId, semanaInicio },
         include: {
@@ -44,6 +44,16 @@ export async function GET(request: NextRequest) {
               pendencia: {
                 include: {
                   projeto: { select: { id: true, codigo: true, imovelNome: true, municipio: true, estado: true } },
+                },
+              },
+            },
+          },
+          condicionanteLicenca: {
+            include: {
+              licenca: {
+                include: {
+                  projeto: { select: { id: true, codigo: true, imovelNome: true, municipio: true, estado: true, cliente: { select: { id: true, nome: true } } } },
+                  cliente: { select: { id: true, nome: true } },
                 },
               },
             },
@@ -72,10 +82,24 @@ export async function GET(request: NextRequest) {
         },
         orderBy: [{ criadoEm: 'asc' }],
       }),
+      // Backlog — condicionantes de licença (plano de ação), ainda não concluídas
+      prisma.condicionanteLicenca.findMany({
+        where: { responsavelId: usuarioId, concluida: false },
+        include: {
+          licenca: {
+            include: {
+              projeto: { select: { id: true, codigo: true, imovelNome: true, municipio: true, estado: true, cliente: { select: { id: true, nome: true } } } },
+              cliente: { select: { id: true, nome: true } },
+            },
+          },
+        },
+        orderBy: [{ prazo: 'asc' }, { criadoEm: 'asc' }],
+      }),
     ])
 
     const idsTarefaNaSemana = new Set(planejadas.filter(p => p.tarefaId).map(p => p.tarefaId))
     const idsAcaoNaSemana   = new Set(planejadas.filter(p => p.acaoPendenciaId).map(p => p.acaoPendenciaId))
+    const idsCondNaSemana   = new Set(planejadas.filter(p => p.condicionanteLicencaId).map(p => p.condicionanteLicencaId))
 
     const backlogTarefas = tarefasBruto
       .filter(t => !idsTarefaNaSemana.has(t.id))
@@ -98,8 +122,20 @@ export async function GET(request: NextRequest) {
         projeto: a.pendencia.projeto,
       }))
 
+    const backlogCondicionantes = condicionantesBruto
+      .filter(c => !idsCondNaSemana.has(c.id))
+      .map(c => ({
+        id: c.id,
+        tipo: 'CONDICIONANTE_LICENCA' as const,
+        titulo: c.descricao,
+        prazo: c.prazo,
+        projeto: c.licenca.projeto || null,
+        cliente: c.licenca.cliente || c.licenca.projeto?.cliente || null,
+        numeroLicenca: c.licenca.numero,
+      }))
+
     // Backlog unificado, ordenado por prazo (sem prazo vai por último)
-    const backlog = [...backlogTarefas, ...backlogPendencias].sort((a, b) => {
+    const backlog = [...backlogTarefas, ...backlogPendencias, ...backlogCondicionantes].sort((a, b) => {
       if (!a.prazo && !b.prazo) return 0
       if (!a.prazo) return 1
       if (!b.prazo) return -1
@@ -124,6 +160,19 @@ export async function GET(request: NextRequest) {
             concluida: p.acaoPendencia.concluida,
           }
         }
+        if (p.tipo === 'CONDICIONANTE_LICENCA' && p.condicionanteLicenca) {
+          return {
+            id: p.id,
+            tipo: 'CONDICIONANTE_LICENCA' as const,
+            itemId: p.condicionanteLicencaId,
+            criadoEm: p.criadoEm,
+            diaSemana: p.diaSemana,
+            titulo: p.condicionanteLicenca.descricao,
+            numeroLicenca: p.condicionanteLicenca.licenca.numero,
+            projeto: p.condicionanteLicenca.licenca.projeto || null,
+            concluida: p.condicionanteLicenca.concluida,
+          }
+        }
         return {
           id: p.id,
           tipo: 'TAREFA' as const,
@@ -142,7 +191,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// Adiciona uma tarefa (ou ação de pendência) ao planejamento da semana
+// Adiciona uma tarefa, ação de pendência ou condicionante de licença ao planejamento da semana
 export async function POST(request: NextRequest) {
   try {
     const user = await getCurrentUser()
@@ -152,7 +201,7 @@ export async function POST(request: NextRequest) {
     const { itemId, tipo, semanaInicio: semanaParam, diaSemana } = body
     if (!itemId) return NextResponse.json({ error: 'itemId é obrigatório' }, { status: 400 })
 
-    const tipoFinal = tipo === 'PENDENCIA' ? 'PENDENCIA' : 'TAREFA'
+    const tipoFinal = tipo === 'PENDENCIA' ? 'PENDENCIA' : tipo === 'CONDICIONANTE_LICENCA' ? 'CONDICIONANTE_LICENCA' : 'TAREFA'
 
     let usuarioId = body.usuarioId || user.id
     if (usuarioId !== user.id && !PODE_VER_OUTROS.includes(user.role)) {
@@ -162,22 +211,25 @@ export async function POST(request: NextRequest) {
     const semanaInicio = segundaFeiraDaSemana(semanaParam ? new Date(semanaParam) : new Date())
 
     // Se ninguém escolheu um dia explicitamente (botão "+", sem arrastar/tocar
-    // numa pílula), tenta descobrir sozinho a partir do prazo que a tarefa ou
-    // a pendência já tem — evita pedir pra "redefinir" uma data que já existe.
-    // Se o prazo cair fora da semana atual (ou não existir), fica "sem dia
-    // definido" mesmo, do jeito que já era — o usuário só ajusta se precisar.
+    // numa pílula), tenta descobrir sozinho a partir do prazo que o item já
+    // tem — evita pedir pra "redefinir" uma data que já existe. Se o prazo
+    // cair fora da semana atual (ou não existir), fica "sem dia definido"
+    // mesmo, do jeito que já era — o usuário só ajusta se precisar.
     let diaFinal: number | null = diaSemana ?? null
     if (diaFinal === null) {
       let prazoReal: Date | null = null
       if (tipoFinal === 'TAREFA') {
         const tarefa = await prisma.tarefa.findUnique({ where: { id: itemId }, select: { prazo: true } })
         prazoReal = tarefa?.prazo ?? null
-      } else {
+      } else if (tipoFinal === 'PENDENCIA') {
         const acao = await prisma.acaoPendencia.findUnique({
           where: { id: itemId },
           include: { pendencia: { select: { prazoResposta: true } } },
         })
         prazoReal = acao?.pendencia?.prazoResposta ?? null
+      } else {
+        const cond = await prisma.condicionanteLicenca.findUnique({ where: { id: itemId }, select: { prazo: true } })
+        prazoReal = cond?.prazo ?? null
       }
 
       if (prazoReal) {
@@ -190,17 +242,26 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const item = tipoFinal === 'PENDENCIA'
-      ? await prisma.tarefaSemana.upsert({
-          where: { acaoPendenciaId_usuarioId_semanaInicio: { acaoPendenciaId: itemId, usuarioId, semanaInicio } },
-          create: { tipo: 'PENDENCIA', acaoPendenciaId: itemId, usuarioId, semanaInicio, diaSemana: diaFinal },
-          update: {},
-        })
-      : await prisma.tarefaSemana.upsert({
-          where: { tarefaId_usuarioId_semanaInicio: { tarefaId: itemId, usuarioId, semanaInicio } },
-          create: { tipo: 'TAREFA', tarefaId: itemId, usuarioId, semanaInicio, diaSemana: diaFinal },
-          update: {},
-        })
+    let item
+    if (tipoFinal === 'PENDENCIA') {
+      item = await prisma.tarefaSemana.upsert({
+        where: { acaoPendenciaId_usuarioId_semanaInicio: { acaoPendenciaId: itemId, usuarioId, semanaInicio } },
+        create: { tipo: 'PENDENCIA', acaoPendenciaId: itemId, usuarioId, semanaInicio, diaSemana: diaFinal },
+        update: {},
+      })
+    } else if (tipoFinal === 'CONDICIONANTE_LICENCA') {
+      item = await prisma.tarefaSemana.upsert({
+        where: { condicionanteLicencaId_usuarioId_semanaInicio: { condicionanteLicencaId: itemId, usuarioId, semanaInicio } },
+        create: { tipo: 'CONDICIONANTE_LICENCA', condicionanteLicencaId: itemId, usuarioId, semanaInicio, diaSemana: diaFinal },
+        update: {},
+      })
+    } else {
+      item = await prisma.tarefaSemana.upsert({
+        where: { tarefaId_usuarioId_semanaInicio: { tarefaId: itemId, usuarioId, semanaInicio } },
+        create: { tipo: 'TAREFA', tarefaId: itemId, usuarioId, semanaInicio, diaSemana: diaFinal },
+        update: {},
+      })
+    }
 
     return NextResponse.json({ item })
   } catch (err) {
