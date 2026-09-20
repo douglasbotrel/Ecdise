@@ -13,6 +13,21 @@ function formatData(d: string | Date | null | undefined) {
   return new Date(d).toLocaleDateString('pt-BR')
 }
 
+function maskCpfCnpj(value: string): string {
+  const digitos = value.replace(/\D/g, '').slice(0, 14)
+  if (digitos.length <= 11) {
+    return digitos
+      .replace(/(\d{3})(\d)/, '$1.$2')
+      .replace(/(\d{3})(\d)/, '$1.$2')
+      .replace(/(\d{3})(\d{1,2})$/, '$1-$2')
+  }
+  return digitos
+    .replace(/(\d{2})(\d)/, '$1.$2')
+    .replace(/(\d{3})(\d)/, '$1.$2')
+    .replace(/(\d{3})(\d)/, '$1/$2')
+    .replace(/(\d{4})(\d{1,2})$/, '$1-$2')
+}
+
 function statusVigencia(dataValidade: string | Date | null | undefined): { label: string; cor: string } {
   if (!dataValidade) return { label: 'Sem validade definida', cor: 'bg-gray-100 text-gray-500' }
   const dias = Math.floor((new Date(dataValidade).getTime() - Date.now()) / 86_400_000)
@@ -54,6 +69,9 @@ export default function LicencasPage() {
   const [salvando, setSalvando] = useState(false)
   const [form, setForm] = useState(FORM_VAZIO)
   const [planoAcao, setPlanoAcao] = useState<PlanoAcaoItem[]>([])
+  const [criandoCliente, setCriandoCliente] = useState(false)
+  const [formNovoCliente, setFormNovoCliente] = useState({ nome: '', cpfCnpj: '', telefone: '' })
+  const [salvandoCliente, setSalvandoCliente] = useState(false)
   const [expandidas, setExpandidas] = useState<Record<string, boolean>>({})
   useLockBodyScroll(modalOpen)
 
@@ -82,7 +100,36 @@ export default function LicencasPage() {
   function abrirNova() {
     setForm(FORM_VAZIO)
     setPlanoAcao([])
+    setCriandoCliente(false)
+    setFormNovoCliente({ nome: '', cpfCnpj: '', telefone: '' })
     setModalOpen(true)
+  }
+
+  async function criarClienteRapido() {
+    if (!formNovoCliente.nome.trim() || !formNovoCliente.cpfCnpj.trim()) {
+      toast.error('Nome e CPF/CNPJ são obrigatórios')
+      return
+    }
+    setSalvandoCliente(true)
+    try {
+      const res = await fetch('/api/clientes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          nome: formNovoCliente.nome.trim(),
+          cpfCnpj: formNovoCliente.cpfCnpj,
+          telefone: formNovoCliente.telefone || null,
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) { toast.error(data.error || 'Erro ao criar cliente'); return }
+      toast.success('Cliente cadastrado!')
+      setClientes(prev => [...prev, data.cliente])
+      setForm(f => ({ ...f, clienteId: data.cliente.id }))
+      setCriandoCliente(false)
+      setFormNovoCliente({ nome: '', cpfCnpj: '', telefone: '' })
+    } catch { toast.error('Erro ao criar cliente') }
+    finally { setSalvandoCliente(false) }
   }
 
   function abrirEdicao(l: any) {
@@ -365,17 +412,60 @@ export default function LicencasPage() {
 
               {!form.id && form.vinculo === 'avulsa' && (
                 <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">Cliente *</label>
-                  <select
-                    value={form.clienteId}
-                    onChange={e => setForm(f => ({ ...f, clienteId: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-green-500"
-                  >
-                    <option value="">Selecione o cliente...</option>
-                    {clientesOrdenados.map((c: any) => (
-                      <option key={c.id} value={c.id}>{c.nome}</option>
-                    ))}
-                  </select>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-xs font-medium text-gray-600">Cliente *</label>
+                    <button
+                      type="button"
+                      onClick={() => setCriandoCliente(v => !v)}
+                      className="text-xs text-green-600 font-medium hover:text-green-700"
+                    >
+                      {criandoCliente ? 'Selecionar existente' : '+ Novo cliente'}
+                    </button>
+                  </div>
+
+                  {criandoCliente ? (
+                    <div className="p-3 border border-dashed border-green-200 rounded-lg bg-green-50/40 space-y-2">
+                      <input
+                        value={formNovoCliente.nome}
+                        onChange={e => setFormNovoCliente(f => ({ ...f, nome: e.target.value }))}
+                        placeholder="Nome do cliente *"
+                        className="w-full px-2.5 py-1.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                      />
+                      <div className="grid grid-cols-2 gap-2">
+                        <input
+                          value={formNovoCliente.cpfCnpj}
+                          onChange={e => setFormNovoCliente(f => ({ ...f, cpfCnpj: maskCpfCnpj(e.target.value) }))}
+                          placeholder="CPF/CNPJ *"
+                          className="px-2.5 py-1.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                        />
+                        <input
+                          value={formNovoCliente.telefone}
+                          onChange={e => setFormNovoCliente(f => ({ ...f, telefone: e.target.value }))}
+                          placeholder="Telefone (opcional)"
+                          className="px-2.5 py-1.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={criarClienteRapido}
+                        disabled={salvandoCliente}
+                        className="w-full flex items-center justify-center gap-1.5 py-1.5 bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white text-sm font-medium rounded-lg"
+                      >
+                        {salvandoCliente && <Loader2 className="w-3.5 h-3.5 animate-spin" />} Cadastrar e usar
+                      </button>
+                    </div>
+                  ) : (
+                    <select
+                      value={form.clienteId}
+                      onChange={e => setForm(f => ({ ...f, clienteId: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-green-500"
+                    >
+                      <option value="">Selecione o cliente...</option>
+                      {clientesOrdenados.map((c: any) => (
+                        <option key={c.id} value={c.id}>{c.nome}</option>
+                      ))}
+                    </select>
+                  )}
                   <p className="text-xs text-gray-400 mt-1">Essa licença não terá código de projeto (PRJ-00XX) — é um registro manual/externo.</p>
                 </div>
               )}
