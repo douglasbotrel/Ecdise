@@ -96,3 +96,36 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ error: 'Erro interno' }, { status: 500 })
   }
 }
+
+// DELETE /api/condicionantes-licenca?id=... — remove um item do plano de ação.
+// Restrito ao ADMIN — os demais gestores podem editar, mas não excluir.
+export async function DELETE(request: NextRequest) {
+  try {
+    const user = await getCurrentUser()
+    if (!user) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
+    if (user.role !== 'ADMIN') {
+      return NextResponse.json({ error: 'Apenas o Administrador pode excluir condicionantes' }, { status: 403 })
+    }
+
+    const { searchParams } = new URL(request.url)
+    const id = searchParams.get('id')
+    if (!id) return NextResponse.json({ error: 'id é obrigatório' }, { status: 400 })
+
+    const item = await prisma.condicionanteLicenca.findUnique({ where: { id } })
+    if (!item) return NextResponse.json({ error: 'Não encontrado' }, { status: 404 })
+
+    // Remove primeiro qualquer planejamento na semana que referencie esse item
+    // (senão a exclusão falha por restrição de chave estrangeira)
+    await prisma.tarefaSemana.deleteMany({ where: { condicionanteLicencaId: id } })
+    await prisma.condicionanteLicenca.delete({ where: { id } })
+
+    await prisma.log.create({
+      data: { usuarioId: user.id, acao: 'EXCLUIR_CONDICIONANTE_LICENCA', entidade: 'CondicionanteLicenca', entidadeId: id },
+    }).catch(() => {})
+
+    return NextResponse.json({ ok: true })
+  } catch (error) {
+    console.error('[condicionantes-licenca DELETE]', error)
+    return NextResponse.json({ error: 'Erro interno' }, { status: 500 })
+  }
+}

@@ -64,6 +64,7 @@ export default function LicencasPage() {
   const [usuarios, setUsuarios] = useState<any[]>([])
   const [clientes, setClientes] = useState<any[]>([])
   const [projetos, setProjetos] = useState<any[]>([])
+  const [meRole, setMeRole] = useState<string | null>(null)
 
   const [modalOpen, setModalOpen] = useState(false)
   const [salvando, setSalvando] = useState(false)
@@ -98,6 +99,7 @@ export default function LicencasPage() {
 
   useEffect(() => {
     fetch('/api/usuarios?ativo=true').then(r => r.json()).then(d => setUsuarios(d.usuarios || [])).catch(() => {})
+    fetch('/api/auth/me').then(r => r.json()).then(d => setMeRole((d.usuario || d)?.role || null)).catch(() => {})
     fetch('/api/clientes').then(r => r.json()).then(d => setClientes(d.clientes || [])).catch(() => {})
     fetch('/api/projetos?limit=200').then(r => r.json()).then(d => setProjetos(d.projetos || [])).catch(() => {})
   }, [])
@@ -220,6 +222,17 @@ export default function LicencasPage() {
       carregar()
     } catch { toast.error('Erro ao salvar') }
     finally { setSalvandoCondicionante(false) }
+  }
+
+  async function excluirCondicionante(itemId: string, descricao: string) {
+    const confirmado = window.confirm(`Excluir a condicionante "${descricao}"? Esta ação não pode ser desfeita.`)
+    if (!confirmado) return
+    try {
+      const res = await fetch(`/api/condicionantes-licenca?id=${itemId}`, { method: 'DELETE' })
+      if (!res.ok) { const d = await res.json(); toast.error(d.error || 'Erro ao excluir'); return }
+      toast.success('Condicionante excluída')
+      carregar()
+    } catch { toast.error('Erro ao excluir') }
   }
 
   async function salvar() {
@@ -464,6 +477,15 @@ export default function LicencasPage() {
                           >
                             <Pencil className="w-3.5 h-3.5" />
                           </button>
+                          {meRole === 'ADMIN' && (
+                            <button
+                              onClick={() => excluirCondicionante(c.id, c.descricao)}
+                              className="p-1 text-gray-300 hover:text-red-600 hover:bg-red-50 rounded-md flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                              title="Excluir condicionante"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          )}
                         </div>
                       )
                     ))}
