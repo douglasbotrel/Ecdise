@@ -60,7 +60,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const {
       projetoId, clienteId, numero, dataEmissao, dataValidade,
-      areaPermitida, atividadePermitida, condicionantes, documentoUrl,
+      areaPermitida, atividadePermitida, latitude, longitude, condicionantes, documentoUrl,
       planoAcao, // opcional: array de { descricao, comoSeraFeito, responsavelId, prazo }
     } = body
 
@@ -83,6 +83,8 @@ export async function POST(request: NextRequest) {
       dataValidade: dataValidade ? new Date(dataValidade) : null,
       areaPermitida: areaPermitida ? parseFloat(areaPermitida) : null,
       atividadePermitida: atividadePermitida || null,
+      latitude: latitude ? parseFloat(latitude) : null,
+      longitude: longitude ? parseFloat(longitude) : null,
       condicionantes: condicionantes || null,
       documentoUrl: documentoUrl || null,
     }

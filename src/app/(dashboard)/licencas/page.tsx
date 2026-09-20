@@ -1,12 +1,23 @@
 'use client'
 
 import { useState, useEffect, useMemo } from 'react'
+import dynamic from 'next/dynamic'
 import { toast } from 'sonner'
 import {
   Award, Plus, X, Search, Loader2, Calendar, MapPin, Ruler, FileText,
-  Check, Circle, Trash2, ChevronDown, ChevronUp, Pencil,
+  Check, Circle, Trash2, ChevronDown, ChevronUp, Pencil, Map as MapIcon,
 } from 'lucide-react'
 import { useLockBodyScroll } from '@/hooks/useLockBodyScroll'
+
+// Carregado só no navegador — Leaflet precisa do DOM, não funciona em SSR
+const MapaLicencas = dynamic(() => import('@/components/MapaLicencas'), {
+  ssr: false,
+  loading: () => (
+    <div className="h-[520px] flex items-center justify-center bg-gray-50 rounded-xl border border-gray-200">
+      <Loader2 className="w-6 h-6 animate-spin text-gray-300" />
+    </div>
+  ),
+})
 
 function formatData(d: string | Date | null | undefined) {
   if (!d) return '—'
@@ -55,6 +66,8 @@ const FORM_VAZIO = {
   dataValidade: '',
   areaPermitida: '',
   atividadePermitida: '',
+  latitude: '',
+  longitude: '',
 }
 
 export default function LicencasPage() {
@@ -67,6 +80,7 @@ export default function LicencasPage() {
   const [meRole, setMeRole] = useState<string | null>(null)
 
   const [modalOpen, setModalOpen] = useState(false)
+  const [verMapa, setVerMapa] = useState(false)
   const [salvando, setSalvando] = useState(false)
   const [form, setForm] = useState(FORM_VAZIO)
   const [planoAcao, setPlanoAcao] = useState<PlanoAcaoItem[]>([])
@@ -150,6 +164,8 @@ export default function LicencasPage() {
       dataValidade: l.dataValidade ? l.dataValidade.split('T')[0] : '',
       areaPermitida: l.areaPermitida != null ? String(l.areaPermitida) : '',
       atividadePermitida: l.atividadePermitida || '',
+      latitude: l.latitude != null ? String(l.latitude) : '',
+      longitude: l.longitude != null ? String(l.longitude) : '',
     })
     setPlanoAcao((l.planoAcao || []).map((c: any) => ({
       id: c.id,
@@ -262,6 +278,8 @@ export default function LicencasPage() {
             dataValidade: form.dataValidade || null,
             areaPermitida: form.areaPermitida || null,
             atividadePermitida: form.atividadePermitida || null,
+            latitude: form.latitude || null,
+            longitude: form.longitude || null,
           }),
         })
         if (!res.ok) { const d = await res.json(); toast.error(d.error || 'Erro ao salvar'); return }
@@ -294,6 +312,8 @@ export default function LicencasPage() {
             dataValidade: form.dataValidade || null,
             areaPermitida: form.areaPermitida || null,
             atividadePermitida: form.atividadePermitida || null,
+            latitude: form.latitude || null,
+            longitude: form.longitude || null,
             planoAcao: planoAcao.filter(item => item.descricao.trim()).map(item => ({
               descricao: item.descricao,
               comoSeraFeito: item.comoSeraFeito || null,
@@ -313,6 +333,7 @@ export default function LicencasPage() {
 
   const clientesOrdenados = useMemo(() => [...clientes].sort((a, b) => a.nome.localeCompare(b.nome)), [clientes])
   const projetosOrdenados = useMemo(() => [...projetos].sort((a, b) => (a.codigo || '').localeCompare(b.codigo || '')), [projetos])
+  const licencasComCoordenadas = useMemo(() => licencas.filter(l => l.latitude != null && l.longitude != null), [licencas])
 
   return (
     <div className="p-4 sm:p-6 space-y-5 max-w-6xl mx-auto">
@@ -325,13 +346,27 @@ export default function LicencasPage() {
             Todas as licenças obtidas — vindas de projetos ou cadastradas manualmente.
           </p>
         </div>
-        <button
-          onClick={abrirNova}
-          className="flex items-center gap-2 px-4 py-2.5 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold rounded-xl transition-colors"
-        >
-          <Plus className="w-4 h-4" /> Nova Licença
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={() => setVerMapa(v => !v)}
+            disabled={licencasComCoordenadas.length === 0}
+            className="flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-200 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed text-gray-700 text-sm font-semibold rounded-xl transition-colors"
+            title={licencasComCoordenadas.length === 0 ? 'Nenhuma licença com coordenadas cadastradas ainda' : ''}
+          >
+            <MapIcon className="w-4 h-4" /> {verMapa ? 'Ocultar Mapa' : 'Ver Mapa'} ({licencasComCoordenadas.length})
+          </button>
+          <button
+            onClick={abrirNova}
+            className="flex items-center gap-2 px-4 py-2.5 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold rounded-xl transition-colors"
+          >
+            <Plus className="w-4 h-4" /> Nova Licença
+          </button>
+        </div>
       </div>
+
+      {verMapa && licencasComCoordenadas.length > 0 && (
+        <MapaLicencas licencas={licencasComCoordenadas} />
+      )}
 
       <div className="bg-white rounded-xl border border-gray-100 p-3">
         <div className="relative">
@@ -636,6 +671,24 @@ export default function LicencasPage() {
                     className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500" />
                 </div>
               </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Latitude</label>
+                  <input type="number" step="any" value={form.latitude} onChange={e => setForm(f => ({ ...f, latitude: e.target.value }))}
+                    placeholder="Ex: -5.5231"
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500" />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Longitude</label>
+                  <input type="number" step="any" value={form.longitude} onChange={e => setForm(f => ({ ...f, longitude: e.target.value }))}
+                    placeholder="Ex: -45.2145"
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500" />
+                </div>
+              </div>
+              <p className="text-xs text-gray-400 -mt-2">
+                Opcional — se preencher os dois, essa licença aparece no mapa geral (botão "Ver Mapa").
+              </p>
 
               {/* Plano de ação */}
               <div className="pt-2 border-t border-gray-100">

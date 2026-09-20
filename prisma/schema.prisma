@@ -263,6 +263,8 @@ model Licenca {
   dataValidade   DateTime?
   areaPermitida  Float?
   atividadePermitida String?
+  latitude       Float?
+  longitude      Float?
   condicionantes String?   // observações gerais em texto livre (legado)
   documentoUrl   String?
   criadoEm       DateTime  @default(now())

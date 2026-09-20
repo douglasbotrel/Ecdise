@@ -43,6 +43,8 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
     if (body.dataEmissao !== undefined) updateData.dataEmissao = new Date(body.dataEmissao)
     if (body.dataValidade !== undefined) updateData.dataValidade = body.dataValidade ? new Date(body.dataValidade) : null
     if (body.areaPermitida !== undefined) updateData.areaPermitida = body.areaPermitida ? parseFloat(body.areaPermitida) : null
+    if (body.latitude !== undefined) updateData.latitude = body.latitude ? parseFloat(body.latitude) : null
+    if (body.longitude !== undefined) updateData.longitude = body.longitude ? parseFloat(body.longitude) : null
     if (body.atividadePermitida !== undefined) updateData.atividadePermitida = body.atividadePermitida || null
     if (body.condicionantes !== undefined) updateData.condicionantes = body.condicionantes || null
     if (body.documentoUrl !== undefined) updateData.documentoUrl = body.documentoUrl || null
