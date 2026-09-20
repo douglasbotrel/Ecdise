@@ -24,6 +24,28 @@ function formatData(d: string | Date | null | undefined) {
   return new Date(d).toLocaleDateString('pt-BR')
 }
 
+// Converte graus/minutos/segundos para decimal (N e E ficam positivos; S e W, negativos)
+function gmsParaDecimal(graus: string, min: string, seg: string, hemisferio: 'N' | 'S' | 'E' | 'W'): number | null {
+  const g = parseFloat(graus)
+  if (isNaN(g)) return null
+  const m = parseFloat(min) || 0
+  const s = parseFloat(seg) || 0
+  const decimal = Math.abs(g) + m / 60 + s / 3600
+  const negativo = hemisferio === 'S' || hemisferio === 'W'
+  return negativo ? -decimal : decimal
+}
+
+// Converte decimal para graus/minutos/segundos — usado ao editar uma licença
+// que já tem coordenada salva, pra pré-preencher o formulário em GMS também
+function decimalParaGms(valor: number): { graus: string; min: string; seg: string } {
+  const abs = Math.abs(valor)
+  const graus = Math.floor(abs)
+  const minFloat = (abs - graus) * 60
+  const min = Math.floor(minFloat)
+  const seg = Math.round((minFloat - min) * 60 * 100) / 100
+  return { graus: String(graus), min: String(min), seg: String(seg) }
+}
+
 function maskCpfCnpj(value: string): string {
   const digitos = value.replace(/\D/g, '').slice(0, 14)
   if (digitos.length <= 11) {
@@ -81,6 +103,11 @@ export default function LicencasPage() {
 
   const [modalOpen, setModalOpen] = useState(false)
   const [verMapa, setVerMapa] = useState(false)
+  const [formatoCoord, setFormatoCoord] = useState<'decimal' | 'gms'>('decimal')
+  const [gms, setGms] = useState({
+    latGraus: '', latMin: '', latSeg: '', latHemis: 'S' as 'N' | 'S',
+    lonGraus: '', lonMin: '', lonSeg: '', lonHemis: 'W' as 'E' | 'W',
+  })
   const [salvando, setSalvando] = useState(false)
   const [form, setForm] = useState(FORM_VAZIO)
   const [planoAcao, setPlanoAcao] = useState<PlanoAcaoItem[]>([])
@@ -123,6 +150,8 @@ export default function LicencasPage() {
     setPlanoAcao([])
     setCriandoCliente(false)
     setFormNovoCliente({ nome: '', cpfCnpj: '', telefone: '' })
+    setFormatoCoord('decimal')
+    setGms({ latGraus: '', latMin: '', latSeg: '', latHemis: 'S', lonGraus: '', lonMin: '', lonSeg: '', lonHemis: 'W' })
     setModalOpen(true)
   }
 
@@ -167,6 +196,17 @@ export default function LicencasPage() {
       latitude: l.latitude != null ? String(l.latitude) : '',
       longitude: l.longitude != null ? String(l.longitude) : '',
     })
+    setFormatoCoord('decimal')
+    if (l.latitude != null && l.longitude != null) {
+      const gLat = decimalParaGms(l.latitude)
+      const gLon = decimalParaGms(l.longitude)
+      setGms({
+        latGraus: gLat.graus, latMin: gLat.min, latSeg: gLat.seg, latHemis: l.latitude < 0 ? 'S' : 'N',
+        lonGraus: gLon.graus, lonMin: gLon.min, lonSeg: gLon.seg, lonHemis: l.longitude < 0 ? 'W' : 'E',
+      })
+    } else {
+      setGms({ latGraus: '', latMin: '', latSeg: '', latHemis: 'S', lonGraus: '', lonMin: '', lonSeg: '', lonHemis: 'W' })
+    }
     setPlanoAcao((l.planoAcao || []).map((c: any) => ({
       id: c.id,
       descricao: c.descricao,
@@ -672,23 +712,105 @@ export default function LicencasPage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">Latitude</label>
-                  <input type="number" step="any" value={form.latitude} onChange={e => setForm(f => ({ ...f, latitude: e.target.value }))}
-                    placeholder="Ex: -5.5231"
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500" />
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-xs font-medium text-gray-600">Coordenadas (opcional)</label>
+                  <div className="flex gap-1 p-0.5 bg-gray-100 rounded-lg">
+                    <button
+                      type="button"
+                      onClick={() => setFormatoCoord('decimal')}
+                      className={`px-2 py-1 text-xs font-medium rounded-md transition-colors ${formatoCoord === 'decimal' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500'}`}
+                    >
+                      Decimal
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setFormatoCoord('gms')}
+                      className={`px-2 py-1 text-xs font-medium rounded-md transition-colors ${formatoCoord === 'gms' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500'}`}
+                    >
+                      Grau/Min/Seg
+                    </button>
+                  </div>
                 </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">Longitude</label>
-                  <input type="number" step="any" value={form.longitude} onChange={e => setForm(f => ({ ...f, longitude: e.target.value }))}
-                    placeholder="Ex: -45.2145"
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500" />
-                </div>
+
+                {formatoCoord === 'decimal' ? (
+                  <div className="grid grid-cols-2 gap-3">
+                    <input type="number" step="any" value={form.latitude} onChange={e => setForm(f => ({ ...f, latitude: e.target.value }))}
+                      placeholder="Latitude — ex: -5.5231"
+                      className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500" />
+                    <input type="number" step="any" value={form.longitude} onChange={e => setForm(f => ({ ...f, longitude: e.target.value }))}
+                      placeholder="Longitude — ex: -45.2145"
+                      className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500" />
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {/* Latitude em GMS */}
+                    <div className="flex items-center gap-1.5">
+                      <input type="number" value={gms.latGraus} onChange={e => {
+                        const novo = { ...gms, latGraus: e.target.value }
+                        setGms(novo)
+                        setForm(f => ({ ...f, latitude: String(gmsParaDecimal(novo.latGraus, novo.latMin, novo.latSeg, novo.latHemis) ?? '') }))
+                      }} placeholder="Graus" className="w-1/4 px-2 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500" />
+                      <span className="text-gray-400 text-xs">°</span>
+                      <input type="number" value={gms.latMin} onChange={e => {
+                        const novo = { ...gms, latMin: e.target.value }
+                        setGms(novo)
+                        setForm(f => ({ ...f, latitude: String(gmsParaDecimal(novo.latGraus, novo.latMin, novo.latSeg, novo.latHemis) ?? '') }))
+                      }} placeholder="Min" className="w-1/4 px-2 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500" />
+                      <span className="text-gray-400 text-xs">'</span>
+                      <input type="number" step="any" value={gms.latSeg} onChange={e => {
+                        const novo = { ...gms, latSeg: e.target.value }
+                        setGms(novo)
+                        setForm(f => ({ ...f, latitude: String(gmsParaDecimal(novo.latGraus, novo.latMin, novo.latSeg, novo.latHemis) ?? '') }))
+                      }} placeholder="Seg" className="w-1/4 px-2 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500" />
+                      <span className="text-gray-400 text-xs">"</span>
+                      <select value={gms.latHemis} onChange={e => {
+                        const novo = { ...gms, latHemis: e.target.value as 'N' | 'S' }
+                        setGms(novo)
+                        setForm(f => ({ ...f, latitude: String(gmsParaDecimal(novo.latGraus, novo.latMin, novo.latSeg, novo.latHemis) ?? '') }))
+                      }} className="px-1.5 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-green-500">
+                        <option value="S">S</option>
+                        <option value="N">N</option>
+                      </select>
+                    </div>
+                    {/* Longitude em GMS */}
+                    <div className="flex items-center gap-1.5">
+                      <input type="number" value={gms.lonGraus} onChange={e => {
+                        const novo = { ...gms, lonGraus: e.target.value }
+                        setGms(novo)
+                        setForm(f => ({ ...f, longitude: String(gmsParaDecimal(novo.lonGraus, novo.lonMin, novo.lonSeg, novo.lonHemis) ?? '') }))
+                      }} placeholder="Graus" className="w-1/4 px-2 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500" />
+                      <span className="text-gray-400 text-xs">°</span>
+                      <input type="number" value={gms.lonMin} onChange={e => {
+                        const novo = { ...gms, lonMin: e.target.value }
+                        setGms(novo)
+                        setForm(f => ({ ...f, longitude: String(gmsParaDecimal(novo.lonGraus, novo.lonMin, novo.lonSeg, novo.lonHemis) ?? '') }))
+                      }} placeholder="Min" className="w-1/4 px-2 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500" />
+                      <span className="text-gray-400 text-xs">'</span>
+                      <input type="number" step="any" value={gms.lonSeg} onChange={e => {
+                        const novo = { ...gms, lonSeg: e.target.value }
+                        setGms(novo)
+                        setForm(f => ({ ...f, longitude: String(gmsParaDecimal(novo.lonGraus, novo.lonMin, novo.lonSeg, novo.lonHemis) ?? '') }))
+                      }} placeholder="Seg" className="w-1/4 px-2 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500" />
+                      <span className="text-gray-400 text-xs">"</span>
+                      <select value={gms.lonHemis} onChange={e => {
+                        const novo = { ...gms, lonHemis: e.target.value as 'E' | 'W' }
+                        setGms(novo)
+                        setForm(f => ({ ...f, longitude: String(gmsParaDecimal(novo.lonGraus, novo.lonMin, novo.lonSeg, novo.lonHemis) ?? '') }))
+                      }} className="px-1.5 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-green-500">
+                        <option value="W">W</option>
+                        <option value="E">E</option>
+                      </select>
+                    </div>
+                    {form.latitude && form.longitude && (
+                      <p className="text-xs text-gray-400">Convertido: {parseFloat(form.latitude).toFixed(6)}, {parseFloat(form.longitude).toFixed(6)}</p>
+                    )}
+                  </div>
+                )}
+                <p className="text-xs text-gray-400 mt-1">
+                  Opcional — se preencher os dois, essa licença aparece no mapa geral (botão "Ver Mapa").
+                </p>
               </div>
-              <p className="text-xs text-gray-400 -mt-2">
-                Opcional — se preencher os dois, essa licença aparece no mapa geral (botão "Ver Mapa").
-              </p>
 
               {/* Plano de ação */}
               <div className="pt-2 border-t border-gray-100">
