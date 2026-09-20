@@ -7,7 +7,7 @@ import { toast } from 'sonner'
 import {
   ArrowLeft, Plus, Check, FileText, BarChart2,
   DollarSign, User, Calendar, Loader2,
-  Edit2, Save, Clock, AlertCircle, MessageSquare,
+  Edit2, Save, Clock, AlertCircle, MessageSquare, Award, X,
 } from 'lucide-react'
 import {
   formatDate, formatCurrency,
@@ -67,6 +67,56 @@ export default function ProjetoDetalhe() {
   useLockBodyScroll(!!(modalCredencial || modalProtocolo))
   const [protocoloForm, setProtocoloForm]         = useState({ data: '', codigoOrgao: '' })
   const [salvandoProtocolo, setSalvandoProtocolo] = useState(false)
+
+  // Modal de Licença Obtida
+  const [modalLicenca, setModalLicenca]           = useState(false)
+  useLockBodyScroll(!!(modalCredencial || modalProtocolo || modalLicenca))
+  const [licencaForm, setLicencaForm] = useState({
+    numero: '', dataEmissao: '', dataValidade: '', areaPermitida: '', atividadePermitida: '',
+  })
+  const [salvandoLicenca, setSalvandoLicenca] = useState(false)
+
+  function abrirModalLicenca() {
+    setLicencaForm({
+      numero: projeto?.licenca?.numero || '',
+      dataEmissao: projeto?.licenca?.dataEmissao ? projeto.licenca.dataEmissao.split('T')[0] : HOJE_STR,
+      dataValidade: projeto?.licenca?.dataValidade ? projeto.licenca.dataValidade.split('T')[0] : '',
+      areaPermitida: projeto?.licenca?.areaPermitida != null ? String(projeto.licenca.areaPermitida) : '',
+      atividadePermitida: projeto?.licenca?.atividadePermitida || '',
+    })
+    setModalLicenca(true)
+  }
+
+  async function salvarLicencaObtida() {
+    if (!licencaForm.numero.trim() || !licencaForm.dataEmissao) {
+      toast.error('Informe o número da licença e a data de emissão')
+      return
+    }
+    setSalvandoLicenca(true)
+    try {
+      const res = await fetch('/api/licencas', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          projetoId: id,
+          numero: licencaForm.numero.trim(),
+          dataEmissao: licencaForm.dataEmissao,
+          dataValidade: licencaForm.dataValidade || null,
+          areaPermitida: licencaForm.areaPermitida || null,
+          atividadePermitida: licencaForm.atividadePermitida || null,
+        }),
+      })
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}))
+        toast.error(d.error || 'Erro ao registrar licença')
+        return
+      }
+      toast.success('🏅 Licença registrada! Confira/complete o plano de ação na aba Licenças.')
+      setModalLicenca(false)
+      loadProjeto({ silent: true })
+    } catch { toast.error('Erro ao registrar licença') }
+    finally { setSalvandoLicenca(false) }
+  }
 
   // Etapas que têm acesso ao módulo Operacional (após primeiro pagamento)
   const ETAPAS_VALIDAS    = ['OPERACIONAL', 'EM_EXECUCAO', 'CONCLUIDO']
@@ -275,6 +325,8 @@ export default function ProjetoDetalhe() {
             codigoOrgao: projeto?.protocoloCodigoOrgao || '',
           })
           setModalProtocolo(true)
+        } else if (titulo.includes('LICENÇA') || titulo.includes('LICENCA')) {
+          abrirModalLicenca()
         }
       }
     } catch {
@@ -486,17 +538,28 @@ export default function ProjetoDetalhe() {
               <span className="text-xs text-gray-500">{projeto.tipoServico} • {projeto.municipio}</span>
             </div>
           </div>
-          {!emOperacional && (
-            <select
-              value={projeto.statusOperacional}
-              onChange={e => atualizarStatus(e.target.value)}
-              className="px-3 py-2 border border-gray-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-green-500 w-full sm:w-auto"
-            >
-              {Object.entries(STATUS_OPERACIONAL_LABELS).map(([k, v]) => (
-                <option key={k} value={k}>{v}</option>
-              ))}
-            </select>
-          )}
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            {modoGestor && (
+              <button
+                onClick={abrirModalLicenca}
+                className="flex items-center gap-1.5 px-3 py-2 bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 rounded-xl text-sm font-medium transition-colors flex-shrink-0"
+                title="Registrar licença obtida"
+              >
+                <Award className="w-4 h-4" /> Licença Obtida
+              </button>
+            )}
+            {!emOperacional && (
+              <select
+                value={projeto.statusOperacional}
+                onChange={e => atualizarStatus(e.target.value)}
+                className="px-3 py-2 border border-gray-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-green-500 w-full sm:w-auto"
+              >
+                {Object.entries(STATUS_OPERACIONAL_LABELS).map(([k, v]) => (
+                  <option key={k} value={k}>{v}</option>
+                ))}
+              </select>
+            )}
+          </div>
         </div>
       </div>
 
@@ -1552,6 +1615,104 @@ export default function ProjetoDetalhe() {
                 className="px-5 py-2.5 border border-gray-200 text-gray-600 hover:bg-gray-50 rounded-xl text-sm font-medium"
               >
                 Pular
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Licença Obtida */}
+      {modalLicenca && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 sticky top-0 bg-white">
+              <div>
+                <h2 className="font-bold text-gray-900">🏅 Licença Obtida</h2>
+                <p className="text-xs text-gray-500 mt-0.5">
+                  Registre os dados básicos — o plano de ação (condicionantes) você completa depois na aba Licenças.
+                </p>
+              </div>
+              <button
+                onClick={() => setModalLicenca(false)}
+                className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="px-6 py-5 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Número da licença *</label>
+                <input
+                  type="text"
+                  value={licencaForm.numero}
+                  onChange={e => setLicencaForm(p => ({ ...p, numero: e.target.value }))}
+                  placeholder="Ex: LP-1234/2026"
+                  className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                  autoFocus
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Data de emissão *</label>
+                  <input
+                    type="date"
+                    value={licencaForm.dataEmissao}
+                    onChange={e => setLicencaForm(p => ({ ...p, dataEmissao: e.target.value }))}
+                    className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Data de validade</label>
+                  <input
+                    type="date"
+                    value={licencaForm.dataValidade}
+                    onChange={e => setLicencaForm(p => ({ ...p, dataValidade: e.target.value }))}
+                    className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Área permitida (ha)</label>
+                  <input
+                    type="number" step="0.01"
+                    value={licencaForm.areaPermitida}
+                    onChange={e => setLicencaForm(p => ({ ...p, areaPermitida: e.target.value }))}
+                    className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Atividade permitida</label>
+                  <input
+                    type="text"
+                    value={licencaForm.atividadePermitida}
+                    onChange={e => setLicencaForm(p => ({ ...p, atividadePermitida: e.target.value }))}
+                    placeholder="Ex: Pecuária extensiva"
+                    className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                  />
+                </div>
+              </div>
+              <p className="text-xs text-amber-700 bg-amber-50 rounded-lg px-3 py-2">
+                📋 Depois de salvar, essa licença aparece na aba <strong>Licenças</strong> — lá dá pra adicionar o
+                plano de ação (condicionantes: o que fazer, quem, como e prazo).
+              </p>
+            </div>
+
+            <div className="px-6 pb-5 flex gap-2 sticky bottom-0 bg-white">
+              <button
+                onClick={salvarLicencaObtida}
+                disabled={salvandoLicenca}
+                className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white rounded-xl text-sm font-semibold transition-colors"
+              >
+                {salvandoLicenca ? <Loader2 className="w-4 h-4 animate-spin" /> : <Award className="w-4 h-4" />}
+                Salvar Licença
+              </button>
+              <button
+                onClick={() => setModalLicenca(false)}
+                className="px-5 py-2.5 border border-gray-200 text-gray-600 hover:bg-gray-50 rounded-xl text-sm font-medium"
+              >
+                Cancelar
               </button>
             </div>
           </div>

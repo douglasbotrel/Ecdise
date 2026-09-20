@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation'
 import {
   LayoutDashboard, Briefcase, FileText, Settings,
   ClipboardList, MapPin, DollarSign, CheckSquare,
-  BarChart3, ChevronLeft, ChevronRight, X, FileSearch, Users, ListChecks, Users2
+  BarChart3, ChevronLeft, ChevronRight, X, FileSearch, Users, ListChecks, Users2, Award
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -52,6 +52,12 @@ const navItems = [
     label: 'Acompanhamento de Processos',
     icon: FileSearch,
     modulo: 'acompanhamento',
+  },
+  {
+    href: '/licencas',
+    label: 'Licenças',
+    icon: Award,
+    modulo: 'licencas',
   },
   {
     href: '/campo',

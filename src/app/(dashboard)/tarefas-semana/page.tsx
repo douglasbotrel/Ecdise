@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { toast } from 'sonner'
 import {
   Plus, X, CheckCircle2, Circle, ChevronLeft, ChevronRight, ChevronDown,
-  Calendar, Loader2, Users, TrendingUp, AlertTriangle, Landmark, GripVertical
+  Calendar, Loader2, Users, TrendingUp, AlertTriangle, Landmark, GripVertical, Award
 } from 'lucide-react'
 import { useLockBodyScroll } from '@/hooks/useLockBodyScroll'
 
@@ -52,7 +52,7 @@ function corUrgencia(prazo: string | null | undefined): { barra: string; texto: 
 }
 
 // Payload transportado durante o arraste
-type DragPayload = { origem: 'backlog' | 'planejada'; id: string; tipo: 'TAREFA' | 'PENDENCIA' }
+type DragPayload = { origem: 'backlog' | 'planejada'; id: string; tipo: 'TAREFA' | 'PENDENCIA' | 'CONDICIONANTE_LICENCA' }
 
 export default function TarefasSemanaPage() {
   const [me, setMe] = useState<any>(null)
@@ -120,7 +120,7 @@ export default function TarefasSemanaPage() {
     }
   }, [loading, semanaInicio])
 
-  async function adicionarNaSemana(itemId: string, tipo: 'TAREFA' | 'PENDENCIA', diaSemana: number | null = null) {
+  async function adicionarNaSemana(itemId: string, tipo: 'TAREFA' | 'PENDENCIA' | 'CONDICIONANTE_LICENCA', diaSemana: number | null = null) {
     setProcessando(itemId)
     try {
       const res = await fetch('/api/tarefas-semana', {
@@ -162,11 +162,17 @@ export default function TarefasSemanaPage() {
     }
   }
 
-  async function marcarConcluida(itemId: string, tipo: 'TAREFA' | 'PENDENCIA', concluida: boolean) {
+  async function marcarConcluida(itemId: string, tipo: 'TAREFA' | 'PENDENCIA' | 'CONDICIONANTE_LICENCA', concluida: boolean) {
     setProcessando(itemId)
     try {
       const res = tipo === 'PENDENCIA'
         ? await fetch('/api/acoes', {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: itemId, concluida: !concluida }),
+          })
+        : tipo === 'CONDICIONANTE_LICENCA'
+        ? await fetch('/api/condicionantes-licenca', {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ id: itemId, concluida: !concluida }),
@@ -177,7 +183,11 @@ export default function TarefasSemanaPage() {
             body: JSON.stringify({ id: itemId, status: concluida ? 'PENDENTE' : 'CONCLUIDA' }),
           })
       if (!res.ok) { toast.error('Erro ao atualizar'); return }
-      toast.success(concluida ? 'Reaberta' : (tipo === 'PENDENCIA' ? 'Concluída! Também atualizado em Acompanhamento.' : 'Concluída! Também atualizado no Operacional.'))
+      toast.success(concluida ? 'Reaberta' : (
+        tipo === 'PENDENCIA' ? 'Concluída! Também atualizado em Acompanhamento.'
+        : tipo === 'CONDICIONANTE_LICENCA' ? 'Concluída! Também atualizado na aba Licenças.'
+        : 'Concluída! Também atualizado no Operacional.'
+      ))
       carregar()
     } finally {
       setProcessando(null)
@@ -269,13 +279,14 @@ export default function TarefasSemanaPage() {
 
   function TaskCard({ item, draggable, onDragStart }: { item: any; draggable: boolean; onDragStart?: (e: React.DragEvent) => void }) {
     const ehPendencia = item.tipo === 'PENDENCIA'
+    const ehLicenca = item.tipo === 'CONDICIONANTE_LICENCA'
     const concluida = !!item.concluida
     return (
       <div
         draggable={draggable}
         onDragStart={onDragStart}
         className={`rounded-lg border overflow-hidden bg-white cursor-grab active:cursor-grabbing ${
-          concluida ? 'border-green-100 bg-green-50/40' : ehPendencia ? 'border-purple-100' : 'border-gray-100'
+          concluida ? 'border-green-100 bg-green-50/40' : ehPendencia ? 'border-purple-100' : ehLicenca ? 'border-amber-100' : 'border-gray-100'
         }`}
       >
         <div className="flex items-start gap-1.5 p-2">
@@ -294,6 +305,11 @@ export default function TarefasSemanaPage() {
             {ehPendencia && (
               <span className="flex items-center gap-0.5 text-[9px] font-semibold text-purple-700 bg-purple-50 px-1 py-0.5 rounded-full w-fit mb-0.5">
                 <Landmark className="w-2 h-2" /> Pendência
+              </span>
+            )}
+            {ehLicenca && (
+              <span className="flex items-center gap-0.5 text-[9px] font-semibold text-amber-700 bg-amber-50 px-1 py-0.5 rounded-full w-fit mb-0.5">
+                <Award className="w-2 h-2" /> Licença
               </span>
             )}
             <p className={`text-xs leading-tight ${concluida ? 'text-gray-400 line-through' : 'text-gray-800'} truncate`}>
@@ -361,6 +377,7 @@ export default function TarefasSemanaPage() {
             {grupo.itens.map((t: any) => {
               const urg = corUrgencia(t.prazo)
               const ehPendencia = t.tipo === 'PENDENCIA'
+              const ehLicenca = t.tipo === 'CONDICIONANTE_LICENCA'
               return (
                 <div
                   key={t.id}
@@ -368,7 +385,7 @@ export default function TarefasSemanaPage() {
                   onDragStart={e => onDragStartBacklog(e, t)}
                   className="flex items-stretch gap-0 rounded-xl border border-gray-100 hover:border-gray-200 hover:shadow-sm transition-all overflow-hidden cursor-grab active:cursor-grabbing"
                 >
-                  <div className={`w-1 flex-shrink-0 ${ehPendencia ? 'bg-purple-500' : urg.barra}`} />
+                  <div className={`w-1 flex-shrink-0 ${ehPendencia ? 'bg-purple-500' : ehLicenca ? 'bg-amber-500' : urg.barra}`} />
                   <div className="flex items-start gap-2 p-3 flex-1 min-w-0">
                     <GripVertical className="w-3.5 h-3.5 text-gray-200 mt-0.5 flex-shrink-0 hidden sm:block" />
                     <button
@@ -383,6 +400,11 @@ export default function TarefasSemanaPage() {
                       {ehPendencia && (
                         <span className="flex items-center gap-0.5 text-[10px] font-semibold text-purple-700 bg-purple-50 px-1.5 py-0.5 rounded-full w-fit">
                           <Landmark className="w-2.5 h-2.5" /> Pendência
+                        </span>
+                      )}
+                      {ehLicenca && (
+                        <span className="flex items-center gap-0.5 text-[10px] font-semibold text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded-full w-fit">
+                          <Award className="w-2.5 h-2.5" /> Licença
                         </span>
                       )}
                       <p className="text-sm text-gray-800 leading-snug break-words">{t.titulo}</p>
@@ -405,6 +427,7 @@ export default function TarefasSemanaPage() {
 
   const backlogTarefas    = backlog.filter(t => t.tipo === 'TAREFA')
   const backlogPendencias = backlog.filter(t => t.tipo === 'PENDENCIA')
+  const backlogLicencas   = backlog.filter(t => t.tipo === 'CONDICIONANTE_LICENCA')
 
   return (
     <div className="p-4 sm:p-6 space-y-5 max-w-7xl mx-auto">
@@ -589,6 +612,22 @@ export default function TarefasSemanaPage() {
                 <div className="space-y-2">
                   {agruparPorProjeto(backlogPendencias).map(grupo => (
                     <GrupoProjeto key={grupo.projeto?.id || 'sem-projeto'} grupo={grupo} prefixo="pend" />
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="pt-4 border-t border-gray-100">
+              <h2 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-1.5">
+                <Award className="w-3.5 h-3.5 text-amber-500" /> Licenças (plano de ação)
+                <span className="text-xs font-normal text-gray-400">({backlogLicencas.length})</span>
+              </h2>
+              {backlogLicencas.length === 0 ? (
+                <p className="text-xs text-gray-400 py-3 text-center">Nenhuma condicionante de licença sob sua responsabilidade.</p>
+              ) : (
+                <div className="space-y-2">
+                  {agruparPorProjeto(backlogLicencas).map(grupo => (
+                    <GrupoProjeto key={grupo.projeto?.id || 'sem-projeto'} grupo={grupo} prefixo="lic" />
                   ))}
                 </div>
               )}

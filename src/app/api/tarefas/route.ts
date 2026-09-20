@@ -2,7 +2,17 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getCurrentUser } from '@/lib/auth'
 
-const PODE_DEFINIR_DATA_CAMPO = ['ADMIN', 'GESTOR_CAMPO', 'GESTOR_GERAL', 'GESTOR_OPERACIONAL']
+// Quem pode ver/planejar a semana de OUTRO usuário (além da própria)
+const PODE_VER_OUTROS = ['ADMIN', 'GESTOR_GERAL', 'GESTOR_OPERACIONAL', 'GESTOR_ADMINISTRATIVO', 'SUPERVISOR']
+
+function segundaFeiraDaSemana(data: Date): Date {
+  const d = new Date(data)
+  const dia = d.getDay() // 0=domingo..6=sábado
+  const diff = dia === 0 ? -6 : 1 - dia
+  d.setDate(d.getDate() + diff)
+  d.setHours(0, 0, 0, 0)
+  return d
+}
 
 export async function GET(request: NextRequest) {
   try {
@@ -10,312 +20,304 @@ export async function GET(request: NextRequest) {
     if (!user) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
 
     const { searchParams } = new URL(request.url)
-    const projetoId         = searchParams.get('projetoId')
-    const responsavelId     = searchParams.get('responsavelId')
-    const status            = searchParams.get('status')
-    const solicitadasCampo  = searchParams.get('solicitadasCampo') // campo page
+    const semanaParam = searchParams.get('semanaInicio')
+    let usuarioId = searchParams.get('usuarioId') || user.id
 
-    const where: any = { projeto: { excluido: false } }
-    if (projetoId)    where.projetoId     = projetoId
-    if (responsavelId) where.responsavelId = responsavelId
-    if (status)       where.status        = status
-    if (solicitadasCampo === 'true') {
-      where.requerVistoriaCampo = true
-      where.statusVistoria = 'SOLICITADA'
+    // Só ADMIN/gestores podem ver a semana de outra pessoa
+    if (usuarioId !== user.id && !PODE_VER_OUTROS.includes(user.role)) {
+      usuarioId = user.id
     }
 
-    const tarefas = await prisma.tarefa.findMany({
-      where,
-      include: {
-        responsavel: { select: { id: true, nome: true } },
-        projeto: { select: { id: true, codigo: true, imovelNome: true, municipio: true, estado: true } },
-        documentos: true,
-      },
-      orderBy: [{ ordem: 'asc' }, { criadoEm: 'asc' }]
+    const semanaInicio = segundaFeiraDaSemana(semanaParam ? new Date(semanaParam) : new Date())
+
+    const [planejadas, tarefasBruto, acoesBruto, condicionantesBruto] = await Promise.all([
+      prisma.tarefaSemana.findMany({
+        where: { usuarioId, semanaInicio },
+        include: {
+          tarefa: {
+            include: {
+              projeto: { select: { id: true, codigo: true, imovelNome: true, municipio: true, estado: true } },
+            },
+          },
+          acaoPendencia: {
+            include: {
+              pendencia: {
+                include: {
+                  projeto: { select: { id: true, codigo: true, imovelNome: true, municipio: true, estado: true } },
+                },
+              },
+            },
+          },
+          condicionanteLicenca: {
+            include: {
+              licenca: {
+                include: {
+                  projeto: { select: { id: true, codigo: true, imovelNome: true, municipio: true, estado: true } },
+                  cliente: { select: { id: true, nome: true } },
+                },
+              },
+            },
+          },
+        },
+        orderBy: { criadoEm: 'asc' },
+      }),
+      // Backlog — tarefas operacionais pendentes
+      prisma.tarefa.findMany({
+        where: { responsavelId: usuarioId, status: { notIn: ['CONCLUIDA', 'CANCELADA'] }, projeto: { excluido: false } },
+        include: {
+          projeto: { select: { id: true, codigo: true, imovelNome: true, municipio: true, estado: true } },
+        },
+        orderBy: [{ prazo: 'asc' }, { criadoEm: 'asc' }],
+      }),
+      // Backlog — ações de pendência com órgão, ainda não concluídas — só as
+      // que estão sob a responsabilidade do usuário que está vendo a lista.
+      prisma.acaoPendencia.findMany({
+        where: { responsavelId: usuarioId, concluida: false, pendencia: { projeto: { excluido: false } } },
+        include: {
+          pendencia: {
+            include: {
+              projeto: { select: { id: true, codigo: true, imovelNome: true, municipio: true, estado: true } },
+            },
+          },
+        },
+        orderBy: [{ criadoEm: 'asc' }],
+      }),
+      // Backlog — condicionantes de licença (plano de ação), ainda não concluídas
+      prisma.condicionanteLicenca.findMany({
+        where: { responsavelId: usuarioId, concluida: false },
+        include: {
+          licenca: {
+            include: {
+              projeto: { select: { id: true, codigo: true, imovelNome: true, municipio: true, estado: true } },
+              cliente: { select: { id: true, nome: true } },
+            },
+          },
+        },
+        orderBy: [{ prazo: 'asc' }, { criadoEm: 'asc' }],
+      }),
+    ])
+
+    const idsTarefaNaSemana = new Set(planejadas.filter(p => p.tarefaId).map(p => p.tarefaId))
+    const idsAcaoNaSemana   = new Set(planejadas.filter(p => p.acaoPendenciaId).map(p => p.acaoPendenciaId))
+    const idsCondNaSemana   = new Set(planejadas.filter(p => p.condicionanteLicencaId).map(p => p.condicionanteLicencaId))
+
+    const backlogTarefas = tarefasBruto
+      .filter(t => !idsTarefaNaSemana.has(t.id))
+      .map(t => ({
+        id: t.id,
+        tipo: 'TAREFA' as const,
+        titulo: t.titulo,
+        prazo: t.prazo,
+        projeto: t.projeto,
+      }))
+
+    const backlogPendencias = acoesBruto
+      .filter(a => !idsAcaoNaSemana.has(a.id))
+      .map(a => ({
+        id: a.id,
+        tipo: 'PENDENCIA' as const,
+        titulo: a.descricao,
+        prazo: a.pendencia.prazoResposta,
+        numeroPedido: a.pendencia.numeroPedido,
+        projeto: a.pendencia.projeto,
+      }))
+
+    const backlogCondicionantes = condicionantesBruto
+      .filter(c => !idsCondNaSemana.has(c.id))
+      .map(c => ({
+        id: c.id,
+        tipo: 'CONDICIONANTE_LICENCA' as const,
+        titulo: c.descricao,
+        prazo: c.prazo,
+        projeto: c.licenca.projeto || null,
+        cliente: c.licenca.cliente || c.licenca.projeto?.cliente || null,
+        numeroLicenca: c.licenca.numero,
+      }))
+
+    // Backlog unificado, ordenado por prazo (sem prazo vai por último)
+    const backlog = [...backlogTarefas, ...backlogPendencias, ...backlogCondicionantes].sort((a, b) => {
+      if (!a.prazo && !b.prazo) return 0
+      if (!a.prazo) return 1
+      if (!b.prazo) return -1
+      return new Date(a.prazo).getTime() - new Date(b.prazo).getTime()
     })
 
-    return NextResponse.json({ tarefas })
-  } catch {
+    return NextResponse.json({
+      semanaInicio,
+      usuarioId,
+      backlog,
+      planejadas: planejadas.map(p => {
+        if (p.tipo === 'PENDENCIA' && p.acaoPendencia) {
+          return {
+            id: p.id,
+            tipo: 'PENDENCIA' as const,
+            itemId: p.acaoPendenciaId,
+            criadoEm: p.criadoEm,
+            diaSemana: p.diaSemana,
+            titulo: p.acaoPendencia.descricao,
+            numeroPedido: p.acaoPendencia.pendencia.numeroPedido,
+            projeto: p.acaoPendencia.pendencia.projeto,
+            concluida: p.acaoPendencia.concluida,
+          }
+        }
+        if (p.tipo === 'CONDICIONANTE_LICENCA' && p.condicionanteLicenca) {
+          return {
+            id: p.id,
+            tipo: 'CONDICIONANTE_LICENCA' as const,
+            itemId: p.condicionanteLicencaId,
+            criadoEm: p.criadoEm,
+            diaSemana: p.diaSemana,
+            titulo: p.condicionanteLicenca.descricao,
+            numeroLicenca: p.condicionanteLicenca.licenca.numero,
+            projeto: p.condicionanteLicenca.licenca.projeto || null,
+            concluida: p.condicionanteLicenca.concluida,
+          }
+        }
+        return {
+          id: p.id,
+          tipo: 'TAREFA' as const,
+          itemId: p.tarefaId,
+          criadoEm: p.criadoEm,
+          diaSemana: p.diaSemana,
+          titulo: p.tarefa?.titulo,
+          projeto: p.tarefa?.projeto,
+          concluida: p.tarefa?.status === 'CONCLUIDA',
+        }
+      }),
+    })
+  } catch (err) {
+    console.error('[tarefas-semana GET]', err)
     return NextResponse.json({ error: 'Erro interno' }, { status: 500 })
   }
 }
 
+// Adiciona uma tarefa, ação de pendência ou condicionante de licença ao planejamento da semana
 export async function POST(request: NextRequest) {
   try {
     const user = await getCurrentUser()
     if (!user) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
 
     const body = await request.json()
-    const { projetoId, titulo, descricao, tipo, responsavelId, prazo, ordem, etapa, obrigatorio } = body
+    const { itemId, tipo, semanaInicio: semanaParam, diaSemana } = body
+    if (!itemId) return NextResponse.json({ error: 'itemId é obrigatório' }, { status: 400 })
 
-    if (!projetoId || !titulo) {
-      return NextResponse.json({ error: 'Projeto e título são obrigatórios' }, { status: 400 })
+    const tipoFinal = tipo === 'PENDENCIA' ? 'PENDENCIA' : tipo === 'CONDICIONANTE_LICENCA' ? 'CONDICIONANTE_LICENCA' : 'TAREFA'
+
+    let usuarioId = body.usuarioId || user.id
+    if (usuarioId !== user.id && !PODE_VER_OUTROS.includes(user.role)) {
+      usuarioId = user.id
     }
 
-    // ── Validação: prazo não pode ser no passado ───────────────────────────
-    // Comparação por STRING de data (AAAA-MM-DD), não por objeto Date — evita
-    // o bug de fuso horário em que o servidor (UTC) já considerava "hoje" um
-    // dia adiante do calendário real no Brasil (UTC-3), rejeitando prazos que
-    // na prática ainda eram hoje para quem estava usando o sistema à noite.
-    if (prazo) {
-      const prazoStr = String(prazo).slice(0, 10)
-      const agoraBR  = new Date(Date.now() - 3 * 60 * 60 * 1000) // UTC-3 fixo (Brasil não tem mais horário de verão)
-      const hojeStr  = agoraBR.toISOString().slice(0, 10)
-      if (prazoStr < hojeStr) {
-        return NextResponse.json(
-          { error: 'O prazo da tarefa não pode ser uma data passada.' },
-          { status: 400 }
-        )
+    const semanaInicio = segundaFeiraDaSemana(semanaParam ? new Date(semanaParam) : new Date())
+
+    // Se ninguém escolheu um dia explicitamente (botão "+", sem arrastar/tocar
+    // numa pílula), tenta descobrir sozinho a partir do prazo que o item já
+    // tem — evita pedir pra "redefinir" uma data que já existe. Se o prazo
+    // cair fora da semana atual (ou não existir), fica "sem dia definido"
+    // mesmo, do jeito que já era — o usuário só ajusta se precisar.
+    let diaFinal: number | null = diaSemana ?? null
+    if (diaFinal === null) {
+      let prazoReal: Date | null = null
+      if (tipoFinal === 'TAREFA') {
+        const tarefa = await prisma.tarefa.findUnique({ where: { id: itemId }, select: { prazo: true } })
+        prazoReal = tarefa?.prazo ?? null
+      } else if (tipoFinal === 'PENDENCIA') {
+        const acao = await prisma.acaoPendencia.findUnique({
+          where: { id: itemId },
+          include: { pendencia: { select: { prazoResposta: true } } },
+        })
+        prazoReal = acao?.pendencia?.prazoResposta ?? null
+      } else {
+        const cond = await prisma.condicionanteLicenca.findUnique({ where: { id: itemId }, select: { prazo: true } })
+        prazoReal = cond?.prazo ?? null
+      }
+
+      if (prazoReal) {
+        const semanaFim = new Date(semanaInicio)
+        semanaFim.setDate(semanaFim.getDate() + 7)
+        if (prazoReal >= semanaInicio && prazoReal < semanaFim) {
+          const diaSemanaJs = prazoReal.getDay() // 0=domingo..6=sábado
+          diaFinal = diaSemanaJs === 0 ? 6 : diaSemanaJs - 1 // 0=Segunda..6=Domingo
+        }
       }
     }
 
-    const tarefa = await prisma.tarefa.create({
-      data: {
-        projetoId, titulo, descricao,
-        tipo: tipo || 'TAREFA',
-        responsavelId: responsavelId || null,
-        prazo: prazo ? new Date(prazo) : null,
-        ordem: ordem || 0,
-        etapa,
-        obrigatorio: obrigatorio || false,
-        status: 'PENDENTE',
-      },
-      include: { responsavel: { select: { id: true, nome: true } } }
-    })
+    let item
+    if (tipoFinal === 'PENDENCIA') {
+      item = await prisma.tarefaSemana.upsert({
+        where: { acaoPendenciaId_usuarioId_semanaInicio: { acaoPendenciaId: itemId, usuarioId, semanaInicio } },
+        create: { tipo: 'PENDENCIA', acaoPendenciaId: itemId, usuarioId, semanaInicio, diaSemana: diaFinal },
+        update: {},
+      })
+    } else if (tipoFinal === 'CONDICIONANTE_LICENCA') {
+      item = await prisma.tarefaSemana.upsert({
+        where: { condicionanteLicencaId_usuarioId_semanaInicio: { condicionanteLicencaId: itemId, usuarioId, semanaInicio } },
+        create: { tipo: 'CONDICIONANTE_LICENCA', condicionanteLicencaId: itemId, usuarioId, semanaInicio, diaSemana: diaFinal },
+        update: {},
+      })
+    } else {
+      item = await prisma.tarefaSemana.upsert({
+        where: { tarefaId_usuarioId_semanaInicio: { tarefaId: itemId, usuarioId, semanaInicio } },
+        create: { tipo: 'TAREFA', tarefaId: itemId, usuarioId, semanaInicio, diaSemana: diaFinal },
+        update: {},
+      })
+    }
 
-    return NextResponse.json({ tarefa }, { status: 201 })
-  } catch {
-    return NextResponse.json({ error: 'Erro interno' }, { status: 500 })
+    return NextResponse.json({ item })
+  } catch (err) {
+    console.error('[tarefas-semana POST]', err)
+    return NextResponse.json({ error: 'Erro ao adicionar à semana' }, { status: 500 })
   }
 }
 
+// Atualiza o dia da semana escolhido para um item já planejado
 export async function PATCH(request: NextRequest) {
   try {
     const user = await getCurrentUser()
     if (!user) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
 
     const body = await request.json()
-    const { id, status, responsavelId, prazo, descricao, observacao, requerVistoriaCampo, dataCampo } = body
+    const { id, diaSemana } = body
+    if (!id) return NextResponse.json({ error: 'id é obrigatório' }, { status: 400 })
 
-    if (!id) return NextResponse.json({ error: 'ID da tarefa é obrigatório' }, { status: 400 })
+    const item = await prisma.tarefaSemana.findUnique({ where: { id } })
+    if (!item) return NextResponse.json({ error: 'Não encontrado' }, { status: 404 })
+    if (item.usuarioId !== user.id && !PODE_VER_OUTROS.includes(user.role)) {
+      return NextResponse.json({ error: 'Sem permissão' }, { status: 403 })
+    }
 
-    // Busca tarefa atual para checks
-    const tarefaAtual = await prisma.tarefa.findUnique({
+    const atualizado = await prisma.tarefaSemana.update({
       where: { id },
-      include: { projeto: { select: { id: true, codigo: true, imovelNome: true } } }
-    })
-    if (!tarefaAtual) return NextResponse.json({ error: 'Tarefa não encontrada' }, { status: 404 })
-
-    // ── Proteção: dataCampo só pode ser editada por campo/admin ──────────
-    if (dataCampo !== undefined && !PODE_DEFINIR_DATA_CAMPO.includes(user.role)) {
-      return NextResponse.json(
-        { error: 'Apenas o Gestor de Campo ou Admin pode definir a data de vistoria' },
-        { status: 403 }
-      )
-    }
-
-    // ── Monta payload de update ──────────────────────────────────────────
-    const updateData: any = {
-      ...(status           !== undefined && { status }),
-      ...(responsavelId    !== undefined && { responsavelId }),
-      ...(descricao        !== undefined && { descricao }),
-      ...(observacao       !== undefined && { observacao: observacao || null }),
-      ...(status === 'CONCLUIDA'         && { dataConclusao: new Date() }),
-    }
-
-    // prazo: operacional pode setar prazo apenas se NÃO for tarefa de campo aguardando definição
-    if (prazo !== undefined) {
-      if (tarefaAtual.requerVistoriaCampo && tarefaAtual.statusVistoria === 'AGENDADA') {
-        // data já definida pelo campo — operacional não pode alterar
-        return NextResponse.json(
-          { error: 'A data desta tarefa foi definida pela Gestão de Campo e não pode ser alterada aqui.' },
-          { status: 403 }
-        )
-      }
-      updateData.prazo = prazo ? new Date(prazo) : null
-    }
-
-    // ── Marcar como "requer vistoria de campo" ────────────────────────────
-    if (requerVistoriaCampo === true && !tarefaAtual.requerVistoriaCampo) {
-      updateData.requerVistoriaCampo = true
-      updateData.statusVistoria = 'SOLICITADA'
-      // Remove prazo editado pelo operacional — campo que vai definir
-      updateData.prazo = null
-
-      // Notifica APENAS gestores de campo — são eles quem agendam vistorias
-      const gestoresCampo = await prisma.usuario.findMany({
-        where: { ativo: true, role: 'GESTOR_CAMPO' },
-        select: { id: true },
-      })
-      if (gestoresCampo.length > 0) {
-        await prisma.notificacao.createMany({
-          data: gestoresCampo.map(g => ({
-            usuarioId: g.id,
-            titulo: '📅 Solicitação de vistoria de campo',
-            mensagem: `Tarefa "${tarefaAtual.titulo}" do projeto ${tarefaAtual.projeto?.codigo} (${tarefaAtual.projeto?.imovelNome || ''}) aguarda agendamento pelo setor de campo.`,
-            tipo: 'info',
-            link: `/campo`,
-          })),
-        })
-      }
-    }
-
-    // ── Desmarcar "requer vistoria de campo" ──────────────────────────────
-    if (requerVistoriaCampo === false && tarefaAtual.requerVistoriaCampo) {
-      updateData.requerVistoriaCampo = false
-      updateData.statusVistoria = null
-      updateData.dataCampo = null
-    }
-
-    // ── Campo define data (dataCampo) ─────────────────────────────────────
-    if (dataCampo !== undefined && PODE_DEFINIR_DATA_CAMPO.includes(user.role)) {
-      updateData.dataCampo = dataCampo ? new Date(dataCampo) : null
-      if (dataCampo) {
-        updateData.statusVistoria = 'AGENDADA'
-        updateData.prazo = new Date(dataCampo) // sincroniza prazo com data de campo
-
-        // Notifica equipe operacional do projeto
-        const projeto = tarefaAtual.projeto
-        if (projeto) {
-          const projetoCompleto = await prisma.projeto.findUnique({
-            where: { id: projeto.id },
-            select: { responsavelId: true, supervisorId: true, gestorResponsavelId: true }
-          })
-          const notificar = [
-            projetoCompleto?.responsavelId,
-            projetoCompleto?.supervisorId,
-            projetoCompleto?.gestorResponsavelId,
-          ].filter(Boolean) as string[]
-
-          const idsEnvolvidos = [
-            ...notificar,
-            tarefaAtual.responsavelId,
-          ].filter(Boolean) as string[]
-
-          let destinatarios = Array.from(new Set(idsEnvolvidos))
-
-          // Fallback: se ninguém específico atribuído, notifica ADMIN/GESTOR_GERAL
-          if (destinatarios.length === 0) {
-            const admins = await prisma.usuario.findMany({
-              where: { ativo: true, role: { in: ['ADMIN', 'GESTOR_GERAL'] } },
-              select: { id: true },
-            })
-            destinatarios = admins.map(a => a.id)
-          }
-
-          if (destinatarios.length > 0) {
-            await prisma.notificacao.createMany({
-              data: destinatarios.map(uid => ({
-                usuarioId: uid,
-                titulo: '✅ Vistoria agendada pelo setor de campo',
-                mensagem: `A tarefa "${tarefaAtual.titulo}" do projeto ${projeto.codigo} foi agendada para ${new Date(dataCampo).toLocaleDateString('pt-BR')}.`,
-                tipo: 'sucesso',
-                link: `/operacional/${projeto.id}`,
-              })),
-            })
-          }
-        }
-      } else {
-        // Campo removeu a data → volta para SOLICITADA
-        updateData.statusVistoria = 'SOLICITADA'
-        updateData.prazo = null
-      }
-    }
-
-    const tarefa = await prisma.tarefa.update({
-      where: { id },
-      data: updateData,
-      include: { responsavel: { select: { id: true, nome: true } } }
+      data: { diaSemana: diaSemana === null ? null : Number(diaSemana) },
     })
 
-    // ── Tarefa concluída no Operacional → fecha a vistoria de campo vinculada ──
-    // Evita que a vistoria continue aparecendo em "Minhas Vistorias" (Agendada/
-    // Em Campo) depois que a ação já foi dada como concluída no Operacional.
-    if (status === 'CONCLUIDA' && tarefaAtual.requerVistoriaCampo) {
-      const vistoriaVinculada = await prisma.vistoria.findUnique({ where: { tarefaId: id } })
-      if (vistoriaVinculada && !['REALIZADA', 'CANCELADA'].includes(vistoriaVinculada.status)) {
-        await prisma.vistoria.update({
-          where: { id: vistoriaVinculada.id },
-          data: {
-            status: 'REALIZADA',
-            dataRealizada: vistoriaVinculada.dataRealizada || new Date(),
-          },
-        })
-      }
+    return NextResponse.json({ item: atualizado })
+  } catch (err) {
+    console.error('[tarefas-semana PATCH]', err)
+    return NextResponse.json({ error: 'Erro ao atualizar' }, { status: 500 })
+  }
+}
+
+// Remove um item do planejamento da semana (volta pro backlog)
+export async function DELETE(request: NextRequest) {
+  try {
+    const user = await getCurrentUser()
+    if (!user) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
+
+    const { searchParams } = new URL(request.url)
+    const id = searchParams.get('id')
+    if (!id) return NextResponse.json({ error: 'id é obrigatório' }, { status: 400 })
+
+    const item = await prisma.tarefaSemana.findUnique({ where: { id } })
+    if (!item) return NextResponse.json({ error: 'Não encontrado' }, { status: 404 })
+    if (item.usuarioId !== user.id && !PODE_VER_OUTROS.includes(user.role)) {
+      return NextResponse.json({ error: 'Sem permissão' }, { status: 403 })
     }
 
-    // ── Notificar quando responsável é designado ─────────────────────────
-    if (
-      responsavelId &&
-      responsavelId !== tarefaAtual.responsavelId &&
-      responsavelId !== user.id
-    ) {
-      await prisma.notificacao.create({
-        data: {
-          usuarioId: responsavelId,
-          titulo: '📋 Você foi designado para uma atividade',
-          mensagem: `Você foi indicado como responsável pela atividade "${tarefaAtual.titulo}" do projeto ${tarefaAtual.projeto?.codigo} (${tarefaAtual.projeto?.imovelNome || ''}).`,
-          tipo: 'info',
-          link: `/operacional/${tarefaAtual.projetoId}`,
-        },
-      }).catch(() => {}) // não bloqueia se falhar
-    }
-
-    // ── Auto-avanço de pipeline ao concluir tarefas ──────────────────────
-    if (updateData.status) {
-      const todasTarefas = await prisma.tarefa.findMany({
-        where: { projetoId: tarefaAtual.projetoId },
-        select: { id: true, status: true },
-      })
-      const totalTarefas  = todasTarefas.length
-      const concluidas    = todasTarefas.filter(t => t.status === 'CONCLUIDA').length
-
-      const proj = await prisma.projeto.findUnique({
-        where: { id: tarefaAtual.projetoId },
-        select: { id: true, etapaPipeline: true, statusOperacional: true },
-      })
-
-      if (proj) {
-        if (updateData.status === 'CONCLUIDA') {
-          // Primeira tarefa concluída → avança de OPERACIONAL para EM_EXECUCAO
-          if (proj.etapaPipeline === 'OPERACIONAL' && concluidas === 1) {
-            await prisma.projeto.update({
-              where: { id: proj.id },
-              data: { etapaPipeline: 'EM_EXECUCAO', statusOperacional: 'EM_ANDAMENTO' },
-            })
-            await prisma.historicoStatus.create({
-              data: {
-                projetoId: proj.id,
-                statusAnterior: 'NAO_INICIADO',
-                statusNovo: 'EM_ANDAMENTO',
-                campo: 'statusOperacional',
-                observacao: 'Iniciado automaticamente ao concluir primeira tarefa',
-                usuarioId: user.id,
-              },
-            }).catch(() => {})
-          }
-          // Todas concluídas → finaliza parte operacional
-          if (totalTarefas > 0 && concluidas === totalTarefas) {
-            await prisma.projeto.update({
-              where: { id: proj.id },
-              data: { statusOperacional: 'CONCLUIDO' },
-            })
-          }
-        } else if (updateData.status === 'PENDENTE') {
-          // Desmarcou → se estava CONCLUIDO, volta para EM_ANDAMENTO
-          if (proj.statusOperacional === 'CONCLUIDO') {
-            await prisma.projeto.update({
-              where: { id: proj.id },
-              data: { statusOperacional: 'EM_ANDAMENTO' },
-            })
-          }
-        }
-      }
-    }
-
-    return NextResponse.json({ tarefa })
-  } catch (error) {
-    console.error(error)
-    return NextResponse.json({ error: 'Erro interno' }, { status: 500 })
+    await prisma.tarefaSemana.delete({ where: { id } })
+    return NextResponse.json({ ok: true })
+  } catch (err) {
+    console.error('[tarefas-semana DELETE]', err)
+    return NextResponse.json({ error: 'Erro ao remover' }, { status: 500 })
   }
 }
