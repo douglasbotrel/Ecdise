@@ -95,7 +95,7 @@ export async function PATCH(request: NextRequest) {
     if (!user) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
 
     const body = await request.json()
-    const { id, status, responsavelId, prazo, descricao, observacao, requerVistoriaCampo, dataCampo } = body
+    const { id, status, responsavelId, prazo, descricao, observacao, requerVistoriaCampo, dataCampo, titulo } = body
 
     if (!id) return NextResponse.json({ error: 'ID da tarefa é obrigatório' }, { status: 400 })
 
@@ -114,12 +114,29 @@ export async function PATCH(request: NextRequest) {
       )
     }
 
+    // ── Proteção: renomear a tarefa (corrigir título digitado errado) ────
+    // Restrito ao ADMIN — o título é usado para disparar os popups de
+    // SIGLA/CTF/PROTOCOLO/LICENÇA, então um nome errado quebra esse fluxo
+    // silenciosamente (foi exatamente o que aconteceu com "Protcolo SEMA").
+    if (titulo !== undefined) {
+      if (user.role !== 'ADMIN') {
+        return NextResponse.json(
+          { error: 'Apenas o Administrador pode renomear uma tarefa' },
+          { status: 403 }
+        )
+      }
+      if (!String(titulo).trim()) {
+        return NextResponse.json({ error: 'O título não pode ficar vazio' }, { status: 400 })
+      }
+    }
+
     // ── Monta payload de update ──────────────────────────────────────────
     const updateData: any = {
       ...(status           !== undefined && { status }),
       ...(responsavelId    !== undefined && { responsavelId }),
       ...(descricao        !== undefined && { descricao }),
       ...(observacao       !== undefined && { observacao: observacao || null }),
+      ...(titulo           !== undefined && { titulo: String(titulo).trim() }),
       ...(status === 'CONCLUIDA'         && { dataConclusao: new Date() }),
     }
 

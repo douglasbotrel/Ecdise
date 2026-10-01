@@ -14,6 +14,7 @@ import {
   STATUS_OPERACIONAL_LABELS, STATUS_COLORS, STATUS_TAREFA_LABELS,
 } from '@/lib/utils'
 import NoteEditor from './NoteEditor'
+import TituloEditor from './TituloEditor'
 
 // Estado inline de edição por tarefa
 interface TarefaEdit {
@@ -481,6 +482,7 @@ export default function ProjetoDetalhe() {
 
   const emOperacional = projeto.etapaPipeline === 'OPERACIONAL'
   const modoGestor   = ROLES_GESTOR.includes(currentUser?.role)
+  const souAdmin     = currentUser?.role === 'ADMIN'
   // Gestores podem editar em qualquer etapa válida
   const modoEdicao   = emOperacional || (modoGestor && ETAPAS_VALIDAS.includes(projeto.etapaPipeline))
   const tarefas       = projeto.tarefas || []
@@ -1147,6 +1149,7 @@ export default function ProjetoDetalhe() {
                             )}
                           </div>
                           <NoteEditor tarefaId={tarefa.id} currentNote={tarefa.observacao ?? null} onSaved={() => loadProjeto({ silent: true })} />
+                          <TituloEditor tarefaId={tarefa.id} currentTitulo={tarefa.titulo} podeEditar={souAdmin} onSaved={() => loadProjeto({ silent: true })} />
                         </div>
                         <span className={`text-xs px-2 py-0.5 rounded-full flex-shrink-0 ${STATUS_COLORS[tarefa.status] || 'bg-gray-100 text-gray-600'}`}>
                           {STATUS_TAREFA_LABELS[tarefa.status]}
@@ -1314,6 +1317,7 @@ export default function ProjetoDetalhe() {
                               {!tarefa.responsavel && <span className="text-amber-400">Sem responsável</span>}
                             </div>
                             <NoteEditor tarefaId={tarefa.id} currentNote={tarefa.observacao ?? null} onSaved={() => loadProjeto({ silent: true })} />
+                            <TituloEditor tarefaId={tarefa.id} currentTitulo={tarefa.titulo} podeEditar={souAdmin} onSaved={() => loadProjeto({ silent: true })} />
                           </div>
                         </div>
                       ))}
@@ -1352,6 +1356,7 @@ export default function ProjetoDetalhe() {
                                     {tarefa.prazo && <span>{formatDate(tarefa.prazo)}</span>}
                                   </div>
                                   <NoteEditor tarefaId={tarefa.id} currentNote={tarefa.observacao ?? null} onSaved={() => loadProjeto({ silent: true })} />
+                                  <TituloEditor tarefaId={tarefa.id} currentTitulo={tarefa.titulo} podeEditar={souAdmin} onSaved={() => loadProjeto({ silent: true })} />
                                 </div>
                               </div>
                             ))}
