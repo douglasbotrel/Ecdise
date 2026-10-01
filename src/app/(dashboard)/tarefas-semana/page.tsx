@@ -69,8 +69,23 @@ export default function TarefasSemanaPage() {
   const [verPainelEquipe, setVerPainelEquipe] = useState(false)
   const [kpi, setKpi] = useState<any>(null)
   const [carregandoKpi, setCarregandoKpi] = useState(false)
-  useLockBodyScroll(verPainelEquipe)
   const [colapsados, setColapsados] = useState<Record<string, boolean>>({})
+
+  // ── Modal de tarefas especiais (SIGLA / CTF / PROTOCOLO / LICENÇA) ────────
+  // Mesmas tarefas que, no Operacional, abrem um popup pedindo dados extras
+  // ao serem concluídas (credenciais, nº de protocolo, dados da licença).
+  // Sem isso aqui, concluir essas tarefas por "Tarefas da Semana" marcava a
+  // tarefa como feita mas nunca coletava os dados nem avançava o projeto
+  // para Acompanhamento de Processos.
+  const [modalEspecial, setModalEspecial] = useState<{ tipo: 'SIGLA' | 'CTF' | 'PROTOCOLO' | 'LICENCA'; projetoId: string; projetoCodigo: string } | null>(null)
+  const [carregandoEspecial, setCarregandoEspecial] = useState(false)
+  const [salvandoEspecial, setSalvandoEspecial] = useState(false)
+  const [credForm, setCredForm] = useState({ login: '', senha: '' })
+  const [protocoloForm, setProtocoloForm] = useState({ data: '', codigoOrgao: '' })
+  const [licencaForm, setLicencaForm] = useState({
+    numero: '', dataEmissao: '', dataValidade: '', areaPermitida: '', atividadePermitida: '',
+  })
+  useLockBodyScroll(verPainelEquipe || !!modalEspecial)
 
   const podeGerenciarEquipe = me && ROLES_GESTAO.includes(me.role)
   const hojeBlocoRef = useRef<HTMLDivElement>(null)
@@ -183,6 +198,22 @@ export default function TarefasSemanaPage() {
             body: JSON.stringify({ id: itemId, status: concluida ? 'PENDENTE' : 'CONCLUIDA' }),
           })
       if (!res.ok) { toast.error('Erro ao atualizar'); return }
+
+      // ── Tarefa operacional concluída: verifica se é uma tarefa "especial"
+      // (SIGLA/CTF/PROTOCOLO/LICENÇA) que precisa de dados extras — mesma
+      // lógica usada no Operacional ao marcar essas tarefas como concluídas.
+      if (tipo === 'TAREFA' && !concluida) {
+        const data = await res.json().catch(() => null)
+        const titulo: string = (data?.tarefa?.titulo || '').toUpperCase()
+        const projetoId: string | undefined = data?.tarefa?.projetoId
+        if (projetoId) {
+          if (titulo.includes('SIGLA')) await abrirModalEspecial('SIGLA', projetoId)
+          else if (titulo.includes('CTF')) await abrirModalEspecial('CTF', projetoId)
+          else if (titulo.includes('PROTOCOLO')) await abrirModalEspecial('PROTOCOLO', projetoId)
+          else if (titulo.includes('LICENÇA') || titulo.includes('LICENCA')) await abrirModalEspecial('LICENCA', projetoId)
+        }
+      }
+
       toast.success(concluida ? 'Reaberta' : (
         tipo === 'PENDENCIA' ? 'Concluída! Também atualizado em Acompanhamento.'
         : tipo === 'CONDICIONANTE_LICENCA' ? 'Concluída! Também atualizado na aba Licenças.'
@@ -191,6 +222,102 @@ export default function TarefasSemanaPage() {
       carregar()
     } finally {
       setProcessando(null)
+    }
+  }
+
+  // ── Abre o popup de dados extras, pré-carregando o que já existir ────────
+  async function abrirModalEspecial(tipo: 'SIGLA' | 'CTF' | 'PROTOCOLO' | 'LICENCA', projetoId: string) {
+    setCarregandoEspecial(true)
+    try {
+      const res = await fetch(`/api/projetos/${projetoId}`)
+      const data = await res.json().catch(() => null)
+      const projeto = data?.projeto
+      const hojeStr = new Date().toISOString().split('T')[0]
+      if (tipo === 'SIGLA' || tipo === 'CTF') {
+        const creds = projeto?.credenciais ? JSON.parse(projeto.credenciais) : {}
+        setCredForm({ login: creds[tipo]?.login || '', senha: creds[tipo]?.senha || '' })
+      } else if (tipo === 'PROTOCOLO') {
+        setProtocoloForm({
+          data: projeto?.protocoloData ? projeto.protocoloData.split('T')[0] : hojeStr,
+          codigoOrgao: projeto?.protocoloCodigoOrgao || '',
+        })
+      } else if (tipo === 'LICENCA') {
+        setLicencaForm({
+          numero: projeto?.licenca?.numero || '',
+          dataEmissao: projeto?.licenca?.dataEmissao ? projeto.licenca.dataEmissao.split('T')[0] : hojeStr,
+          dataValidade: projeto?.licenca?.dataValidade ? projeto.licenca.dataValidade.split('T')[0] : '',
+          areaPermitida: projeto?.licenca?.areaPermitida != null ? String(projeto.licenca.areaPermitida) : '',
+          atividadePermitida: projeto?.licenca?.atividadePermitida || '',
+        })
+      }
+      setModalEspecial({ tipo, projetoId, projetoCodigo: projeto?.codigo || '' })
+    } finally {
+      setCarregandoEspecial(false)
+    }
+  }
+
+  // ── Salva os dados extras do popup e, no caso de Protocolo, move o
+  // projeto para Acompanhamento de Processos (mesmo efeito do Operacional) ──
+  async function salvarModalEspecial() {
+    if (!modalEspecial) return
+    const { tipo, projetoId } = modalEspecial
+    if (tipo === 'PROTOCOLO' && (!protocoloForm.data || !protocoloForm.codigoOrgao.trim())) {
+      toast.error('Informe a data e o código do processo no órgão')
+      return
+    }
+    if (tipo === 'LICENCA' && (!licencaForm.numero.trim() || !licencaForm.dataEmissao)) {
+      toast.error('Informe o número da licença e a data de emissão')
+      return
+    }
+    setSalvandoEspecial(true)
+    try {
+      if (tipo === 'SIGLA' || tipo === 'CTF') {
+        const projRes = await fetch(`/api/projetos/${projetoId}`)
+        const projData = await projRes.json().catch(() => null)
+        const credsAtuais = projData?.projeto?.credenciais ? JSON.parse(projData.projeto.credenciais) : {}
+        const novasCreds = { ...credsAtuais, [tipo]: { login: credForm.login, senha: credForm.senha } }
+        const res = await fetch(`/api/projetos/${projetoId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ credenciais: JSON.stringify(novasCreds) }),
+        })
+        if (!res.ok) { const d = await res.json().catch(() => ({})); toast.error(d.error || 'Erro ao salvar credenciais'); return }
+        toast.success(`Credenciais do ${tipo} salvas!`)
+      } else if (tipo === 'PROTOCOLO') {
+        const res = await fetch(`/api/projetos/${projetoId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            protocoloData: protocoloForm.data,
+            protocoloCodigoOrgao: protocoloForm.codigoOrgao.trim(),
+            statusOperacional: 'CONCLUIDO',
+            emAcompanhamento: true,
+          }),
+        })
+        if (!res.ok) { const d = await res.json().catch(() => ({})); toast.error(d.error || 'Erro ao salvar protocolo'); return }
+        toast.success('Protocolo registrado! Projeto movido para Acompanhamento de Processos.')
+      } else if (tipo === 'LICENCA') {
+        const res = await fetch('/api/licencas', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            projetoId,
+            numero: licencaForm.numero.trim(),
+            dataEmissao: licencaForm.dataEmissao,
+            dataValidade: licencaForm.dataValidade || null,
+            areaPermitida: licencaForm.areaPermitida || null,
+            atividadePermitida: licencaForm.atividadePermitida || null,
+          }),
+        })
+        if (!res.ok) { const d = await res.json().catch(() => ({})); toast.error(d.error || 'Erro ao registrar licença'); return }
+        toast.success('🏅 Licença registrada! Confira/complete o plano de ação na aba Licenças.')
+      }
+      setModalEspecial(null)
+      carregar()
+    } catch {
+      toast.error('Erro ao salvar')
+    } finally {
+      setSalvandoEspecial(false)
     }
   }
 
@@ -675,6 +802,142 @@ export default function TarefasSemanaPage() {
                 </div>
               )}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Modal de dados extras (SIGLA / CTF / PROTOCOLO / LICENÇA) ──────── */}
+      {(modalEspecial || carregandoEspecial) && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-sm w-full">
+            {carregandoEspecial || !modalEspecial ? (
+              <div className="flex justify-center py-10">
+                <Loader2 className="w-5 h-5 animate-spin text-gray-300" />
+              </div>
+            ) : (
+              <>
+                <div className="p-5 border-b border-gray-100 flex items-center justify-between">
+                  <div>
+                    <h3 className="font-semibold text-gray-900">
+                      {modalEspecial.tipo === 'SIGLA' && '🔑 Credenciais do SIGLA'}
+                      {modalEspecial.tipo === 'CTF' && '🔑 Credenciais do CTF'}
+                      {modalEspecial.tipo === 'PROTOCOLO' && '📋 Protocolo do Processo'}
+                      {modalEspecial.tipo === 'LICENCA' && '🏅 Licença Obtida'}
+                    </h3>
+                    <p className="text-xs text-gray-400 mt-0.5">Projeto {modalEspecial.projetoCodigo}</p>
+                  </div>
+                  <button onClick={() => setModalEspecial(null)} className="text-gray-400 hover:text-gray-600">
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+                <div className="p-5 space-y-3">
+                  {(modalEspecial.tipo === 'SIGLA' || modalEspecial.tipo === 'CTF') && (
+                    <>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1.5">Login</label>
+                        <input
+                          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
+                          value={credForm.login}
+                          onChange={e => setCredForm(p => ({ ...p, login: e.target.value }))}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1.5">Senha</label>
+                        <input
+                          type="password"
+                          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
+                          value={credForm.senha}
+                          onChange={e => setCredForm(p => ({ ...p, senha: e.target.value }))}
+                        />
+                      </div>
+                    </>
+                  )}
+                  {modalEspecial.tipo === 'PROTOCOLO' && (
+                    <>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1.5">Data do Protocolo</label>
+                        <input
+                          type="date"
+                          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
+                          value={protocoloForm.data}
+                          onChange={e => setProtocoloForm(p => ({ ...p, data: e.target.value }))}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1.5">Código do processo no órgão</label>
+                        <input
+                          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
+                          value={protocoloForm.codigoOrgao}
+                          onChange={e => setProtocoloForm(p => ({ ...p, codigoOrgao: e.target.value }))}
+                        />
+                      </div>
+                    </>
+                  )}
+                  {modalEspecial.tipo === 'LICENCA' && (
+                    <>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1.5">Número da licença</label>
+                        <input
+                          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
+                          value={licencaForm.numero}
+                          onChange={e => setLicencaForm(p => ({ ...p, numero: e.target.value }))}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1.5">Data de emissão</label>
+                        <input
+                          type="date"
+                          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
+                          value={licencaForm.dataEmissao}
+                          onChange={e => setLicencaForm(p => ({ ...p, dataEmissao: e.target.value }))}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1.5">Data de validade</label>
+                        <input
+                          type="date"
+                          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
+                          value={licencaForm.dataValidade}
+                          onChange={e => setLicencaForm(p => ({ ...p, dataValidade: e.target.value }))}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1.5">Área permitida (ha)</label>
+                        <input
+                          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
+                          value={licencaForm.areaPermitida}
+                          onChange={e => setLicencaForm(p => ({ ...p, areaPermitida: e.target.value }))}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1.5">Atividade permitida</label>
+                        <input
+                          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
+                          value={licencaForm.atividadePermitida}
+                          onChange={e => setLicencaForm(p => ({ ...p, atividadePermitida: e.target.value }))}
+                        />
+                      </div>
+                    </>
+                  )}
+                </div>
+                <div className="p-5 border-t border-gray-100 flex gap-2">
+                  <button
+                    onClick={salvarModalEspecial}
+                    disabled={salvandoEspecial}
+                    className="flex-1 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold rounded-lg py-2 flex items-center justify-center gap-1.5 disabled:opacity-60"
+                  >
+                    {salvandoEspecial ? <Loader2 className="w-4 h-4 animate-spin" /> : '💾'}
+                    Salvar
+                  </button>
+                  <button
+                    onClick={() => setModalEspecial(null)}
+                    className="px-4 text-sm text-gray-500 hover:text-gray-700"
+                  >
+                    Depois
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}
