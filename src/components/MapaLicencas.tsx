@@ -5,16 +5,39 @@ import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 
-// Corrige o ícone padrão do Leaflet, que não carrega certo com o bundler do Next.js
-const iconePadrao = L.icon({
-  iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
-  iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
-  shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-  popupAnchor: [1, -34],
-  shadowSize: [41, 41],
-})
+// Ícones por tipo de licença — um "pin" em formato de gota (como o marcador
+// padrão), mas com cor e emoji diferentes: verde com 🌾 para Atividade
+// (licença ambiental rural) e azul com 💧 para Outorga (uso de água).
+// Usa divIcon (HTML/CSS puro) em vez de imagem, então não depende de
+// nenhuma rede externa pra carregar o ícone.
+function criarIconePin(emoji: string, cor: string) {
+  return L.divIcon({
+    html: `
+      <div style="
+        width: 30px; height: 30px;
+        background: ${cor};
+        border: 2px solid white;
+        border-radius: 50% 50% 50% 0;
+        transform: rotate(-45deg);
+        box-shadow: 0 1px 4px rgba(0,0,0,0.45);
+        display: flex; align-items: center; justify-content: center;
+      ">
+        <span style="transform: rotate(45deg); font-size: 14px; line-height: 1;">${emoji}</span>
+      </div>
+    `,
+    className: '', // evita o fundo/quadrado branco padrão do Leaflet
+    iconSize: [30, 30],
+    iconAnchor: [15, 30],
+    popupAnchor: [0, -28],
+  })
+}
+
+const iconeAtividade = criarIconePin('🌾', '#16a34a') // verde — licença ambiental / atividade rural
+const iconeOutorga   = criarIconePin('💧', '#0284c7') // azul — outorga de uso de água
+
+function iconePorTipo(tipo: string | null | undefined) {
+  return tipo === 'OUTORGA' ? iconeOutorga : iconeAtividade
+}
 
 function formatData(d: string | Date | null | undefined) {
   if (!d) return '—'
@@ -51,17 +74,28 @@ export default function MapaLicencas({ licencas }: { licencas: any[] }) {
         />
         <AjustarAosMarcadores pontos={pontos} />
         {comCoordenadas.map(l => (
-          <Marker key={l.id} position={[l.latitude, l.longitude]} icon={iconePadrao}>
+          <Marker key={l.id} position={[l.latitude, l.longitude]} icon={iconePorTipo(l.tipo)}>
             <Popup>
               <div className="text-sm min-w-[180px]">
-                <p className="font-semibold text-gray-900">Licença nº {l.numero}</p>
+                <p className="font-semibold text-gray-900">
+                  {l.tipo === 'OUTORGA' ? '💧 Outorga' : '🌾 Atividade'} nº {l.numero}
+                </p>
                 <p className="text-gray-600">{l.cliente?.nome || l.projeto?.cliente?.nome || '—'}</p>
                 {l.projeto?.imovelNome && <p className="text-gray-500 text-xs">{l.projeto.imovelNome}</p>}
                 <div className="mt-1.5 text-xs text-gray-500 space-y-0.5">
                   <p>Emitida: {formatData(l.dataEmissao)}</p>
                   <p>Válida até: {formatData(l.dataValidade)}</p>
-                  {l.areaPermitida != null && <p>Área: {l.areaPermitida} ha</p>}
-                  {l.atividadePermitida && <p>Atividade: {l.atividadePermitida}</p>}
+                  {l.tipo === 'OUTORGA' ? (
+                    <>
+                      {l.vazao != null && <p>Vazão: {l.vazao} m³/h</p>}
+                      {l.tipoOutorga && <p>Tipo: {l.tipoOutorga}</p>}
+                    </>
+                  ) : (
+                    <>
+                      {l.areaPermitida != null && <p>Área: {l.areaPermitida} ha</p>}
+                      {l.atividadePermitida && <p>Atividade: {l.atividadePermitida}</p>}
+                    </>
+                  )}
                 </div>
               </div>
             </Popup>

@@ -39,6 +39,7 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
     const body = await request.json()
     const updateData: any = {}
 
+    if (body.tipo !== undefined) updateData.tipo = body.tipo === 'OUTORGA' ? 'OUTORGA' : 'ATIVIDADE'
     if (body.numero !== undefined) updateData.numero = body.numero
     if (body.dataEmissao !== undefined) updateData.dataEmissao = new Date(body.dataEmissao)
     if (body.dataValidade !== undefined) updateData.dataValidade = body.dataValidade ? new Date(body.dataValidade) : null
@@ -46,6 +47,8 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
     if (body.latitude !== undefined) updateData.latitude = body.latitude ? parseFloat(body.latitude) : null
     if (body.longitude !== undefined) updateData.longitude = body.longitude ? parseFloat(body.longitude) : null
     if (body.atividadePermitida !== undefined) updateData.atividadePermitida = body.atividadePermitida || null
+    if (body.vazao !== undefined) updateData.vazao = body.vazao ? parseFloat(body.vazao) : null
+    if (body.tipoOutorga !== undefined) updateData.tipoOutorga = body.tipoOutorga || null
     if (body.condicionantes !== undefined) updateData.condicionantes = body.condicionantes || null
     if (body.documentoUrl !== undefined) updateData.documentoUrl = body.documentoUrl || null
     if (body.clienteId !== undefined) updateData.clienteId = body.clienteId || null

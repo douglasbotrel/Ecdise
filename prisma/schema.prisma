@@ -259,10 +259,13 @@ model Licenca {
   projetoId      String?   @unique
   clienteId      String?   // preenchido quando a licença não está vinculada a um projeto (cadastro externo/manual)
   numero         String
+  tipo           String    @default("ATIVIDADE") // ATIVIDADE (licença ambiental) | OUTORGA (uso de água)
   dataEmissao    DateTime
   dataValidade   DateTime?
-  areaPermitida  Float?
-  atividadePermitida String?
+  areaPermitida  Float?    // ATIVIDADE
+  atividadePermitida String? // ATIVIDADE
+  vazao          Float?    // OUTORGA — vazão concedida (m³/h)
+  tipoOutorga    String?   // OUTORGA — ex: "Superficial", "Subterrânea (poço)"
   latitude       Float?
   longitude      Float?
   condicionantes String?   // observações gerais em texto livre (legado)

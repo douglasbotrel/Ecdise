@@ -6,6 +6,7 @@ import { toast } from 'sonner'
 import {
   Award, Plus, X, Search, Loader2, Calendar, MapPin, Ruler, FileText,
   Check, Circle, Trash2, ChevronDown, ChevronUp, Pencil, Map as MapIcon,
+  Sprout, Droplet, Gauge,
 } from 'lucide-react'
 import { useLockBodyScroll } from '@/hooks/useLockBodyScroll'
 
@@ -78,18 +79,29 @@ interface PlanoAcaoItem {
   concluida?: boolean
 }
 
+const TIPOS_OUTORGA = ['Superficial (rio/riacho)', 'Subterrânea (poço)', 'Barramento/Represamento', 'Lançamento de efluentes']
+
 const FORM_VAZIO = {
   id: '' as string | null,
   vinculo: 'projeto' as 'projeto' | 'avulsa',
   projetoId: '',
   clienteId: '',
   numero: '',
+  tipo: 'ATIVIDADE' as 'ATIVIDADE' | 'OUTORGA',
   dataEmissao: new Date().toISOString().split('T')[0],
   dataValidade: '',
   areaPermitida: '',
   atividadePermitida: '',
+  vazao: '',
+  tipoOutorga: '',
   latitude: '',
   longitude: '',
+}
+
+function infoTipoLicenca(tipo: string | null | undefined): { label: string; cor: string; Icone: typeof Sprout } {
+  return tipo === 'OUTORGA'
+    ? { label: 'Outorga', cor: 'text-sky-700 bg-sky-50', Icone: Droplet }
+    : { label: 'Atividade', cor: 'text-green-700 bg-green-50', Icone: Sprout }
 }
 
 export default function LicencasPage() {
@@ -120,6 +132,7 @@ export default function LicencasPage() {
   })
   const [salvandoCondicionante, setSalvandoCondicionante] = useState(false)
   const [expandidas, setExpandidas] = useState<Record<string, boolean>>({})
+  const [filtroTipo, setFiltroTipo] = useState<'TODAS' | 'ATIVIDADE' | 'OUTORGA'>('TODAS')
   useLockBodyScroll(modalOpen)
 
   async function carregar() {
@@ -189,10 +202,13 @@ export default function LicencasPage() {
       projetoId: l.projetoId || '',
       clienteId: l.clienteId || l.projeto?.cliente?.id || '',
       numero: l.numero,
+      tipo: l.tipo === 'OUTORGA' ? 'OUTORGA' : 'ATIVIDADE',
       dataEmissao: l.dataEmissao ? l.dataEmissao.split('T')[0] : '',
       dataValidade: l.dataValidade ? l.dataValidade.split('T')[0] : '',
       areaPermitida: l.areaPermitida != null ? String(l.areaPermitida) : '',
       atividadePermitida: l.atividadePermitida || '',
+      vazao: l.vazao != null ? String(l.vazao) : '',
+      tipoOutorga: l.tipoOutorga || '',
       latitude: l.latitude != null ? String(l.latitude) : '',
       longitude: l.longitude != null ? String(l.longitude) : '',
     })
@@ -305,6 +321,12 @@ export default function LicencasPage() {
       return
     }
 
+    // Campos específicos do tipo escolhido — zera os do outro tipo pra não
+    // deixar lixo (ex: trocar de Atividade pra Outorga some com área/atividade)
+    const camposTipo = form.tipo === 'OUTORGA'
+      ? { areaPermitida: null, atividadePermitida: null, vazao: form.vazao || null, tipoOutorga: form.tipoOutorga || null }
+      : { areaPermitida: form.areaPermitida || null, atividadePermitida: form.atividadePermitida || null, vazao: null, tipoOutorga: null }
+
     setSalvando(true)
     try {
       if (form.id) {
@@ -314,10 +336,10 @@ export default function LicencasPage() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             numero: form.numero.trim(),
+            tipo: form.tipo,
             dataEmissao: form.dataEmissao,
             dataValidade: form.dataValidade || null,
-            areaPermitida: form.areaPermitida || null,
-            atividadePermitida: form.atividadePermitida || null,
+            ...camposTipo,
             latitude: form.latitude || null,
             longitude: form.longitude || null,
           }),
@@ -348,10 +370,10 @@ export default function LicencasPage() {
             projetoId: form.vinculo === 'projeto' ? form.projetoId : null,
             clienteId: form.vinculo === 'avulsa' ? form.clienteId : null,
             numero: form.numero.trim(),
+            tipo: form.tipo,
             dataEmissao: form.dataEmissao,
             dataValidade: form.dataValidade || null,
-            areaPermitida: form.areaPermitida || null,
-            atividadePermitida: form.atividadePermitida || null,
+            ...camposTipo,
             latitude: form.latitude || null,
             longitude: form.longitude || null,
             planoAcao: planoAcao.filter(item => item.descricao.trim()).map(item => ({
@@ -374,6 +396,13 @@ export default function LicencasPage() {
   const clientesOrdenados = useMemo(() => [...clientes].sort((a, b) => a.nome.localeCompare(b.nome)), [clientes])
   const projetosOrdenados = useMemo(() => [...projetos].sort((a, b) => (a.codigo || '').localeCompare(b.codigo || '')), [projetos])
   const licencasComCoordenadas = useMemo(() => licencas.filter(l => l.latitude != null && l.longitude != null), [licencas])
+  const qtdAtividade = useMemo(() => licencas.filter(l => l.tipo !== 'OUTORGA').length, [licencas])
+  const qtdOutorga   = useMemo(() => licencas.filter(l => l.tipo === 'OUTORGA').length, [licencas])
+  const licencasFiltradas = useMemo(() => {
+    if (filtroTipo === 'TODAS') return licencas
+    if (filtroTipo === 'OUTORGA') return licencas.filter(l => l.tipo === 'OUTORGA')
+    return licencas.filter(l => l.tipo !== 'OUTORGA')
+  }, [licencas, filtroTipo])
 
   return (
     <div className="p-4 sm:p-6 space-y-5 max-w-6xl mx-auto">
@@ -408,7 +437,7 @@ export default function LicencasPage() {
         <MapaLicencas licencas={licencasComCoordenadas} />
       )}
 
-      <div className="bg-white rounded-xl border border-gray-100 p-3">
+      <div className="bg-white rounded-xl border border-gray-100 p-3 space-y-3">
         <div className="relative">
           <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
           <input
@@ -418,29 +447,56 @@ export default function LicencasPage() {
             className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
           />
         </div>
+        {/* Abas por tipo de licença */}
+        <div className="flex gap-1.5">
+          <button
+            onClick={() => setFiltroTipo('TODAS')}
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${filtroTipo === 'TODAS' ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-500 hover:bg-gray-100'}`}
+          >
+            Todas ({licencas.length})
+          </button>
+          <button
+            onClick={() => setFiltroTipo('ATIVIDADE')}
+            className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${filtroTipo === 'ATIVIDADE' ? 'bg-green-600 text-white' : 'bg-green-50 text-green-700 hover:bg-green-100'}`}
+          >
+            <Sprout className="w-3.5 h-3.5" /> Atividade ({qtdAtividade})
+          </button>
+          <button
+            onClick={() => setFiltroTipo('OUTORGA')}
+            className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${filtroTipo === 'OUTORGA' ? 'bg-sky-600 text-white' : 'bg-sky-50 text-sky-700 hover:bg-sky-100'}`}
+          >
+            <Droplet className="w-3.5 h-3.5" /> Outorga ({qtdOutorga})
+          </button>
+        </div>
       </div>
 
       {loading ? (
         <div className="flex justify-center py-16"><Loader2 className="w-6 h-6 animate-spin text-gray-300" /></div>
-      ) : licencas.length === 0 ? (
+      ) : licencasFiltradas.length === 0 ? (
         <div className="bg-white rounded-xl border border-gray-100 p-10 text-center">
           <Award className="w-8 h-8 text-gray-200 mx-auto mb-2" />
-          <p className="text-sm text-gray-400">Nenhuma licença cadastrada ainda.</p>
+          <p className="text-sm text-gray-400">
+            {licencas.length === 0 ? 'Nenhuma licença cadastrada ainda.' : 'Nenhuma licença desse tipo.'}
+          </p>
         </div>
       ) : (
         <div className="space-y-3">
-          {licencas.map(l => {
+          {licencasFiltradas.map(l => {
             const vig = statusVigencia(l.dataValidade)
             const nomeCliente = l.cliente?.nome || l.projeto?.cliente?.nome || '—'
             const concluidas = (l.planoAcao || []).filter((c: any) => c.concluida).length
             const total = (l.planoAcao || []).length
             const aberto = !!expandidas[l.id]
+            const tipoInfo = infoTipoLicenca(l.tipo)
             return (
               <div key={l.id} className="bg-white rounded-xl border border-gray-100 overflow-hidden">
                 <div className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2 flex-wrap">
                       <p className="font-semibold text-gray-900">Licença nº {l.numero}</p>
+                      <span className={`flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full ${tipoInfo.cor}`}>
+                        <tipoInfo.Icone className="w-3 h-3" /> {tipoInfo.label}
+                      </span>
                       <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${vig.cor}`}>{vig.label}</span>
                       {l.projeto ? (
                         <span className="text-xs font-mono text-gray-400 bg-gray-50 px-1.5 py-0.5 rounded">{l.projeto.codigo}</span>
@@ -452,8 +508,17 @@ export default function LicencasPage() {
                     <div className="flex flex-wrap gap-3 mt-1.5 text-xs text-gray-400">
                       <span className="flex items-center gap-1"><Calendar className="w-3 h-3" /> Emitida {formatData(l.dataEmissao)}</span>
                       {l.dataValidade && <span className="flex items-center gap-1"><Calendar className="w-3 h-3" /> Válida até {formatData(l.dataValidade)}</span>}
-                      {l.areaPermitida != null && <span className="flex items-center gap-1"><Ruler className="w-3 h-3" /> {l.areaPermitida} ha</span>}
-                      {l.atividadePermitida && <span className="flex items-center gap-1"><MapPin className="w-3 h-3" /> {l.atividadePermitida}</span>}
+                      {l.tipo === 'OUTORGA' ? (
+                        <>
+                          {l.vazao != null && <span className="flex items-center gap-1"><Gauge className="w-3 h-3" /> {l.vazao} m³/h</span>}
+                          {l.tipoOutorga && <span className="flex items-center gap-1"><Droplet className="w-3 h-3" /> {l.tipoOutorga}</span>}
+                        </>
+                      ) : (
+                        <>
+                          {l.areaPermitida != null && <span className="flex items-center gap-1"><Ruler className="w-3 h-3" /> {l.areaPermitida} ha</span>}
+                          {l.atividadePermitida && <span className="flex items-center gap-1"><MapPin className="w-3 h-3" /> {l.atividadePermitida}</span>}
+                        </>
+                      )}
                     </div>
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0">
@@ -676,11 +741,31 @@ export default function LicencasPage() {
               )}
 
               <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Tipo de licença *</label>
+                <div className="flex gap-2 p-1 bg-gray-100 rounded-xl">
+                  <button
+                    type="button"
+                    onClick={() => setForm(f => ({ ...f, tipo: 'ATIVIDADE' }))}
+                    className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-sm font-medium transition-colors ${form.tipo === 'ATIVIDADE' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500'}`}
+                  >
+                    <Sprout className="w-4 h-4 text-green-600" /> Atividade
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setForm(f => ({ ...f, tipo: 'OUTORGA' }))}
+                    className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-sm font-medium transition-colors ${form.tipo === 'OUTORGA' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500'}`}
+                  >
+                    <Droplet className="w-4 h-4 text-sky-600" /> Outorga (uso de água)
+                  </button>
+                </div>
+              </div>
+
+              <div>
                 <label className="block text-xs font-medium text-gray-600 mb-1">Número da licença *</label>
                 <input
                   value={form.numero}
                   onChange={e => setForm(f => ({ ...f, numero: e.target.value }))}
-                  placeholder="Ex: LP-1234/2026"
+                  placeholder={form.tipo === 'OUTORGA' ? 'Ex: OUT-0456/2026' : 'Ex: LP-1234/2026'}
                   className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
                 />
               </div>
@@ -698,19 +783,38 @@ export default function LicencasPage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">Área permitida (ha)</label>
-                  <input type="number" step="0.01" value={form.areaPermitida} onChange={e => setForm(f => ({ ...f, areaPermitida: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500" />
+              {form.tipo === 'OUTORGA' ? (
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Vazão concedida (m³/h)</label>
+                    <input type="number" step="0.01" value={form.vazao} onChange={e => setForm(f => ({ ...f, vazao: e.target.value }))}
+                      placeholder="Ex: 12,5"
+                      className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Tipo de outorga</label>
+                    <select value={form.tipoOutorga} onChange={e => setForm(f => ({ ...f, tipoOutorga: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-green-500">
+                      <option value="">Selecione...</option>
+                      {TIPOS_OUTORGA.map(t => <option key={t} value={t}>{t}</option>)}
+                    </select>
+                  </div>
                 </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">Atividade permitida</label>
-                  <input value={form.atividadePermitida} onChange={e => setForm(f => ({ ...f, atividadePermitida: e.target.value }))}
-                    placeholder="Ex: Pecuária extensiva"
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500" />
+              ) : (
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Área permitida (ha)</label>
+                    <input type="number" step="0.01" value={form.areaPermitida} onChange={e => setForm(f => ({ ...f, areaPermitida: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Atividade permitida</label>
+                    <input value={form.atividadePermitida} onChange={e => setForm(f => ({ ...f, atividadePermitida: e.target.value }))}
+                      placeholder="Ex: Pecuária extensiva"
+                      className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500" />
+                  </div>
                 </div>
-              </div>
+              )}
 
               <div>
                 <div className="flex items-center justify-between mb-1">

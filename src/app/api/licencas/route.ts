@@ -59,8 +59,8 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json()
     const {
-      projetoId, clienteId, numero, dataEmissao, dataValidade,
-      areaPermitida, atividadePermitida, latitude, longitude, condicionantes, documentoUrl,
+      projetoId, clienteId, numero, tipo, dataEmissao, dataValidade,
+      areaPermitida, atividadePermitida, vazao, tipoOutorga, latitude, longitude, condicionantes, documentoUrl,
       planoAcao, // opcional: array de { descricao, comoSeraFeito, responsavelId, prazo }
     } = body
 
@@ -70,6 +70,7 @@ export async function POST(request: NextRequest) {
     if (!projetoId && !clienteId) {
       return NextResponse.json({ error: 'Informe o projeto vinculado ou, na falta dele, o cliente da licença' }, { status: 400 })
     }
+    const tipoLicenca = tipo === 'OUTORGA' ? 'OUTORGA' : 'ATIVIDADE'
 
     let projeto = null
     if (projetoId) {
@@ -79,10 +80,15 @@ export async function POST(request: NextRequest) {
 
     const dadosBase = {
       numero,
+      tipo: tipoLicenca,
       dataEmissao: new Date(dataEmissao),
       dataValidade: dataValidade ? new Date(dataValidade) : null,
-      areaPermitida: areaPermitida ? parseFloat(areaPermitida) : null,
-      atividadePermitida: atividadePermitida || null,
+      // Campos específicos por tipo — só gravamos os do tipo escolhido, pra não
+      // deixar lixo de um tipo misturado no registro do outro.
+      areaPermitida: tipoLicenca === 'ATIVIDADE' && areaPermitida ? parseFloat(areaPermitida) : null,
+      atividadePermitida: tipoLicenca === 'ATIVIDADE' ? (atividadePermitida || null) : null,
+      vazao: tipoLicenca === 'OUTORGA' && vazao ? parseFloat(vazao) : null,
+      tipoOutorga: tipoLicenca === 'OUTORGA' ? (tipoOutorga || null) : null,
       latitude: latitude ? parseFloat(latitude) : null,
       longitude: longitude ? parseFloat(longitude) : null,
       condicionantes: condicionantes || null,
