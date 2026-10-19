@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getCurrentUser } from '@/lib/auth'
 import { PODE_GERENCIAR_LICENCAS } from '@/lib/permissoesLicencas'
+import { normalizarTipoLicenca } from '@/lib/tiposLicenca'
 
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
   try {
@@ -39,7 +40,7 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
     const body = await request.json()
     const updateData: any = {}
 
-    if (body.tipo !== undefined) updateData.tipo = body.tipo === 'OUTORGA' ? 'OUTORGA' : 'ATIVIDADE'
+    if (body.tipo !== undefined) updateData.tipo = normalizarTipoLicenca(body.tipo)
     if (body.numero !== undefined) updateData.numero = body.numero
     if (body.dataEmissao !== undefined) updateData.dataEmissao = new Date(body.dataEmissao)
     if (body.dataValidade !== undefined) updateData.dataValidade = body.dataValidade ? new Date(body.dataValidade) : null

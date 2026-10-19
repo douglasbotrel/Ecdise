@@ -426,7 +426,7 @@ export default function FinanceiroPage() {
       {/* ── Modal ADM: liberar sem pagamento ────────────────── */}
       {modalLiberar && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md modal-panel">
             <div className="flex items-center justify-between px-6 py-4 border-b border-orange-100 bg-orange-50">
               <div className="flex items-center gap-3">
                 <div className="w-9 h-9 bg-orange-100 rounded-xl flex items-center justify-center">
@@ -496,7 +496,7 @@ export default function FinanceiroPage() {
       {/* ── Modal ADM: aprovar ajuste parcial ───────────────── */}
       {modalAprovar && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md modal-panel">
             <div className="flex items-center justify-between px-6 py-4 border-b border-orange-100 bg-orange-50">
               <div className="flex items-center gap-3">
                 <div className="w-9 h-9 bg-orange-100 rounded-xl flex items-center justify-center">
@@ -563,7 +563,7 @@ export default function FinanceiroPage() {
       {/* ── Modal de pagamento ───────────────────────────────── */}
       {modalPag && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md modal-panel">
             <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
               <div>
                 <h2 className="text-lg font-bold text-gray-900">Registrar Pagamento</h2>

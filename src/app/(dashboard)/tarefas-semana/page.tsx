@@ -7,6 +7,7 @@ import {
   Calendar, Loader2, Users, TrendingUp, AlertTriangle, Landmark, GripVertical, Award
 } from 'lucide-react'
 import { useLockBodyScroll } from '@/hooks/useLockBodyScroll'
+import { detectarTarefaEspecial } from '@/lib/tarefaEspecial'
 
 const ROLES_GESTAO = ['ADMIN', 'GESTOR_GERAL', 'GESTOR_OPERACIONAL', 'GESTOR_ADMINISTRATIVO', 'SUPERVISOR']
 
@@ -204,14 +205,9 @@ export default function TarefasSemanaPage() {
       // lógica usada no Operacional ao marcar essas tarefas como concluídas.
       if (tipo === 'TAREFA' && !concluida) {
         const data = await res.json().catch(() => null)
-        const titulo: string = (data?.tarefa?.titulo || '').toUpperCase()
+        const especial = detectarTarefaEspecial(data?.tarefa?.titulo)
         const projetoId: string | undefined = data?.tarefa?.projetoId
-        if (projetoId) {
-          if (titulo.includes('SIGLA')) await abrirModalEspecial('SIGLA', projetoId)
-          else if (titulo.includes('CTF')) await abrirModalEspecial('CTF', projetoId)
-          else if (titulo.includes('PROTOCOLO')) await abrirModalEspecial('PROTOCOLO', projetoId)
-          else if (titulo.includes('LICENÇA') || titulo.includes('LICENCA')) await abrirModalEspecial('LICENCA', projetoId)
-        }
+        if (projetoId && especial) await abrirModalEspecial(especial, projetoId)
       }
 
       toast.success(concluida ? 'Reaberta' : (
@@ -766,7 +762,7 @@ export default function TarefasSemanaPage() {
       {/* Painel da equipe (gestores) */}
       {verPainelEquipe && podeGerenciarEquipe && (
         <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={() => setVerPainelEquipe(false)}>
-          <div className="bg-white rounded-2xl max-w-lg w-full max-h-[80vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+          <div className="bg-white rounded-2xl max-w-lg w-full modal-panel" onClick={e => e.stopPropagation()}>
             <div className="p-5 border-b border-gray-100 flex items-center justify-between">
               <div>
                 <h3 className="font-semibold text-gray-900 flex items-center gap-2">
@@ -809,7 +805,7 @@ export default function TarefasSemanaPage() {
       {/* ── Modal de dados extras (SIGLA / CTF / PROTOCOLO / LICENÇA) ──────── */}
       {(modalEspecial || carregandoEspecial) && (
         <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-sm w-full">
+          <div className="bg-white rounded-2xl max-w-sm w-full modal-panel">
             {carregandoEspecial || !modalEspecial ? (
               <div className="flex justify-center py-10">
                 <Loader2 className="w-5 h-5 animate-spin text-gray-300" />

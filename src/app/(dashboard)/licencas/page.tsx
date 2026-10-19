@@ -6,8 +6,9 @@ import { toast } from 'sonner'
 import {
   Award, Plus, X, Search, Loader2, Calendar, MapPin, Ruler, FileText,
   Check, Circle, Trash2, ChevronDown, ChevronUp, Pencil, Map as MapIcon,
-  Sprout, Droplet, Gauge,
+  Sprout, Droplet, Gauge, Car, Fuel, Wrench, Factory, Pickaxe, Recycle,
 } from 'lucide-react'
+import { TIPOS_LICENCA, infoTipo, normalizarTipoLicenca, ehTipoAgua } from '@/lib/tiposLicenca'
 import { useLockBodyScroll } from '@/hooks/useLockBodyScroll'
 
 // Carregado só no navegador — Leaflet precisa do DOM, não funciona em SSR
@@ -87,7 +88,7 @@ const FORM_VAZIO = {
   projetoId: '',
   clienteId: '',
   numero: '',
-  tipo: 'ATIVIDADE' as 'ATIVIDADE' | 'OUTORGA',
+  tipo: 'ATIVIDADE' as string,
   dataEmissao: new Date().toISOString().split('T')[0],
   dataValidade: '',
   areaPermitida: '',
@@ -98,10 +99,11 @@ const FORM_VAZIO = {
   longitude: '',
 }
 
-function infoTipoLicenca(tipo: string | null | undefined): { label: string; cor: string; Icone: typeof Sprout } {
-  return tipo === 'OUTORGA'
-    ? { label: 'Outorga', cor: 'text-sky-700 bg-sky-50', Icone: Droplet }
-    : { label: 'Atividade', cor: 'text-green-700 bg-green-50', Icone: Sprout }
+const ICONES_TIPO = { Sprout, Droplet, Car, Fuel, Wrench, Factory, Pickaxe, Recycle, FileText } as const
+
+function infoTipoLicenca(tipo: string | null | undefined) {
+  const t = infoTipo(tipo)
+  return { label: t.label, cor: t.selo, Icone: ICONES_TIPO[t.icone] }
 }
 
 export default function LicencasPage() {
@@ -132,7 +134,7 @@ export default function LicencasPage() {
   })
   const [salvandoCondicionante, setSalvandoCondicionante] = useState(false)
   const [expandidas, setExpandidas] = useState<Record<string, boolean>>({})
-  const [filtroTipo, setFiltroTipo] = useState<'TODAS' | 'ATIVIDADE' | 'OUTORGA'>('TODAS')
+  const [filtroTipo, setFiltroTipo] = useState<string>('TODAS')
   useLockBodyScroll(modalOpen)
 
   async function carregar() {
@@ -202,7 +204,7 @@ export default function LicencasPage() {
       projetoId: l.projetoId || '',
       clienteId: l.clienteId || l.projeto?.cliente?.id || '',
       numero: l.numero,
-      tipo: l.tipo === 'OUTORGA' ? 'OUTORGA' : 'ATIVIDADE',
+      tipo: normalizarTipoLicenca(l.tipo),
       dataEmissao: l.dataEmissao ? l.dataEmissao.split('T')[0] : '',
       dataValidade: l.dataValidade ? l.dataValidade.split('T')[0] : '',
       areaPermitida: l.areaPermitida != null ? String(l.areaPermitida) : '',
@@ -323,7 +325,7 @@ export default function LicencasPage() {
 
     // Campos específicos do tipo escolhido — zera os do outro tipo pra não
     // deixar lixo (ex: trocar de Atividade pra Outorga some com área/atividade)
-    const camposTipo = form.tipo === 'OUTORGA'
+    const camposTipo = ehTipoAgua(form.tipo)
       ? { areaPermitida: null, atividadePermitida: null, vazao: form.vazao || null, tipoOutorga: form.tipoOutorga || null }
       : { areaPermitida: form.areaPermitida || null, atividadePermitida: form.atividadePermitida || null, vazao: null, tipoOutorga: null }
 
@@ -396,12 +398,15 @@ export default function LicencasPage() {
   const clientesOrdenados = useMemo(() => [...clientes].sort((a, b) => a.nome.localeCompare(b.nome)), [clientes])
   const projetosOrdenados = useMemo(() => [...projetos].sort((a, b) => (a.codigo || '').localeCompare(b.codigo || '')), [projetos])
   const licencasComCoordenadas = useMemo(() => licencas.filter(l => l.latitude != null && l.longitude != null), [licencas])
-  const qtdAtividade = useMemo(() => licencas.filter(l => l.tipo !== 'OUTORGA').length, [licencas])
-  const qtdOutorga   = useMemo(() => licencas.filter(l => l.tipo === 'OUTORGA').length, [licencas])
+  // Quantidade por tipo (tipos antigos/desconhecidos contam como Atividade)
+  const qtdPorTipo = useMemo(() => {
+    const m: Record<string, number> = {}
+    licencas.forEach(l => { const k = normalizarTipoLicenca(l.tipo); m[k] = (m[k] || 0) + 1 })
+    return m
+  }, [licencas])
   const licencasFiltradas = useMemo(() => {
     if (filtroTipo === 'TODAS') return licencas
-    if (filtroTipo === 'OUTORGA') return licencas.filter(l => l.tipo === 'OUTORGA')
-    return licencas.filter(l => l.tipo !== 'OUTORGA')
+    return licencas.filter(l => normalizarTipoLicenca(l.tipo) === filtroTipo)
   }, [licencas, filtroTipo])
 
   return (
@@ -448,25 +453,25 @@ export default function LicencasPage() {
           />
         </div>
         {/* Abas por tipo de licença */}
-        <div className="flex gap-1.5">
+        <div className="flex gap-1.5 flex-wrap">
           <button
             onClick={() => setFiltroTipo('TODAS')}
             className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${filtroTipo === 'TODAS' ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-500 hover:bg-gray-100'}`}
           >
             Todas ({licencas.length})
           </button>
-          <button
-            onClick={() => setFiltroTipo('ATIVIDADE')}
-            className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${filtroTipo === 'ATIVIDADE' ? 'bg-green-600 text-white' : 'bg-green-50 text-green-700 hover:bg-green-100'}`}
-          >
-            <Sprout className="w-3.5 h-3.5" /> Atividade ({qtdAtividade})
-          </button>
-          <button
-            onClick={() => setFiltroTipo('OUTORGA')}
-            className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${filtroTipo === 'OUTORGA' ? 'bg-sky-600 text-white' : 'bg-sky-50 text-sky-700 hover:bg-sky-100'}`}
-          >
-            <Droplet className="w-3.5 h-3.5" /> Outorga ({qtdOutorga})
-          </button>
+          {TIPOS_LICENCA.filter(t => (qtdPorTipo[t.chave] || 0) > 0 || filtroTipo === t.chave || t.chave === 'ATIVIDADE' || t.chave === 'OUTORGA').map(t => {
+            const Icone = ICONES_TIPO[t.icone]
+            return (
+              <button
+                key={t.chave}
+                onClick={() => setFiltroTipo(t.chave)}
+                className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${filtroTipo === t.chave ? t.abaAtiva : t.abaInativa}`}
+              >
+                <Icone className="w-3.5 h-3.5" /> {t.label} ({qtdPorTipo[t.chave] || 0})
+              </button>
+            )
+          })}
         </div>
       </div>
 
@@ -508,7 +513,7 @@ export default function LicencasPage() {
                     <div className="flex flex-wrap gap-3 mt-1.5 text-xs text-gray-400">
                       <span className="flex items-center gap-1"><Calendar className="w-3 h-3" /> Emitida {formatData(l.dataEmissao)}</span>
                       {l.dataValidade && <span className="flex items-center gap-1"><Calendar className="w-3 h-3" /> Válida até {formatData(l.dataValidade)}</span>}
-                      {l.tipo === 'OUTORGA' ? (
+                      {ehTipoAgua(l.tipo) ? (
                         <>
                           {l.vazao != null && <span className="flex items-center gap-1"><Gauge className="w-3 h-3" /> {l.vazao} m³/h</span>}
                           {l.tipoOutorga && <span className="flex items-center gap-1"><Droplet className="w-3 h-3" /> {l.tipoOutorga}</span>}
@@ -640,7 +645,7 @@ export default function LicencasPage() {
       {/* Modal de criação/edição */}
       {modalOpen && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setModalOpen(false)}>
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg modal-panel" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 sticky top-0 bg-white">
               <p className="font-bold text-gray-900">{form.id ? 'Editar Licença' : 'Nova Licença'}</p>
               <button onClick={() => setModalOpen(false)} className="text-gray-400 hover:text-gray-600"><X className="w-5 h-5" /></button>
@@ -742,22 +747,23 @@ export default function LicencasPage() {
 
               <div>
                 <label className="block text-xs font-medium text-gray-600 mb-1">Tipo de licença *</label>
-                <div className="flex gap-2 p-1 bg-gray-100 rounded-xl">
-                  <button
-                    type="button"
-                    onClick={() => setForm(f => ({ ...f, tipo: 'ATIVIDADE' }))}
-                    className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-sm font-medium transition-colors ${form.tipo === 'ATIVIDADE' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500'}`}
-                  >
-                    <Sprout className="w-4 h-4 text-green-600" /> Atividade
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setForm(f => ({ ...f, tipo: 'OUTORGA' }))}
-                    className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-sm font-medium transition-colors ${form.tipo === 'OUTORGA' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500'}`}
-                  >
-                    <Droplet className="w-4 h-4 text-sky-600" /> Outorga (uso de água)
-                  </button>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                  {TIPOS_LICENCA.map(t => {
+                    const Icone = ICONES_TIPO[t.icone]
+                    const ativo = form.tipo === t.chave
+                    return (
+                      <button
+                        key={t.chave}
+                        type="button"
+                        onClick={() => setForm(f => ({ ...f, tipo: t.chave }))}
+                        className={`flex items-center gap-1.5 px-2.5 py-2 rounded-lg text-xs sm:text-sm font-medium text-left border transition-colors ${ativo ? 'bg-white border-green-500 ring-1 ring-green-500 text-gray-900' : 'bg-gray-50 border-gray-200 text-gray-500 hover:bg-gray-100'}`}
+                      >
+                        <Icone className={`w-4 h-4 flex-shrink-0 ${t.iconeCor}`} /> <span className="leading-tight">{t.label}</span>
+                      </button>
+                    )
+                  })}
                 </div>
+                <p className="text-xs text-gray-400 mt-1">{infoTipo(form.tipo).descricao}</p>
               </div>
 
               <div>
@@ -765,7 +771,7 @@ export default function LicencasPage() {
                 <input
                   value={form.numero}
                   onChange={e => setForm(f => ({ ...f, numero: e.target.value }))}
-                  placeholder={form.tipo === 'OUTORGA' ? 'Ex: OUT-0456/2026' : 'Ex: LP-1234/2026'}
+                  placeholder={infoTipo(form.tipo).placeholderNumero}
                   className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
                 />
               </div>
@@ -783,7 +789,7 @@ export default function LicencasPage() {
                 </div>
               </div>
 
-              {form.tipo === 'OUTORGA' ? (
+              {ehTipoAgua(form.tipo) ? (
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="block text-xs font-medium text-gray-600 mb-1">Vazão concedida (m³/h)</label>

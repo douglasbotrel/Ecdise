@@ -15,6 +15,8 @@ import {
 } from '@/lib/utils'
 import NoteEditor from './NoteEditor'
 import TituloEditor from './TituloEditor'
+import ExcluirProjetoButton from '@/components/ExcluirProjetoButton'
+import { detectarTarefaEspecial } from '@/lib/tarefaEspecial'
 
 // Estado inline de edição por tarefa
 interface TarefaEdit {
@@ -311,24 +313,19 @@ export default function ProjetoDetalhe() {
       }
       // ── Abre modal de credenciais ao concluir tarefas SIGLA/CTF ──
       if (novoStatus === 'CONCLUIDA' && tarefa) {
-        const titulo = tarefa.titulo.toUpperCase()
-        if (titulo.includes('SIGLA')) {
+        const especial = detectarTarefaEspecial(tarefa.titulo)
+        if (especial === 'SIGLA' || especial === 'CTF') {
           const creds = projeto?.credenciais ? JSON.parse(projeto.credenciais) : {}
-          setCredForm({ login: creds.SIGLA?.login || '', senha: creds.SIGLA?.senha || '' })
-          setModalCredencial({ sistema: 'SIGLA' })
-        } else if (titulo.includes('CTF')) {
-          const creds = projeto?.credenciais ? JSON.parse(projeto.credenciais) : {}
-          setCredForm({ login: creds.CTF?.login || '', senha: creds.CTF?.senha || '' })
-          setModalCredencial({ sistema: 'CTF' })
-        } else if (titulo.includes('PROTOCOLO')) {
+          setCredForm({ login: creds[especial]?.login || '', senha: creds[especial]?.senha || '' })
+          setModalCredencial({ sistema: especial })
+        } else if (especial === 'PROTOCOLO') {
           setProtocoloForm({
             data: projeto?.protocoloData ? projeto.protocoloData.split('T')[0] : HOJE_STR,
             codigoOrgao: projeto?.protocoloCodigoOrgao || '',
           })
           setModalProtocolo(true)
-        } else if (titulo.includes('LICENÇA') || titulo.includes('LICENCA')) {
-          abrirModalLicenca()
         }
+        // Licença: não abre popup ao concluir tarefa — só pelo botão "Licença Obtida".
       }
     } catch {
       toast.error('Erro ao atualizar tarefa')
@@ -561,6 +558,12 @@ export default function ProjetoDetalhe() {
                 ))}
               </select>
             )}
+            <ExcluirProjetoButton
+              projetoId={projeto.id}
+              codigo={projeto.codigo}
+              nome={projeto.imovelNome || projeto.cliente?.nome}
+              onDeleted={() => router.push('/operacional')}
+            />
           </div>
         </div>
       </div>
@@ -1489,7 +1492,7 @@ export default function ProjetoDetalhe() {
           ══════════════════════════════════════════════════════ */}
       {modalCredencial && (
         <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md modal-panel">
             {/* Header */}
             <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
               <div>
@@ -1560,7 +1563,7 @@ export default function ProjetoDetalhe() {
           ══════════════════════════════════════════════════════ */}
       {modalProtocolo && (
         <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md modal-panel">
             {/* Header */}
             <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
               <div>
@@ -1629,7 +1632,7 @@ export default function ProjetoDetalhe() {
       {/* Modal Licença Obtida */}
       {modalLicenca && (
         <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden max-h-[90vh] overflow-y-auto">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md modal-panel">
             <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 sticky top-0 bg-white">
               <div>
                 <h2 className="font-bold text-gray-900">🏅 Licença Obtida</h2>

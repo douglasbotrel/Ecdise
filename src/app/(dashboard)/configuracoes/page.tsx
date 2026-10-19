@@ -779,7 +779,7 @@ export default function ConfiguracoesPage() {
       {/* ── MODAL EDITAR SERVIÇO ── */}
       {servicoEditando && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm modal-panel">
             <div className="flex items-center justify-between p-5 border-b border-gray-100">
               <div>
                 <h2 className="text-base font-semibold text-gray-900">Editar Tipo de Serviço</h2>
@@ -834,7 +834,7 @@ export default function ConfiguracoesPage() {
       {/* ── MODAL EDITAR USUÁRIO ── */}
       {usuarioEditando && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg modal-panel">
             <div className="flex items-center justify-between p-6 border-b border-gray-100">
               <div>
                 <h2 className="text-lg font-semibold text-gray-900">Editar Usuário</h2>
@@ -958,7 +958,7 @@ export default function ConfiguracoesPage() {
       {/* ── MODAL NOVO USUÁRIO ── */}
       {modalUsuario && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg modal-panel">
             <div className="flex items-center justify-between p-6 border-b border-gray-100">
               <h2 className="text-lg font-semibold text-gray-900">Novo Usuário</h2>
               <button onClick={() => setModalUsuario(false)} className="text-gray-400 hover:text-gray-600">

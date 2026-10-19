@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getCurrentUser } from '@/lib/auth'
 import { PODE_GERENCIAR_LICENCAS } from '@/lib/permissoesLicencas'
+import { normalizarTipoLicenca, ehTipoAgua } from '@/lib/tiposLicenca'
 
 // GET /api/licencas — lista todas as licenças (vinculadas a projeto ou cadastradas soltas)
 export async function GET(request: NextRequest) {
@@ -70,7 +71,8 @@ export async function POST(request: NextRequest) {
     if (!projetoId && !clienteId) {
       return NextResponse.json({ error: 'Informe o projeto vinculado ou, na falta dele, o cliente da licença' }, { status: 400 })
     }
-    const tipoLicenca = tipo === 'OUTORGA' ? 'OUTORGA' : 'ATIVIDADE'
+    const tipoLicenca = normalizarTipoLicenca(tipo)
+    const agua = ehTipoAgua(tipoLicenca)
 
     let projeto = null
     if (projetoId) {
@@ -85,10 +87,10 @@ export async function POST(request: NextRequest) {
       dataValidade: dataValidade ? new Date(dataValidade) : null,
       // Campos específicos por tipo — só gravamos os do tipo escolhido, pra não
       // deixar lixo de um tipo misturado no registro do outro.
-      areaPermitida: tipoLicenca === 'ATIVIDADE' && areaPermitida ? parseFloat(areaPermitida) : null,
-      atividadePermitida: tipoLicenca === 'ATIVIDADE' ? (atividadePermitida || null) : null,
-      vazao: tipoLicenca === 'OUTORGA' && vazao ? parseFloat(vazao) : null,
-      tipoOutorga: tipoLicenca === 'OUTORGA' ? (tipoOutorga || null) : null,
+      areaPermitida: !agua && areaPermitida ? parseFloat(areaPermitida) : null,
+      atividadePermitida: !agua ? (atividadePermitida || null) : null,
+      vazao: agua && vazao ? parseFloat(vazao) : null,
+      tipoOutorga: agua ? (tipoOutorga || null) : null,
       latitude: latitude ? parseFloat(latitude) : null,
       longitude: longitude ? parseFloat(longitude) : null,
       condicionantes: condicionantes || null,

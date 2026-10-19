@@ -4,10 +4,11 @@ import { useEffect } from 'react'
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
+import { infoTipo, ehTipoAgua } from '@/lib/tiposLicenca'
 
 // Ícones por tipo de licença — um "pin" em formato de gota (como o marcador
-// padrão), mas com cor e emoji diferentes: verde com 🌾 para Atividade
-// (licença ambiental rural) e azul com 💧 para Outorga (uso de água).
+// padrão), mas com cor e emoji próprios de cada tipo de licença (🌾 atividade,
+// 💧 outorga, 🚗 lava jato...) — definidos em lib/tiposLicenca.
 // Usa divIcon (HTML/CSS puro) em vez de imagem, então não depende de
 // nenhuma rede externa pra carregar o ícone.
 function criarIconePin(emoji: string, cor: string) {
@@ -32,11 +33,12 @@ function criarIconePin(emoji: string, cor: string) {
   })
 }
 
-const iconeAtividade = criarIconePin('🌾', '#16a34a') // verde — licença ambiental / atividade rural
-const iconeOutorga   = criarIconePin('💧', '#0284c7') // azul — outorga de uso de água
-
+// Cache: um ícone por tipo (cor + emoji vêm do catálogo em lib/tiposLicenca)
+const cacheIcones: Record<string, L.DivIcon> = {}
 function iconePorTipo(tipo: string | null | undefined) {
-  return tipo === 'OUTORGA' ? iconeOutorga : iconeAtividade
+  const info = infoTipo(tipo)
+  if (!cacheIcones[info.chave]) cacheIcones[info.chave] = criarIconePin(info.emoji, info.corPino)
+  return cacheIcones[info.chave]
 }
 
 function formatData(d: string | Date | null | undefined) {
@@ -78,14 +80,14 @@ export default function MapaLicencas({ licencas }: { licencas: any[] }) {
             <Popup>
               <div className="text-sm min-w-[180px]">
                 <p className="font-semibold text-gray-900">
-                  {l.tipo === 'OUTORGA' ? '💧 Outorga' : '🌾 Atividade'} nº {l.numero}
+                  {infoTipo(l.tipo).emoji} {infoTipo(l.tipo).label} nº {l.numero}
                 </p>
                 <p className="text-gray-600">{l.cliente?.nome || l.projeto?.cliente?.nome || '—'}</p>
                 {l.projeto?.imovelNome && <p className="text-gray-500 text-xs">{l.projeto.imovelNome}</p>}
                 <div className="mt-1.5 text-xs text-gray-500 space-y-0.5">
                   <p>Emitida: {formatData(l.dataEmissao)}</p>
                   <p>Válida até: {formatData(l.dataValidade)}</p>
-                  {l.tipo === 'OUTORGA' ? (
+                  {ehTipoAgua(l.tipo) ? (
                     <>
                       {l.vazao != null && <p>Vazão: {l.vazao} m³/h</p>}
                       {l.tipoOutorga && <p>Tipo: {l.tipoOutorga}</p>}

@@ -13,6 +13,7 @@ import {
 } from 'lucide-react'
 import { formatDate, formatCurrency, STATUS_OPERACIONAL_LABELS, STATUS_COLORS } from '@/lib/utils'
 import Link from 'next/link'
+import ExcluirProjetoButton from '@/components/ExcluirProjetoButton'
 
 const FILTROS = [
   { label: 'Todos',        value: '' },
@@ -263,6 +264,7 @@ export default function OperacionalPage() {
   const [modoGestao, setModoGestao]       = useState(false)
   const [gestaoData, setGestaoData]       = useState<any>(null)
   const [loadingGestao, setLoadingGestao] = useState(false)
+  const [mostrarFinalizados, setMostrarFinalizados] = useState(false)
 
   // Abre o drawer lateral com dados completos do projeto
   async function abrirQuickView(e: React.MouseEvent, projetoId: string) {
@@ -349,7 +351,10 @@ export default function OperacionalPage() {
       for (const p of dataAtivos.projetos || []) {
         porStatus[p.statusOperacional] = (porStatus[p.statusOperacional] || 0) + 1
       }
-      const totalTodos = Object.values(porStatus).reduce((a: number, b: number) => a + b, 0)
+      // "Todos" conta só os projetos em andamento — finalizados ficam na aba Concluído
+      const totalTodos = Object.entries(porStatus)
+        .filter(([k]) => k !== 'CONCLUIDO')
+        .reduce((a, [, b]) => a + (b as number), 0)
       porStatus['CONCLUIDO'] = (dataConcluidos.projetos || []).length
       porStatus[''] = totalTodos
 
@@ -395,6 +400,111 @@ export default function OperacionalPage() {
   }
 
   const podeVerGestao = currentUser && ROLES_GESTAO.includes(currentUser.role)
+
+  // Finalizados (statusOperacional CONCLUIDO) que não foram para Acompanhamento:
+  // não precisam de acompanhamento diário, então ficam recolhidos e apagados.
+  const projetosFinalizados = filtro === 'CONCLUIDO'
+    ? projetos
+    : projetos.filter(p => p.statusOperacional === 'CONCLUIDO')
+  const projetosAtivos = filtro === 'CONCLUIDO'
+    ? []
+    : projetos.filter(p => p.statusOperacional !== 'CONCLUIDO')
+
+  // Card de projeto. `discreto` = projeto já finalizado que não seguiu para
+  // outra etapa: aparece apagado, só pra consulta eventual.
+  function renderCard(projeto: any, discreto: boolean = false) {
+    const aguardandoPlanejamento = projeto.etapaPipeline === 'OPERACIONAL'
+
+    return (
+      <Link
+        key={projeto.id}
+        href={`/operacional/${projeto.id}`}
+        className={`group rounded-2xl border hover:border-green-200 hover:shadow-md transition-all duration-200 overflow-hidden flex flex-col ${discreto ? 'bg-gray-50 border-gray-100 opacity-60 hover:opacity-100' : 'bg-white border-gray-100'}`}
+      >
+        {aguardandoPlanejamento && <div className="bg-amber-400 h-1 w-full" />}
+
+        <div className="p-5 flex-1 flex flex-col">
+          {/* Topo: código + status + botão info */}
+          <div className="flex items-start justify-between mb-3">
+            <div className="min-w-0 flex-1">
+              <span className="font-mono text-xs text-gray-400">{projeto.codigo}</span>
+              <p className="font-semibold text-gray-900 mt-0.5 group-hover:text-green-700 transition-colors leading-snug">
+                {projeto.imovelNome || projeto.cliente?.nome}
+              </p>
+              <p className="text-xs text-gray-500 mt-0.5">{projeto.tipoServico}</p>
+            </div>
+            <div className="flex flex-col items-end gap-1 flex-shrink-0 ml-2">
+              <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${STATUS_COLORS[projeto.statusOperacional]}`}>
+                {STATUS_OPERACIONAL_LABELS[projeto.statusOperacional]}
+              </span>
+              {aguardandoPlanejamento && (
+                <span className="flex items-center gap-1 text-xs text-amber-600 font-medium">
+                  <AlertCircle className="w-3 h-3" /> Planejar
+                </span>
+              )}
+            </div>
+          </div>
+
+          <div className="space-y-1.5 flex-1">
+            {projeto.municipio && (
+              <div className="flex items-center gap-2 text-xs text-gray-500">
+                <MapPin className="w-3.5 h-3.5 text-gray-300 flex-shrink-0" />
+                <span>{projeto.municipio}{projeto.estado ? ` / ${projeto.estado}` : ''}</span>
+              </div>
+            )}
+            {projeto.responsavel ? (
+              <div className="flex items-center gap-2 text-xs text-gray-500">
+                <User className="w-3.5 h-3.5 text-gray-300 flex-shrink-0" />
+                <span>{projeto.responsavel.nome}</span>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 text-xs text-amber-500">
+                <User className="w-3.5 h-3.5 flex-shrink-0" />
+                <span>Responsável não definido</span>
+              </div>
+            )}
+            {projeto.dataPrazo && (
+              <div className="flex items-center gap-2 text-xs text-gray-500">
+                <Calendar className="w-3.5 h-3.5 text-gray-300 flex-shrink-0" />
+                <span>Prazo: {formatDate(projeto.dataPrazo)}</span>
+              </div>
+            )}
+          </div>
+
+          {/* Rodapé: contadores + botão info + seta */}
+          <div className="mt-4 pt-3 border-t border-gray-50 flex items-center gap-3">
+            <div className="flex items-center gap-3 text-xs text-gray-400 flex-1">
+              <span className="flex items-center gap-1">
+                <CheckSquare className="w-3.5 h-3.5" />
+                {projeto._count?.tarefas || 0} tarefas
+              </span>
+              <span>📷 {projeto._count?.vistorias || 0}</span>
+              <span>📎 {projeto._count?.documentos || 0}</span>
+            </div>
+            {/* Botão de visualização rápida */}
+            <button
+              onClick={e => abrirQuickView(e, projeto.id)}
+              className="flex items-center gap-1 text-xs text-gray-400 hover:text-blue-600 hover:bg-blue-50 px-2 py-1 rounded-lg transition-colors"
+              title="Ver dados rápidos"
+            >
+              <Info className="w-3.5 h-3.5" />
+            </button>
+            <ExcluirProjetoButton
+              compact
+              projetoId={projeto.id}
+              codigo={projeto.codigo}
+              nome={projeto.imovelNome || projeto.cliente?.nome}
+              onDeleted={() => { load(); carregarContagens() }}
+            />
+            <span className="flex items-center gap-1 text-xs font-medium text-green-600 group-hover:gap-2 transition-all">
+              Abrir <ChevronRight className="w-4 h-4" />
+            </span>
+          </div>
+        </div>
+      </Link>
+    )
+  }
+
 
   return (
     <div className="space-y-6">
@@ -476,92 +586,33 @@ export default function OperacionalPage() {
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-          {projetos.map(projeto => {
-            const aguardandoPlanejamento = projeto.etapaPipeline === 'OPERACIONAL'
+        <div className="space-y-6">
+          {projetosAtivos.length > 0 && (
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+              {projetosAtivos.map(p => renderCard(p))}
+            </div>
+          )}
 
-            return (
-              <Link
-                key={projeto.id}
-                href={`/operacional/${projeto.id}`}
-                className="group bg-white rounded-2xl border border-gray-100 hover:border-green-200 hover:shadow-md transition-all duration-200 overflow-hidden flex flex-col"
-              >
-                {aguardandoPlanejamento && <div className="bg-amber-400 h-1 w-full" />}
-
-                <div className="p-5 flex-1 flex flex-col">
-                  {/* Topo: código + status + botão info */}
-                  <div className="flex items-start justify-between mb-3">
-                    <div className="min-w-0 flex-1">
-                      <span className="font-mono text-xs text-gray-400">{projeto.codigo}</span>
-                      <p className="font-semibold text-gray-900 mt-0.5 group-hover:text-green-700 transition-colors leading-snug">
-                        {projeto.imovelNome || projeto.cliente?.nome}
-                      </p>
-                      <p className="text-xs text-gray-500 mt-0.5">{projeto.tipoServico}</p>
-                    </div>
-                    <div className="flex flex-col items-end gap-1 flex-shrink-0 ml-2">
-                      <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${STATUS_COLORS[projeto.statusOperacional]}`}>
-                        {STATUS_OPERACIONAL_LABELS[projeto.statusOperacional]}
-                      </span>
-                      {aguardandoPlanejamento && (
-                        <span className="flex items-center gap-1 text-xs text-amber-600 font-medium">
-                          <AlertCircle className="w-3 h-3" /> Planejar
-                        </span>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="space-y-1.5 flex-1">
-                    {projeto.municipio && (
-                      <div className="flex items-center gap-2 text-xs text-gray-500">
-                        <MapPin className="w-3.5 h-3.5 text-gray-300 flex-shrink-0" />
-                        <span>{projeto.municipio}{projeto.estado ? ` / ${projeto.estado}` : ''}</span>
-                      </div>
-                    )}
-                    {projeto.responsavel ? (
-                      <div className="flex items-center gap-2 text-xs text-gray-500">
-                        <User className="w-3.5 h-3.5 text-gray-300 flex-shrink-0" />
-                        <span>{projeto.responsavel.nome}</span>
-                      </div>
-                    ) : (
-                      <div className="flex items-center gap-2 text-xs text-amber-500">
-                        <User className="w-3.5 h-3.5 flex-shrink-0" />
-                        <span>Responsável não definido</span>
-                      </div>
-                    )}
-                    {projeto.dataPrazo && (
-                      <div className="flex items-center gap-2 text-xs text-gray-500">
-                        <Calendar className="w-3.5 h-3.5 text-gray-300 flex-shrink-0" />
-                        <span>Prazo: {formatDate(projeto.dataPrazo)}</span>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Rodapé: contadores + botão info + seta */}
-                  <div className="mt-4 pt-3 border-t border-gray-50 flex items-center gap-3">
-                    <div className="flex items-center gap-3 text-xs text-gray-400 flex-1">
-                      <span className="flex items-center gap-1">
-                        <CheckSquare className="w-3.5 h-3.5" />
-                        {projeto._count?.tarefas || 0} tarefas
-                      </span>
-                      <span>📷 {projeto._count?.vistorias || 0}</span>
-                      <span>📎 {projeto._count?.documentos || 0}</span>
-                    </div>
-                    {/* Botão de visualização rápida */}
-                    <button
-                      onClick={e => abrirQuickView(e, projeto.id)}
-                      className="flex items-center gap-1 text-xs text-gray-400 hover:text-blue-600 hover:bg-blue-50 px-2 py-1 rounded-lg transition-colors"
-                      title="Ver dados rápidos"
-                    >
-                      <Info className="w-3.5 h-3.5" />
-                    </button>
-                    <span className="flex items-center gap-1 text-xs font-medium text-green-600 group-hover:gap-2 transition-all">
-                      Abrir <ChevronRight className="w-4 h-4" />
-                    </span>
-                  </div>
+          {projetosFinalizados.length > 0 && (
+            <div>
+              {filtro !== 'CONCLUIDO' ? (
+                <button
+                  onClick={() => setMostrarFinalizados(v => !v)}
+                  className="w-full flex items-center justify-between px-4 py-2.5 text-xs text-gray-400 hover:text-gray-600 bg-gray-50 hover:bg-gray-100 border border-gray-100 rounded-xl transition-colors"
+                >
+                  <span>
+                    {projetosFinalizados.length} finalizado(s) sem seguir para outra etapa — {mostrarFinalizados ? 'ocultar' : 'ver'}
+                  </span>
+                  <ChevronRight className={`w-4 h-4 transition-transform ${mostrarFinalizados ? 'rotate-90' : ''}`} />
+                </button>
+              ) : null}
+              {(mostrarFinalizados || filtro === 'CONCLUIDO') && (
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 mt-3">
+                  {projetosFinalizados.map(p => renderCard(p, true))}
                 </div>
-              </Link>
-            )
-          })}
+              )}
+            </div>
+          )}
         </div>
       )}
 

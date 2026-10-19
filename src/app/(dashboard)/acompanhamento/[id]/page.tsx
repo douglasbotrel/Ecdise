@@ -11,6 +11,7 @@ import {
   Pencil, Save,
 } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
+import ExcluirProjetoButton from '@/components/ExcluirProjetoButton'
 
 // ── Categorização visual das pendências (calculada a partir de status + prazo) ──
 type CategoriaPendencia = 'ativa' | 'a_vencer' | 'atrasada' | 'respondida'
@@ -461,14 +462,22 @@ export default function AcompanhamentoDetalhe() {
             </div>
           </div>
 
-          {!licenciado && (
-            <button
-              onClick={abrirModalLicenca}
-              className="flex items-center justify-center gap-2 px-4 py-2.5 bg-green-600 hover:bg-green-700 text-white rounded-xl text-sm font-semibold transition-colors w-full sm:w-auto"
-            >
-              <Award className="w-4 h-4" /> Licença Concedida
-            </button>
-          )}
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            {!licenciado && (
+              <button
+                onClick={abrirModalLicenca}
+                className="flex items-center justify-center gap-2 px-4 py-2.5 bg-green-600 hover:bg-green-700 text-white rounded-xl text-sm font-semibold transition-colors flex-1 sm:flex-none"
+              >
+                <Award className="w-4 h-4" /> Licença Concedida
+              </button>
+            )}
+            <ExcluirProjetoButton
+              projetoId={projeto.id}
+              codigo={projeto.codigo}
+              nome={projeto.imovelNome || projeto.cliente?.nome}
+              onDeleted={() => router.push('/acompanhamento')}
+            />
+          </div>
         </div>
       </div>
 
@@ -870,7 +879,7 @@ export default function AcompanhamentoDetalhe() {
           ══════════════════════════════════════════════════════ */}
       {modalPendencia && (
         <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden max-h-[90vh] flex flex-col">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden modal-panel-flex flex flex-col">
             {/* Header */}
             <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 flex-shrink-0">
               <div>
@@ -995,7 +1004,7 @@ export default function AcompanhamentoDetalhe() {
           ══════════════════════════════════════════════════════ */}
       {modalLicenca && (
         <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden max-h-[90vh] flex flex-col">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden modal-panel-flex flex flex-col">
             {/* Header */}
             <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 flex-shrink-0">
               <div>

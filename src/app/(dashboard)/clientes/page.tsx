@@ -319,7 +319,7 @@ export default function ClientesPage() {
       {/* ── Modal de cadastro/edição ─────────────────────────── */}
       {modalOpen && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={fecharModal}>
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg modal-panel" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 sticky top-0 bg-white z-10">
               <p className="font-bold text-gray-900">{clienteSelecionado ? 'Editar Cliente' : 'Novo Cliente'}</p>
               <button onClick={fecharModal} className="text-gray-400 hover:text-gray-600">
@@ -397,7 +397,7 @@ export default function ClientesPage() {
       {/* Modal de edição de fazenda */}
       {fazendaEditando && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setFazendaEditando(null)}>
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md" onClick={e => e.stopPropagation()}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md modal-panel" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
               <p className="font-bold text-gray-900">Editar Fazenda</p>
               <button onClick={() => setFazendaEditando(null)} className="text-gray-400 hover:text-gray-600">

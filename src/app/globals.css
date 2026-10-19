@@ -101,3 +101,20 @@
 .status-badge {
   @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
 }
+
+/* ── Pop-ups (modais) no celular ────────────────────────────────────────────
+   Altura limitada à área realmente visível da tela (dvh desconta a barra do
+   navegador no celular; vh antigo é o fallback) e rolagem interna, para o
+   botão de salvar/confirmar nunca ficar fora de alcance. */
+.modal-panel {
+  max-height: 90vh;
+  max-height: calc(100dvh - 2rem);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+.modal-panel-flex {
+  max-height: 90vh;
+  max-height: calc(100dvh - 2rem);
+  overscroll-behavior: contain;
+}
