@@ -22,6 +22,11 @@ export async function GET(request: NextRequest) {
     if (solicitadasCampo === 'true') {
       where.requerVistoriaCampo = true
       where.statusVistoria = 'SOLICITADA'
+      // Só o que ainda está em aberto: tarefa já concluída/cancelada significa que a
+      // vistoria de campo já foi feita (ou deixou de valer) — não pode aparecer como pendente.
+      // Também ignora projetos já encerrados/cancelados.
+      where.status = { notIn: ['CONCLUIDA', 'CANCELADA'] }
+      where.projeto = { excluido: false, etapaPipeline: { notIn: ['CONCLUIDO', 'CANCELADO'] } }
     }
 
     const tarefas = await prisma.tarefa.findMany({

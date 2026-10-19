@@ -27,6 +27,17 @@ export async function GET(request: NextRequest) {
       if (dataFim) where.dataAgendada.lte = new Date(dataFim)
     }
 
+    // Auto-correção de legado: vistoria ainda "Agendada/Em andamento" cuja tarefa de origem
+    // já foi CONCLUÍDA no Operacional → a vistoria de campo obviamente já aconteceu.
+    // Fecha como REALIZADA para sair de "Minhas Vistorias" / Gestão de Campo.
+    await prisma.vistoria.updateMany({
+      where: {
+        status: { in: ['AGENDADA', 'EM_ANDAMENTO'] },
+        tarefa: { status: 'CONCLUIDA' },
+      },
+      data: { status: 'REALIZADA' },
+    }).catch(() => {})
+
     const vistorias = await prisma.vistoria.findMany({
       where,
       include: {

@@ -16,6 +16,10 @@ import {
 import NoteEditor from './NoteEditor'
 import TituloEditor from './TituloEditor'
 import ExcluirProjetoButton from '@/components/ExcluirProjetoButton'
+
+// Indicação de vistoria de campo nas tarefas: desligada por enquanto (módulo de vistorias
+// ainda não está em uso). Mude para true para voltar a exibir o checkbox "Vistoria campo".
+const VISTORIA_CAMPO_ATIVA = false
 import { detectarTarefaEspecial } from '@/lib/tarefaEspecial'
 
 // Estado inline de edição por tarefa
@@ -817,8 +821,8 @@ export default function ProjetoDetalhe() {
                       const totalAtrib     = tarefa.prazo && tarefa.responsavelId
                       const semResponsavel = !tarefa.responsavelId
                       const semPrazo       = !tarefa.prazo && !tarefa.requerVistoriaCampo
-                      const aguardaCampo   = tarefa.requerVistoriaCampo && tarefa.statusVistoria === 'SOLICITADA'
-                      const campoAgendado  = tarefa.requerVistoriaCampo && tarefa.statusVistoria === 'AGENDADA'
+                      const aguardaCampo   = tarefa.requerVistoriaCampo && tarefa.statusVistoria === 'SOLICITADA' && tarefa.status !== 'CONCLUIDA'
+                      const campoAgendado  = tarefa.requerVistoriaCampo && tarefa.statusVistoria === 'AGENDADA' && tarefa.status !== 'CONCLUIDA'
 
                       // Status visual da linha
                       const statusCor = campoAgendado ? 'bg-green-500'
@@ -955,7 +959,9 @@ export default function ProjetoDetalhe() {
                                       </select>
                                     </div>
 
-                                    {/* Vistoria de campo */}
+                                    {/* Vistoria de campo — desligada por enquanto (VISTORIA_CAMPO_ATIVA).
+                                        Tarefas que já estavam marcadas continuam mostrando, para poder desmarcar. */}
+                                    {(VISTORIA_CAMPO_ATIVA || tarefa.requerVistoriaCampo) && (
                                     <div className="flex flex-col gap-1 justify-end">
                                       <label className="text-xs text-gray-500 font-medium invisible">.</label>
                                       <label className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm cursor-pointer select-none border transition-colors ${
@@ -972,6 +978,7 @@ export default function ProjetoDetalhe() {
                                         Vistoria campo
                                       </label>
                                     </div>
+                                    )}
 
                                     {/* Botões Salvar / Cancelar */}
                                     <div className="flex flex-col gap-1 justify-end">
