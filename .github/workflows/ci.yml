@@ -1,0 +1,35 @@
+name: CI
+
+# Roda em todo push e pull request: checagem de tipos, testes e auditoria
+# de dependências. Não faz deploy nem mexe em banco.
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  verificar:
+    runs-on: ubuntu-latest
+    env:
+      TZ: America/Sao_Paulo
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Instalar dependências
+        run: npm ci
+
+      - name: Checagem de tipos
+        run: npm run typecheck
+
+      - name: Testes
+        run: npm test
+
+      - name: Auditoria de dependências (produção)
+        # Informativo enquanto o Next.js não for atualizado (ver docs/publicar-melhorias.md)
+        continue-on-error: true
+        run: npm audit --omit=dev --audit-level=high
