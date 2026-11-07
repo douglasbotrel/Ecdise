@@ -33,23 +33,34 @@ export async function GET(request: NextRequest) {
       where: { semanaInicio: { gte: inicio } },
       include: {
         usuario: { select: { id: true, nome: true } },
-        tarefa: { select: { status: true } },
-        acaoPendencia: { select: { concluida: true } },
-        condicionanteLicenca: { select: { concluida: true } },
+        tarefa: { select: { status: true, dataConclusao: true } },
+        acaoPendencia: { select: { concluida: true, dataConclusao: true } },
+        condicionanteLicenca: { select: { concluida: true, dataConclusao: true } },
       },
     })
 
+    // Cumprida = concluída ATÉ o fim da semana planejada (domingo 23:59, com
+    // 1 dia de tolerância para fuso/lançamento). Concluir semanas depois não conta.
+    const TOLERANCIA_MS = 24 * 60 * 60 * 1000
+    function noPrazoDaSemana(semanaInicio: Date, dataConclusao: Date | null | undefined) {
+      if (!dataConclusao) return false
+      const fimSemana = new Date(semanaInicio).getTime() + 7 * 24 * 60 * 60 * 1000 + TOLERANCIA_MS
+      return new Date(dataConclusao).getTime() < fimSemana
+    }
+
     const porUsuario: Record<string, { nome: string; planejadas: number; concluidas: number }> = {}
     for (const r of registros) {
+      // Tarefa cancelada não conta como planejada nem como cumprida
+      if (r.tipo === 'TAREFA' && r.tarefa?.status === 'CANCELADA') continue
       if (!porUsuario[r.usuarioId]) {
         porUsuario[r.usuarioId] = { nome: r.usuario.nome, planejadas: 0, concluidas: 0 }
       }
       porUsuario[r.usuarioId].planejadas++
       const concluida = r.tipo === 'PENDENCIA'
-        ? r.acaoPendencia?.concluida
+        ? !!r.acaoPendencia?.concluida && noPrazoDaSemana(r.semanaInicio, r.acaoPendencia.dataConclusao)
         : r.tipo === 'CONDICIONANTE_LICENCA'
-          ? r.condicionanteLicenca?.concluida
-          : r.tarefa?.status === 'CONCLUIDA'
+          ? !!r.condicionanteLicenca?.concluida && noPrazoDaSemana(r.semanaInicio, r.condicionanteLicenca.dataConclusao)
+          : r.tarefa?.status === 'CONCLUIDA' && noPrazoDaSemana(r.semanaInicio, r.tarefa.dataConclusao)
       if (concluida) porUsuario[r.usuarioId].concluidas++
     }
 

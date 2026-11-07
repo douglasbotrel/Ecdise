@@ -59,7 +59,11 @@ export default function LoginPage() {
       }
 
       toast.success(`Bem-vindo, ${data.usuario.nome}!`)
-      window.location.href = '/dashboard'
+      // Volta para a página de origem (só caminhos internos, nunca outro site)
+      const destino = new URLSearchParams(window.location.search).get('redirect') || ''
+      window.location.href = destino.startsWith('/') && !destino.startsWith('//') && !destino.startsWith('/login')
+        ? destino
+        : '/dashboard'
     } catch {
       toast.error('Erro ao conectar com o servidor')
     } finally {

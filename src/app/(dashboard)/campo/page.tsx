@@ -7,8 +7,9 @@ import {
   Users, Truck, DollarSign, ChevronLeft, ChevronRight,
   Trash2, Edit2, Save, Car
 } from 'lucide-react'
-import { formatDate, formatCurrency } from '@/lib/utils'
+import { formatDate, formatCurrency, formatDataPura } from '@/lib/utils'
 import { ModalVistoria } from '@/components/modals/ModalVistoria'
+import { confirmar } from '@/components/ui/dialogo'
 
 const STATUS_VISTORIA_LABELS: Record<string, string> = {
   AGENDADA: 'Agendada', EM_ANDAMENTO: 'Em Andamento', REALIZADA: 'Realizada',
@@ -168,7 +169,7 @@ export default function CampoPage() {
   }
 
   async function excluirEquipe(id: string) {
-    if (!confirm('Excluir esta equipe?')) return
+    if (!(await confirmar({ titulo: 'Excluir esta equipe?', textoConfirmar: 'Excluir', perigo: true }))) return
     await fetch(`/api/campo/equipes?id=${id}`, { method: 'DELETE' })
     toast.success('Excluída'); load()
   }
@@ -190,7 +191,7 @@ export default function CampoPage() {
   }
 
   async function excluirFrota(id: string) {
-    if (!confirm('Excluir este veículo?')) return
+    if (!(await confirmar({ titulo: 'Excluir este veículo?', textoConfirmar: 'Excluir', perigo: true }))) return
     await fetch(`/api/campo/frota?id=${id}`, { method: 'DELETE' })
     toast.success('Veículo excluído'); load()
   }
@@ -515,8 +516,8 @@ export default function CampoPage() {
                       <p className="text-sm text-gray-500">{v.projeto?.imovelNome}</p>
                       <div className="flex flex-wrap gap-4 mt-2 text-xs text-gray-400">
                         <span className="flex items-center gap-1"><Calendar className="w-3 h-3" />{formatDate(v.dataAgendada)}</span>
-                        {v.dataSaida && <span>🚀 Saída: {new Date(v.dataSaida).toLocaleDateString('pt-BR')}</span>}
-                        {v.dataVolta && <span>🏁 Volta: {new Date(v.dataVolta).toLocaleDateString('pt-BR')}</span>}
+                        {v.dataSaida && <span>🚀 Saída: {formatDataPura(v.dataSaida)}</span>}
+                        {v.dataVolta && <span>🏁 Volta: {formatDataPura(v.dataVolta)}</span>}
                         {v.diasCampo && <span>⏱ {v.diasCampo}d</span>}
                         {v.municipio && <span className="flex items-center gap-1"><MapPin className="w-3 h-3" />{v.municipio}</span>}
                         {v.responsavel && <span>👤 {v.responsavel.nome}</span>}
@@ -786,7 +787,7 @@ export default function CampoPage() {
                     <span className="text-xs text-gray-500 truncate">{d.vistoria?.titulo}</span>
                   </div>
                   <p className="text-sm text-gray-700">{TIPO_DIARIA_LABELS[d.tipo]} {d.descricao && `· ${d.descricao}`}</p>
-                  <p className="text-xs text-gray-400">{d.usuario?.nome} · {new Date(d.data).toLocaleDateString('pt-BR')}</p>
+                  <p className="text-xs text-gray-400">{d.usuario?.nome} · {formatDataPura(d.data)}</p>
                 </div>
                 <p className="font-bold text-gray-900 text-sm flex-shrink-0">{formatCurrency(d.valor)}</p>
               </div>

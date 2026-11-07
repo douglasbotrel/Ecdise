@@ -11,8 +11,10 @@ import {
 } from 'lucide-react'
 import {
   formatDate, formatCurrency,
-  STATUS_OPERACIONAL_LABELS, STATUS_COLORS, STATUS_TAREFA_LABELS,
-} from '@/lib/utils'
+  STATUS_OPERACIONAL_LABELS, STATUS_COLORS, STATUS_TAREFA_LABELS, hojeISO, formatDataPura, isAtrasada } from '@/lib/utils'
+import { confirmar, pedirTexto } from '@/components/ui/dialogo'
+import SenhaRevelavel from '@/components/SenhaRevelavel'
+import { urlLembrada } from '@/hooks/useFiltrosNaUrl'
 import NoteEditor from './NoteEditor'
 import TituloEditor from './TituloEditor'
 import ExcluirProjetoButton from '@/components/ExcluirProjetoButton'
@@ -128,7 +130,7 @@ export default function ProjetoDetalhe() {
   // Etapas que têm acesso ao módulo Operacional (após primeiro pagamento)
   const ETAPAS_VALIDAS    = ['OPERACIONAL', 'EM_EXECUCAO', 'CONCLUIDO']
   const ROLES_GESTOR      = ['ADMIN', 'GESTOR_GERAL', 'GESTOR_OPERACIONAL', 'SUPERVISOR']
-  const HOJE_STR          = new Date().toISOString().split('T')[0]
+  const HOJE_STR          = hojeISO()
   const MAX_DATE_STR      = `${new Date().getFullYear() + 5}-12-31`
 
   // silent = true: re-busca os dados sem desmontar a tela (usado após salvar uma
@@ -218,7 +220,8 @@ export default function ProjetoDetalhe() {
       return
     }
     const pendentes = (projeto?.tarefas || []).filter((t: any) =>
-      (bulkResponsavelId && !t.responsavelId) || (bulkPrazo && !t.prazo)
+      !['CONCLUIDA', 'CANCELADA'].includes(t.status) &&
+      ((bulkResponsavelId && !t.responsavelId) || (bulkPrazo && !t.prazo))
     )
     const projetoSemResponsavel = bulkResponsavelId && !projeto?.responsavelId
     if (pendentes.length === 0 && !projetoSemResponsavel) {
@@ -227,30 +230,23 @@ export default function ProjetoDetalhe() {
     }
     setSalvandoBulk(true)
     try {
-      const promises: Promise<any>[] = pendentes.map((t: any) =>
-        fetch('/api/tarefas', {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            id: t.id,
-            ...(bulkResponsavelId && !t.responsavelId && { responsavelId: bulkResponsavelId }),
-            ...(!t.requerVistoriaCampo && bulkPrazo && !t.prazo && { prazo: bulkPrazo }),
-          }),
-        })
-      )
-      // Se o projeto ainda não tem responsável, define o do bulk como responsável do projeto
-      if (projetoSemResponsavel) {
-        promises.push(
-          fetch(`/api/projetos/${id}`, {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ responsavelId: bulkResponsavelId }),
-          })
-        )
+      const res = await fetch('/api/tarefas/lote', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          projetoId: id,
+          responsavelId: bulkResponsavelId || undefined,
+          prazo: bulkPrazo || undefined,
+          definirResponsavelProjeto: !!projetoSemResponsavel,
+        }),
+      })
+      const d = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        toast.error(d.error || 'Erro ao aplicar em massa — nenhuma atividade foi alterada')
+        return
       }
-      await Promise.all(promises)
-      toast.success(pendentes.length > 0
-        ? `Atribuição aplicada em ${pendentes.length} tarefa(s)!`
+      toast.success(d.atualizadas > 0
+        ? `Atribuição aplicada em ${d.atualizadas} tarefa(s)!`
         : 'Responsável do projeto atualizado!')
       // Fecha todas as linhas expandidas
       setExpandido({})
@@ -320,7 +316,7 @@ export default function ProjetoDetalhe() {
         const especial = detectarTarefaEspecial(tarefa.titulo)
         if (especial === 'SIGLA' || especial === 'CTF') {
           const creds = projeto?.credenciais ? JSON.parse(projeto.credenciais) : {}
-          setCredForm({ login: creds[especial]?.login || '', senha: creds[especial]?.senha || '' })
+          setCredForm({ login: creds[especial]?.login || '', senha: '' })
           setModalCredencial({ sistema: especial })
         } else if (especial === 'PROTOCOLO') {
           setProtocoloForm({
@@ -335,6 +331,45 @@ export default function ProjetoDetalhe() {
       toast.error('Erro ao atualizar tarefa')
       loadProjeto({ silent: true })
     }
+  }
+
+  // ── Cancelar tarefa que não se aplica (sai do progresso) ─────
+  async function cancelarTarefa(tarefa: any) {
+    const motivo = await pedirTexto({
+      titulo: 'Cancelar atividade',
+      mensagem: `"${tarefa._tituloLimpo || tarefa.titulo}" deixa de contar no progresso do projeto.`,
+      label: 'Motivo',
+      placeholder: 'Ex.: serviço não se aplica a este imóvel',
+      textoConfirmar: 'Cancelar atividade',
+      textoCancelar: 'Voltar',
+      perigo: true,
+      multilinha: true,
+    })
+    if (motivo === null) return
+    try {
+      const res = await fetch('/api/tarefas', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: tarefa.id, status: 'CANCELADA', motivo }),
+      })
+      const d = await res.json().catch(() => ({}))
+      if (!res.ok) { toast.error(d.error || 'Erro ao cancelar atividade'); return }
+      toast.success('Atividade cancelada')
+      loadProjeto({ silent: true })
+    } catch { toast.error('Erro ao cancelar atividade') }
+  }
+
+  async function reabrirTarefa(tarefa: any) {
+    if (!(await confirmar({ titulo: 'Reabrir atividade?', mensagem: 'Ela volta a contar no progresso como pendente.', textoConfirmar: 'Reabrir' }))) return
+    try {
+      const res = await fetch('/api/tarefas', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: tarefa.id, status: 'PENDENTE', observacao: null }),
+      })
+      if (!res.ok) { const d = await res.json().catch(() => ({})); toast.error(d.error || 'Erro ao reabrir'); return }
+      loadProjeto({ silent: true })
+    } catch { toast.error('Erro ao reabrir') }
   }
 
   // ── Salvar credenciais do sistema (SIGLA / CTF / etc.) ────────
@@ -460,7 +495,7 @@ export default function ProjetoDetalhe() {
   // ── Agrupa tarefas por serviço (extrai "[NomeServico] título") ──
   // DEVE ficar antes de qualquer early-return para não violar as Rules of Hooks
   const gruposTarefas = useMemo(() => {
-    const lista: any[] = projeto?.tarefas || []
+    const lista: any[] = (projeto?.tarefas || []).filter((t: any) => t.status !== 'CANCELADA')
     const grupos: Record<string, { servico: string; tarefas: any[] }> = {}
     lista.forEach((t: any) => {
       const m = t.titulo.match(/^\[([^\]]+)\]\s*(.+)$/)
@@ -486,7 +521,9 @@ export default function ProjetoDetalhe() {
   const souAdmin     = currentUser?.role === 'ADMIN'
   // Gestores podem editar em qualquer etapa válida
   const modoEdicao   = emOperacional || (modoGestor && ETAPAS_VALIDAS.includes(projeto.etapaPipeline))
-  const tarefas       = projeto.tarefas || []
+  // Canceladas ficam fora de todas as listas e do progresso; aparecem só no bloco próprio
+  const tarefas       = (projeto.tarefas || []).filter((t: any) => t.status !== 'CANCELADA')
+  const tarefasCanceladas = (projeto.tarefas || []).filter((t: any) => t.status === 'CANCELADA')
 
 
   // Helper para exibir nome completo no select de usuário
@@ -514,7 +551,8 @@ export default function ProjetoDetalhe() {
       {/* ── Header ──────────────────────────────────────────── */}
       <div className="flex flex-col gap-3">
         <button
-          onClick={() => router.push('/operacional')}
+          // Volta para a lista com os filtros que estavam aplicados (U5)
+          onClick={() => router.push(urlLembrada('lista_operacional', '/operacional'))}
           className="flex items-center gap-2 text-gray-500 hover:text-gray-700 font-medium text-sm w-fit"
         >
           <ArrowLeft className="w-4 h-4" />
@@ -863,7 +901,7 @@ export default function ProjetoDetalhe() {
                                 )}
                                 {campoAgendado && (
                                   <span className="text-xs bg-green-50 text-green-700 border border-green-200 px-2 py-0.5 rounded-full font-medium">
-                                    📅 {new Date(tarefa.dataCampo).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}
+                                    📅 {formatDataPura(tarefa.dataCampo, { day: '2-digit', month: 'short' })}
                                   </span>
                                 )}
                                 {tarefa.responsavel ? (
@@ -877,7 +915,7 @@ export default function ProjetoDetalhe() {
                                 )}
                                 {tarefa.prazo && !campoAgendado ? (
                                   <span className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">
-                                    {new Date(tarefa.prazo).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}
+                                    {formatDataPura(tarefa.prazo, { day: '2-digit', month: 'short' })}
                                   </span>
                                 ) : !campoAgendado && !aguardaCampo ? (
                                   <span className="text-xs bg-amber-50 text-amber-500 border border-amber-200 px-2 py-0.5 rounded-full">
@@ -942,7 +980,7 @@ export default function ProjetoDetalhe() {
                                       </div>
                                     ) : (
                                       <span className="text-xs text-green-700 bg-green-50 border border-green-200 px-2.5 py-2 rounded-lg font-medium self-end">
-                                        📅 Campo: {new Date(tarefa.dataCampo).toLocaleDateString('pt-BR')}
+                                        📅 Campo: {formatDataPura(tarefa.dataCampo)}
                                       </span>
                                     )}
 
@@ -1129,7 +1167,7 @@ export default function ProjetoDetalhe() {
                         key={tarefa.id}
                         className={`flex items-start gap-3 p-3 rounded-xl border transition-colors ${
                           tarefa.status === 'CONCLUIDA' ? 'bg-green-50 border-green-100'
-                          : tarefa.status === 'ATRASADA' ? 'bg-red-50 border-red-100'
+                          : (tarefa.status === 'ATRASADA' || isAtrasada(tarefa.prazo)) ? 'bg-red-50 border-red-100'
                           : 'bg-white border-gray-100'
                         }`}
                       >
@@ -1152,7 +1190,9 @@ export default function ProjetoDetalhe() {
                               <span className="text-xs text-gray-400">{tarefa.responsavel.nome}</span>
                             )}
                             {tarefa.prazo && (
-                              <span className="text-xs text-gray-400">{formatDate(tarefa.prazo)}</span>
+                              tarefa.status !== 'CONCLUIDA' && isAtrasada(tarefa.prazo)
+                                ? <span className="text-xs font-semibold text-red-600">⚠ Atrasada · {formatDate(tarefa.prazo)}</span>
+                                : <span className="text-xs text-gray-400">{formatDate(tarefa.prazo)}</span>
                             )}
                             {!tarefa.responsavel && emOperacional && (
                               <span className="text-xs text-amber-500">Sem responsável</span>
@@ -1323,12 +1363,25 @@ export default function ProjetoDetalhe() {
                             </p>
                             <div className="flex gap-2 text-xs text-gray-400 mt-0.5 flex-wrap">
                               {tarefa.responsavel && <span>👤 {tarefa.responsavel.nome}</span>}
-                              {tarefa.prazo && <span>📅 {formatDate(tarefa.prazo)}</span>}
+                              {tarefa.prazo && (isAtrasada(tarefa.prazo)
+                                ? <span className="font-semibold text-red-600">⚠ Atrasada · {formatDate(tarefa.prazo)}</span>
+                                : <span>📅 {formatDate(tarefa.prazo)}</span>)}
                               {!tarefa.responsavel && <span className="text-amber-400">Sem responsável</span>}
                             </div>
                             <NoteEditor tarefaId={tarefa.id} currentNote={tarefa.observacao ?? null} onSaved={() => loadProjeto({ silent: true })} />
                             <TituloEditor tarefaId={tarefa.id} currentTitulo={tarefa.titulo} podeEditar={souAdmin} onSaved={() => loadProjeto({ silent: true })} />
                           </div>
+                          {modoGestor && (
+                            <button
+                              type="button"
+                              onClick={() => cancelarTarefa(tarefa)}
+                              aria-label={`Cancelar atividade ${tarefa._tituloLimpo || tarefa.titulo}`}
+                              title="Cancelar (não se aplica)"
+                              className="text-xs text-gray-400 hover:text-red-600 px-1.5 py-0.5 rounded flex-shrink-0"
+                            >
+                              Cancelar
+                            </button>
+                          )}
                         </div>
                       ))}
                     </div>
@@ -1378,6 +1431,29 @@ export default function ProjetoDetalhe() {
                 )
               })}
             </div>
+          )}
+
+          {tarefasCanceladas.length > 0 && (
+            <details className="mt-4 bg-white rounded-2xl border border-gray-100">
+              <summary className="cursor-pointer px-4 py-3 text-xs font-medium text-gray-500">
+                {tarefasCanceladas.length} atividade(s) cancelada(s) — fora do progresso
+              </summary>
+              <ul className="divide-y divide-gray-50">
+                {tarefasCanceladas.map((t: any) => (
+                  <li key={t.id} className="flex items-start justify-between gap-3 px-4 py-2.5">
+                    <div className="min-w-0">
+                      <p className="text-sm text-gray-400 line-through">{t.titulo}</p>
+                      {t.observacao && <p className="text-xs text-gray-500 mt-0.5">{t.observacao}</p>}
+                    </div>
+                    {modoGestor && (
+                      <button type="button" onClick={() => reabrirTarefa(t)} className="text-xs text-green-700 hover:underline flex-shrink-0">
+                        Reabrir
+                      </button>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </details>
           )}
         </div>
       )}
@@ -1439,18 +1515,18 @@ export default function ProjetoDetalhe() {
       {(() => {
         const creds = projeto.credenciais ? (() => { try { return JSON.parse(projeto.credenciais) } catch { return {} } })() : {}
         const sistemas = Object.keys(creds)
-        if (sistemas.length === 0) return null
+        if (sistemas.length === 0 && !modoGestor) return null
         return (
           <div className="bg-white rounded-2xl border border-gray-100 p-4 sm:p-6">
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-semibold text-gray-900">🔑 Credenciais de Sistemas</h3>
               {modoGestor && (
                 <button
-                  onClick={() => {
-                    const s = prompt('Sistema (ex: SIGLA, CTF, IBAMA):')
+                  onClick={async () => {
+                    const s = await pedirTexto({ titulo: 'Adicionar credencial', label: 'Sistema', placeholder: 'Ex.: SIGLA, CTF, IBAMA', textoConfirmar: 'Continuar' })
                     if (s) {
                       const existing = creds[s.toUpperCase()] || {}
-                      setCredForm({ login: existing.login || '', senha: existing.senha || '' })
+                      setCredForm({ login: existing.login || '', senha: '' })
                       setModalCredencial({ sistema: s.toUpperCase() })
                     }
                   }}
@@ -1468,7 +1544,7 @@ export default function ProjetoDetalhe() {
                     {modoGestor && (
                       <button
                         onClick={() => {
-                          setCredForm({ login: creds[s].login || '', senha: creds[s].senha || '' })
+                          setCredForm({ login: creds[s].login || '', senha: '' })
                           setModalCredencial({ sistema: s })
                         }}
                         className="text-xs text-gray-400 hover:text-gray-600"
@@ -1484,7 +1560,7 @@ export default function ProjetoDetalhe() {
                     </div>
                     <div className="flex items-center gap-2">
                       <span className="text-xs text-gray-400 w-12 flex-shrink-0">Senha:</span>
-                      <span className="text-sm font-mono text-gray-800">{creds[s].senha || '—'}</span>
+                      <SenhaRevelavel projetoId={projeto.id} sistema={s} temSenha={!!creds[s].temSenha} />
                     </div>
                   </div>
                 </div>
@@ -1535,7 +1611,7 @@ export default function ProjetoDetalhe() {
                   type="text"
                   value={credForm.senha}
                   onChange={e => setCredForm(p => ({ ...p, senha: e.target.value }))}
-                  placeholder="Senha definida no cadastro"
+                  placeholder="Em branco = manter a senha atual"
                   className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
                 />
               </div>

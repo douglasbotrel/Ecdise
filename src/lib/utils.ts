@@ -3,13 +3,63 @@ import { twMerge } from 'tailwind-merge'
 import { format, formatDistanceToNow, isAfter, isBefore } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 
+// ── Datas sem hora ("data pura") ─────────────────────────────────────────────
+// Prazos, vencimentos e datas de campo são gravados como meia-noite UTC
+// (ex.: 2026-11-10T00:00:00.000Z). Em São Paulo (UTC-3) isso viraria 09/11 às
+// 21h. dataPura() reinterpreta esses valores como a data do calendário local.
+export function dataPura(date: Date | string | null | undefined): Date | null {
+  if (!date) return null
+  if (typeof date === "string" && /^d{4}-d{2}-d{2}$/.test(date)) {
+    const [y, m, d] = date.split("-").map(Number)
+    return new Date(y, m - 1, d)
+  }
+  const dt = new Date(date)
+  if (isNaN(dt.getTime())) return null
+  if (dt.getUTCHours() === 0 && dt.getUTCMinutes() === 0 && dt.getUTCSeconds() === 0 && dt.getUTCMilliseconds() === 0) {
+    return new Date(dt.getUTCFullYear(), dt.getUTCMonth(), dt.getUTCDate())
+  }
+  return dt
+}
+
+// "yyyy-mm-dd" para inputs type=date, sem deslocamento de fuso.
+export function toInputDate(date: Date | string | null | undefined): string {
+  const d = dataPura(date)
+  if (!d) return ""
+  const p = (n: number) => String(n).padStart(2, "0")
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`
+}
+
+// Hoje no fuso de São Paulo, como "yyyy-mm-dd" (vale também no servidor, que roda em UTC).
+export function hojeISO(): string {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date())
+}
+
+// Início do dia de hoje (00:00 local) — use para decidir se algo está atrasado.
+export function inicioDeHoje(): Date {
+  const [y, m, d] = hojeISO().split("-").map(Number)
+  return new Date(y, m - 1, d)
+}
+
+// Vencida = data pura anterior a hoje. Vencer hoje NÃO é atraso.
+export function isAtrasada(date: Date | string | null | undefined): boolean {
+  const d = dataPura(date)
+  return !!d && d < inicioDeHoje()
+}
+
+// Formata data pura em pt-BR sem deslocamento de fuso.
+export function formatDataPura(date: Date | string | null | undefined, opts?: Intl.DateTimeFormatOptions): string {
+  const d = dataPura(date)
+  return d ? d.toLocaleDateString("pt-BR", opts) : "-"
+}
+
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
 export function formatDate(date: Date | string | null): string {
-  if (!date) return '-'
-  return format(new Date(date), 'dd/MM/yyyy', { locale: ptBR })
+  const d = dataPura(date)
+  if (!d) return '-'
+  return format(d, 'dd/MM/yyyy', { locale: ptBR })
 }
 
 export function formatDateTime(date: Date | string | null): string {
@@ -46,8 +96,7 @@ export function truncate(str: string, maxLength: number): string {
 }
 
 export function isExpired(date: Date | string | null): boolean {
-  if (!date) return false
-  return isBefore(new Date(date), new Date())
+  return isAtrasada(date)
 }
 
 export function isExpiringSoon(date: Date | string | null, days = 7): boolean {

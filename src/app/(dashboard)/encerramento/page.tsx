@@ -44,7 +44,7 @@ export default function EncerramentoPage() {
   useEffect(() => {
     async function load() {
       try {
-        const res = await fetch('/api/projetos?statusOperacional=EM_ANDAMENTO')
+        const res = await fetch('/api/projetos?etapas=EM_EXECUCAO&statusOperacionalNot=CANCELADO&limit=300')
         if (!res.ok) throw new Error()
         const data = await res.json()
         const filtrados = data.projetos.filter((p: any) => p.contrato)
@@ -97,12 +97,14 @@ export default function EncerramentoPage() {
       const res = await fetch(`/api/projetos/${projetoId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          statusOperacional: 'CONCLUIDO',
-          dataConclusao: new Date().toISOString(),
-        }),
+        // encerrar: o servidor fecha status, etapa e data de conclusão numa só transação
+        body: JSON.stringify({ encerrar: true }),
       })
-      if (!res.ok) throw new Error()
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}))
+        toast.error(d.error || 'Erro ao encerrar projeto')
+        return
+      }
       toast.success('Projeto encerrado com sucesso!')
       setProjetos(prev => prev.filter(p => p.id !== projetoId))
     } catch {

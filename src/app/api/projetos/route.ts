@@ -15,42 +15,64 @@ export async function GET(request: NextRequest) {
     const responsavelId = searchParams.get('responsavelId')
     const search = searchParams.get('search')
     const emAcompanhamento = searchParams.get('emAcompanhamento')
-    const limit = parseInt(searchParams.get('limit') || '50')
-    const page = parseInt(searchParams.get('page') || '1')
+    const statusOperacional = searchParams.get('statusOperacional')
+    const statusOperacionalNot = searchParams.get('statusOperacionalNot')
+    const limit = Math.min(Math.max(parseInt(searchParams.get('limit') || '50') || 50, 1), 500)
+    const page = Math.max(parseInt(searchParams.get('page') || '1') || 1, 1)
+    // contagem=etapaPipeline|statusOperacional → devolve também o total por valor,
+    // calculado no servidor (os cards não dependem mais da página carregada)
+    const contagem = searchParams.get('contagem')
 
     // suporta múltiplas etapas via "etapas=A,B,C"
     const etapasParam = searchParams.get('etapas')
+    const lista = (v: string) => v.split(',').map(e => e.trim()).filter(Boolean)
 
     const where: any = {}
+    const and: any[] = []
     // Projetos excluídos (soft-delete) nunca aparecem nas listagens normais
     if (searchParams.get('incluirExcluidos') !== 'true') {
       where.excluido = false
     }
     if (statusComercial) where.statusComercial = statusComercial
     if (etapaPipeline) where.etapaPipeline = etapaPipeline
-    if (etapasParam) where.etapaPipeline = { in: etapasParam.split(',').map(e => e.trim()) }
+    if (etapasParam) where.etapaPipeline = { in: lista(etapasParam) }
+    if (statusOperacional) where.statusOperacional = { in: lista(statusOperacional) }
+    if (statusOperacionalNot) and.push({ statusOperacional: { notIn: lista(statusOperacionalNot) } })
     if (clienteId) where.clienteId = clienteId
     if (analistaRapidoId) where.analistaRapidoId = analistaRapidoId
     if (responsavelId) where.responsavelId = responsavelId
     if (emAcompanhamento === 'true')  where.emAcompanhamento = true
     if (emAcompanhamento === 'false') where.emAcompanhamento = false
     if (search) {
-      where.OR = [
-        { codigo: { contains: search } },
-        { imovelNome: { contains: search } },
-        { municipio: { contains: search } },
-        { cliente: { nome: { contains: search } } },
-      ]
+      const termo = { contains: search.trim(), mode: 'insensitive' as const }
+      and.push({
+        OR: [
+          { codigo: termo },
+          { imovelNome: termo },
+          { municipio: termo },
+          { protocoloCodigoOrgao: termo },
+          { cliente: { nome: termo } },
+          { cliente: { cpfCnpj: termo } },
+        ],
+      })
     }
 
     // Restrição por role: analista rápido vê só os seus
     if (user.role === 'ANALISTA_RAPIDO') {
       where.analistaRapidoId = user.id
     } else if (user.role === 'ANALISTA' || user.role === 'TECNICO_CAMPO') {
-      where.responsavelId = user.id
+      // Responsável geral OU responsável por alguma tarefa do projeto
+      delete where.responsavelId
+      and.push({
+        OR: [
+          { responsavelId: user.id },
+          { tarefas: { some: { responsavelId: user.id } } },
+        ],
+      })
     }
+    if (and.length) where.AND = and
 
-    const [projetos, total] = await Promise.all([
+    const [projetosRaw, total] = await Promise.all([
       prisma.projeto.findMany({
         where,
         include: {
@@ -70,7 +92,28 @@ export async function GET(request: NextRequest) {
       prisma.projeto.count({ where }),
     ])
 
-    return NextResponse.json({ projetos, total, page, limit })
+    // Credenciais de órgãos nunca saem na listagem
+    const projetos = projetosRaw.map(({ credenciais, ...p }: any) => ({
+      ...p,
+      temCredenciais: !!credenciais,
+    }))
+
+    let contagens: Record<string, number> | undefined
+    if (contagem === 'etapaPipeline' || contagem === 'statusOperacional') {
+      // Conta sem o filtro do próprio campo agrupado, para que cada card/aba
+      // mostre seu total independente do que está selecionado.
+      const whereContagem: any = { ...where }
+      delete whereContagem[contagem]
+      const grupos = await prisma.projeto.groupBy({
+        by: [contagem],
+        where: whereContagem,
+        _count: { _all: true },
+      })
+      contagens = {}
+      for (const g of grupos as any[]) contagens[g[contagem]] = g._count._all
+    }
+
+    return NextResponse.json({ projetos, total, page, limit, contagens })
   } catch (error) {
     console.error('Erro ao buscar projetos:', error)
     return NextResponse.json({ error: 'Erro interno' }, { status: 500 })
@@ -93,11 +136,23 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Cliente e tipo de serviço são obrigatórios' }, { status: 400 })
     }
 
-    // Código sequencial
-    const count = await prisma.projeto.count()
-    const codigo = `PRJ-${String(count + 1).padStart(4, '0')}`
+    // Código sequencial: parte do maior código existente (não da contagem, que
+    // repete números após exclusões) e tenta de novo se outra criação simultânea
+    // pegar o mesmo número (violação de unique P2002).
+    async function proximoCodigo(): Promise<string> {
+      const ultimos = await prisma.projeto.findMany({
+        where: { codigo: { startsWith: 'PRJ-' } },
+        select: { codigo: true },
+      })
+      const max = ultimos.reduce((m, p) => {
+        const n = parseInt(p.codigo.replace('PRJ-', ''), 10)
+        return Number.isFinite(n) && n > m ? n : m
+      }, 0)
+      return `PRJ-${String(max + 1).padStart(4, '0')}`
+    }
 
-    const projeto = await prisma.projeto.create({
+    async function criar(codigo: string) {
+      return prisma.projeto.create({
       data: {
         codigo,
         clienteId,
@@ -121,6 +176,22 @@ export async function POST(request: NextRequest) {
         analistaRapido: { select: { id: true, nome: true, email: true } },
       },
     })
+    }
+
+    let projeto: any = null
+    let codigo = ''
+    for (let tentativa = 0; tentativa < 5 && !projeto; tentativa++) {
+      codigo = await proximoCodigo()
+      try {
+        projeto = await criar(codigo)
+      } catch (e: any) {
+        if (e?.code !== 'P2002') throw e
+      }
+    }
+    if (!projeto) {
+      return NextResponse.json({ error: 'Não foi possível gerar o código do projeto. Tente novamente.' }, { status: 409 })
+    }
+
 
     // Notifica o analista rápido designado
     if (analistaRapidoId) {
@@ -130,7 +201,7 @@ export async function POST(request: NextRequest) {
           titulo: 'Nova solicitação para análise',
           mensagem: `Projeto ${codigo} — ${imovelNome || tipoServico} (${municipio || 'sem município'}) aguarda sua análise técnica rápida.`,
           tipo: 'info',
-          link: `/comercial`,
+          link: `/comercial?busca=${encodeURIComponent(codigo)}`,
         },
       })
     }

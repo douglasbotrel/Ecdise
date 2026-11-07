@@ -4,6 +4,8 @@ import { useState, useEffect, useRef } from 'react'
 import { toast } from 'sonner'
 import { X, Loader2, Upload, FileText, Trash2, CheckCircle, ArrowRight, DollarSign } from 'lucide-react'
 import { useLockBodyScroll } from '@/hooks/useLockBodyScroll'
+import { toInputDate } from '@/lib/utils'
+import { pedirTexto } from '@/components/ui/dialogo'
 
 const UFS = ['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO']
 
@@ -117,11 +119,15 @@ export function ModalProjeto({ open, onClose, projeto, onSalvo, modoAcao = 'edit
 
   async function excluirProjetoAgora() {
     if (!projeto?.id) return
-    const motivo = window.prompt(
-      `Excluir o projeto ${projeto.codigo || ''} (${projeto.cliente?.nome || projeto.imovelNome || 'sem nome'})?\n\nInforme o motivo da exclusão (obrigatório):`
-    )
+    const motivo = await pedirTexto({
+      titulo: `Excluir o projeto ${projeto.codigo || ''}?`,
+      mensagem: projeto.cliente?.nome || projeto.imovelNome || undefined,
+      label: 'Motivo da exclusão',
+      textoConfirmar: 'Excluir',
+      perigo: true,
+      multilinha: true,
+    })
     if (motivo === null) return // cancelou
-    if (!motivo.trim()) { toast.error('É obrigatório informar o motivo da exclusão'); return }
 
     setExcluindo(true)
     try {
@@ -227,13 +233,13 @@ export function ModalProjeto({ open, onClose, projeto, onSalvo, modoAcao = 'edit
              projeto.tipoServico || ''),
           observacoesContrato: projeto.contrato?.observacoes || '',
           dataAssinaturaContrato: projeto.contrato?.dataAssinatura
-            ? new Date(projeto.contrato.dataAssinatura).toISOString().split('T')[0] : '',
+            ? toInputDate(projeto.contrato.dataAssinatura) : '',
           dataVencimentoContrato: projeto.contrato?.dataVencimento
-            ? new Date(projeto.contrato.dataVencimento).toISOString().split('T')[0] : '',
+            ? toInputDate(projeto.contrato.dataVencimento) : '',
           dataPagamento: projeto.dataAprovacao
-            ? new Date(projeto.dataAprovacao).toISOString().split('T')[0] : '',
+            ? toInputDate(projeto.dataAprovacao) : '',
           responsavelId: projeto.responsavelId || '',
-          dataPrazo: projeto.dataPrazo ? new Date(projeto.dataPrazo).toISOString().split('T')[0] : '',
+          dataPrazo: projeto.dataPrazo ? toInputDate(projeto.dataPrazo) : '',
         }))
         if (projeto.documentos) {
           setArquivos(projeto.documentos.map((d: any) => ({ nome: d.nome, url: d.url })))
@@ -391,9 +397,18 @@ export function ModalProjeto({ open, onClose, projeto, onSalvo, modoAcao = 'edit
       } else if (modoReal === 'financeiro') {
         const contratoSemValor = !projeto?.contrato?.valorTotal || Number(projeto.contrato.valorTotal) <= 0
         if (contratoSemValor) {
-          // Contrato sem valor definido → libera direto para Operacional sem exigir data de pagamento
+          // Contrato sem valor definido → exceção: libera para Operacional com motivo registrado
+          const motivo = await pedirTexto({
+            titulo: 'Liberar contrato sem valor',
+            mensagem: 'Este contrato não tem valor definido. A liberação para a área técnica fica registrada no histórico com o motivo.',
+            label: 'Motivo',
+            textoConfirmar: 'Liberar',
+            multilinha: true,
+          })
+          if (motivo === null) { setLoading(false); return }
           payload = {
             avancarPipeline: true,
+            motivo,
             observacaoTransicao: 'Contrato sem valor definido — liberado diretamente para área técnica',
           }
         } else {

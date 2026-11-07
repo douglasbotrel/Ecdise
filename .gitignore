@@ -50,3 +50,7 @@ next-env.d.ts
 
 # logs locais
 *.log
+*-Douglas.*
+.env-Douglas*
+_remover-douglas-*.ps1
+*.patch

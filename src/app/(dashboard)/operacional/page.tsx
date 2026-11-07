@@ -14,6 +14,7 @@ import {
 import { formatDate, formatCurrency, STATUS_OPERACIONAL_LABELS, STATUS_COLORS } from '@/lib/utils'
 import Link from 'next/link'
 import ExcluirProjetoButton from '@/components/ExcluirProjetoButton'
+import { useFiltrosNaUrl } from '@/hooks/useFiltrosNaUrl'
 
 const FILTROS = [
   { label: 'Todos',        value: '' },
@@ -254,6 +255,7 @@ export default function OperacionalPage() {
   const [loading, setLoading]             = useState(true)
   const [search, setSearch]               = useState('')
   const [filtro, setFiltro]               = useState('')
+  useFiltrosNaUrl({ busca: [search, setSearch], status: [filtro, setFiltro] }, 'lista_operacional')
   // Quick view drawer
   const [quickView, setQuickView]         = useState<any | null>(null)
   useLockBodyScroll(!!quickView)
@@ -311,6 +313,7 @@ export default function OperacionalPage() {
       }
       if (filtro) params.set('statusOperacional', filtro)
       if (search)  params.set('search', search)
+      params.set('limit', '300')
       const res = await fetch(`/api/projetos?${params}`)
       if (!res.ok) throw new Error()
       const data = await res.json()
@@ -331,11 +334,15 @@ export default function OperacionalPage() {
       base.set('etapas', ETAPAS_OPERACIONAL)
       if (search) base.set('search', search)
 
+      // Contagens calculadas no servidor (groupBy), sem depender da página carregada
       const paramsAtivos = new URLSearchParams(base)
       paramsAtivos.set('emAcompanhamento', 'false')
+      paramsAtivos.set('contagem', 'statusOperacional')
+      paramsAtivos.set('limit', '1')
 
       const paramsConcluidos = new URLSearchParams(base)
       paramsConcluidos.set('statusOperacional', 'CONCLUIDO')
+      paramsConcluidos.set('limit', '1')
       // sem emAcompanhamento aqui — conta também os já protocolados/em Acompanhamento
 
       const [resAtivos, resConcluidos] = await Promise.all([
@@ -343,19 +350,16 @@ export default function OperacionalPage() {
         fetch(`/api/projetos?${paramsConcluidos}`),
       ])
       const [dataAtivos, dataConcluidos] = await Promise.all([
-        resAtivos.ok ? resAtivos.json() : { projetos: [] },
-        resConcluidos.ok ? resConcluidos.json() : { projetos: [] },
+        resAtivos.ok ? resAtivos.json() : { contagens: {} },
+        resConcluidos.ok ? resConcluidos.json() : { total: 0 },
       ])
 
-      const porStatus: Record<string, number> = {}
-      for (const p of dataAtivos.projetos || []) {
-        porStatus[p.statusOperacional] = (porStatus[p.statusOperacional] || 0) + 1
-      }
+      const porStatus: Record<string, number> = { ...(dataAtivos.contagens || {}) }
       // "Todos" conta só os projetos em andamento — finalizados ficam na aba Concluído
       const totalTodos = Object.entries(porStatus)
-        .filter(([k]) => k !== 'CONCLUIDO')
+        .filter(([k]) => k !== 'CONCLUIDO' && k !== 'CANCELADO')
         .reduce((a, [, b]) => a + (b as number), 0)
-      porStatus['CONCLUIDO'] = (dataConcluidos.projetos || []).length
+      porStatus['CONCLUIDO'] = dataConcluidos.total || 0
       porStatus[''] = totalTodos
 
       setContagens(porStatus)

@@ -54,30 +54,36 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next()
   }
 
-  // Arquivos estáticos
+  const isApi = pathname.startsWith('/api/')
+
+  // Arquivos estáticos públicos (logo, ícones...). Anexos em /uploads exigem login.
   if (
     pathname.startsWith('/_next') ||
-    pathname.startsWith('/uploads') ||
-    pathname.includes('.')
+    (!isApi && !pathname.startsWith('/uploads') && pathname.includes('.'))
   ) {
     return NextResponse.next()
   }
 
-  const token = request.cookies.get('ecdise_token')?.value
-
-  if (!token) {
-    const loginUrl = new URL('/login', request.url)
-    loginUrl.searchParams.set('redirect', pathname)
-    return NextResponse.redirect(loginUrl)
+  // Sem sessão válida: API responde 401 (a tela trata e leva ao login);
+  // página redireciona para o login lembrando de onde o usuário veio.
+  function semSessao(limparCookie: boolean) {
+    const response = isApi
+      ? NextResponse.json({ error: 'Sessão expirada. Faça login novamente.' }, { status: 401 })
+      : (() => {
+          const loginUrl = new URL('/login', request.url)
+          loginUrl.searchParams.set('redirect', pathname + request.nextUrl.search)
+          return NextResponse.redirect(loginUrl)
+        })()
+    if (limparCookie) response.cookies.delete('ecdise_token')
+    return response
   }
+
+  const token = request.cookies.get('ecdise_token')?.value
+  if (!token) return semSessao(false)
 
   // Verifica assinatura criptográfica — rejeita JWTs forjados
   const payload = await verifyJWT(token)
-  if (!payload) {
-    const response = NextResponse.redirect(new URL('/login', request.url))
-    response.cookies.delete('ecdise_token')
-    return response
-  }
+  if (!payload) return semSessao(true)
 
   // Repassa dados do usuário via headers
   const requestHeaders = new Headers(request.headers)

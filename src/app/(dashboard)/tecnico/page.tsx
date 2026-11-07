@@ -6,7 +6,7 @@ import {
   MapPin, Calendar, Plus, Loader2, CheckCircle2,
   Clock, ChevronDown, ChevronUp, Navigation
 } from 'lucide-react'
-import { formatCurrency } from '@/lib/utils'
+import { formatCurrency, formatDataPura } from '@/lib/utils'
 
 const TIPO_GASTO_LABELS: Record<string, string> = {
   ALIMENTACAO: '🍽️ Alimentação', HOSPEDAGEM: '🏨 Hospedagem',
@@ -214,7 +214,7 @@ function VistoriaCard({ v, expandido, setExpandido, salvando, saidas, setSaidas,
             <div className="flex items-center gap-3 mt-1 text-xs text-gray-500 flex-wrap">
               <span className="flex items-center gap-1"><Navigation className="w-3 h-3" />{v.projeto?.imovelNome || '—'}</span>
               <span className="flex items-center gap-1"><MapPin className="w-3 h-3" />{v.municipio || v.projeto?.municipio || '—'}</span>
-              <span className="flex items-center gap-1"><Calendar className="w-3 h-3" />{new Date(v.dataAgendada).toLocaleDateString('pt-BR')}</span>
+              <span className="flex items-center gap-1"><Calendar className="w-3 h-3" />{formatDataPura(v.dataAgendada)}</span>
               {totalGastos > 0 && <span className="text-green-600 font-medium">💰 {formatCurrency(totalGastos)}</span>}
             </div>
             {v.projeto?.tipoServico && (

@@ -6,6 +6,8 @@ import { Plus, Search, Eye, Edit2, CheckCircle, ArrowRight, Clock, FileText, Fol
 import { formatDate } from '@/lib/utils'
 import { ModalProjeto } from '@/components/modals/ModalProjeto'
 import { ModalDocumentos } from '@/components/modals/ModalDocumentos'
+import { pedirTexto } from '@/components/ui/dialogo'
+import { useFiltrosNaUrl } from '@/hooks/useFiltrosNaUrl'
 
 const ETAPA_LABELS: Record<string, string> = {
   SOLICITACAO:         'Nova Solicitação',
@@ -93,7 +95,12 @@ export default function ComercialPage() {
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [filtroEtapa, setFiltroEtapa] = useState('')
+  useFiltrosNaUrl({ busca: [search, setSearch], etapa: [filtroEtapa, setFiltroEtapa] })
   const [total, setTotal] = useState(0)
+  const [pagina, setPagina] = useState(1)
+  const [contadores, setContadores] = useState<Record<string, number>>({})
+  const [carregandoMais, setCarregandoMais] = useState(false)
+  const POR_PAGINA = 50
   const [modalOpen, setModalOpen] = useState(false)
   const [projetoSelecionado, setProjetoSelecionado] = useState<any>(null)
   const [modoModal, setModoModal] = useState<string>('criar')
@@ -108,20 +115,41 @@ export default function ComercialPage() {
     fetch('/api/auth/me').then(r => r.json()).then(d => setCurrentUser(d.usuario || null))
   }, [])
 
+  const buscar = useCallback(async (pg: number) => {
+    const params = new URLSearchParams()
+    if (filtroEtapa) params.set('etapaPipeline', filtroEtapa)
+    if (search) params.set('search', search)
+    params.set('page', String(pg))
+    params.set('limit', String(POR_PAGINA))
+    // contagem por etapa feita no servidor, sem o filtro de etapa: os cards
+    // não zeram ao clicar e não ficam limitados aos 50 primeiros
+    params.set('contagem', 'etapaPipeline')
+    const res = await fetch(`/api/projetos?${params}`)
+    if (!res.ok) throw new Error()
+    return res.json()
+  }, [filtroEtapa, search])
+
   const load = useCallback(async () => {
     setLoading(true)
     try {
-      const params = new URLSearchParams()
-      if (filtroEtapa) params.set('etapaPipeline', filtroEtapa)
-      if (search) params.set('search', search)
-      const res = await fetch(`/api/projetos?${params}`)
-      if (!res.ok) throw new Error()
-      const data = await res.json()
+      const data = await buscar(1)
       setProjetos(data.projetos)
       setTotal(data.total)
+      setContadores(data.contagens || {})
+      setPagina(1)
     } catch { toast.error('Erro ao carregar projetos') }
     finally { setLoading(false) }
-  }, [filtroEtapa, search])
+  }, [buscar])
+
+  async function carregarMais() {
+    setCarregandoMais(true)
+    try {
+      const data = await buscar(pagina + 1)
+      setProjetos(prev => [...prev, ...data.projetos])
+      setPagina(pagina + 1)
+    } catch { toast.error('Erro ao carregar mais projetos') }
+    finally { setCarregandoMais(false) }
+  }
 
   useEffect(() => {
     const t = setTimeout(load, 300)
@@ -134,11 +162,15 @@ export default function ComercialPage() {
   function abrirDocumentos(projeto: any) { setProjetoDocumentos(projeto); setDocModalOpen(true) }
 
   async function excluirProjeto(projeto: any) {
-    const motivo = window.prompt(
-      `Excluir a solicitação ${projeto.codigo} (${projeto.cliente?.nome || 'sem cliente'})?\n\nInforme o motivo da exclusão (obrigatório):`
-    )
+    const motivo = await pedirTexto({
+      titulo: `Excluir a solicitação ${projeto.codigo}?`,
+      mensagem: projeto.cliente?.nome || undefined,
+      label: 'Motivo da exclusão',
+      textoConfirmar: 'Excluir',
+      perigo: true,
+      multilinha: true,
+    })
     if (motivo === null) return // cancelou
-    if (!motivo.trim()) { toast.error('É obrigatório informar o motivo da exclusão'); return }
 
     setExcluindoId(projeto.id)
     try {
@@ -154,9 +186,6 @@ export default function ComercialPage() {
     finally { setExcluindoId(null) }
   }
 
-  // Contadores por etapa (dos projetos carregados)
-  const contadores: Record<string, number> = {}
-  projetos.forEach(p => { contadores[p.etapaPipeline] = (contadores[p.etapaPipeline] || 0) + 1 })
 
   return (
     <div className="space-y-6">
@@ -286,6 +315,14 @@ export default function ComercialPage() {
                 ))}
               </tbody>
             </table>
+          </div>
+        )}
+        {!loading && projetos.length < total && (
+          <div className="border-t border-gray-100 p-3 text-center">
+            <button type="button" onClick={carregarMais} disabled={carregandoMais}
+              className="text-sm font-medium text-green-700 hover:underline disabled:opacity-50">
+              {carregandoMais ? 'Carregando...' : `Carregar mais (${projetos.length} de ${total})`}
+            </button>
           </div>
         )}
       </div>

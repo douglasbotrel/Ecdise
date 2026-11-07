@@ -4,6 +4,7 @@ import { useLockBodyScroll } from '@/hooks/useLockBodyScroll'
 import { useState, useEffect, useRef } from 'react'
 import { toast } from 'sonner'
 import { X, Upload, FileText, Trash2, ExternalLink, Loader2, FolderOpen } from 'lucide-react'
+import { confirmar } from '@/components/ui/dialogo'
 
 const CATEGORIAS = [
   { value: 'RG',                  label: 'RG',                   cor: 'bg-blue-100 text-blue-700' },
@@ -89,7 +90,7 @@ export function ModalDocumentos({ open, onClose, projeto }: ModalDocumentosProps
   }
 
   async function handleExcluir(docId: string, nome: string) {
-    if (!confirm(`Excluir "${nome}"?`)) return
+    if (!(await confirmar({ titulo: `Excluir "${nome}"?`, textoConfirmar: 'Excluir', perigo: true }))) return
     try {
       const res = await fetch(`/api/documentos/${docId}`, { method: 'DELETE' })
       if (!res.ok) throw new Error()

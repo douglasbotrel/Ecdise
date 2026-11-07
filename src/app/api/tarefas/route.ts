@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { getCurrentUser } from '@/lib/auth'
+import { getCurrentUser, hasPermission } from '@/lib/auth'
 
 const PODE_DEFINIR_DATA_CAMPO = ['ADMIN', 'GESTOR_CAMPO', 'GESTOR_GERAL', 'GESTOR_OPERACIONAL']
 
@@ -100,9 +100,24 @@ export async function PATCH(request: NextRequest) {
     if (!user) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
 
     const body = await request.json()
-    const { id, status, responsavelId, prazo, descricao, observacao, requerVistoriaCampo, dataCampo, titulo } = body
+    const { id, status, responsavelId, prazo, descricao, observacao, requerVistoriaCampo, dataCampo, titulo, motivo } = body
 
     if (!id) return NextResponse.json({ error: 'ID da tarefa é obrigatório' }, { status: 400 })
+
+    const STATUS_VALIDOS = ['PENDENTE', 'EM_ANDAMENTO', 'CONCLUIDA', 'AGUARDANDO', 'CANCELADA']
+    if (status !== undefined && !STATUS_VALIDOS.includes(status)) {
+      return NextResponse.json({ error: 'Status de tarefa inválido' }, { status: 400 })
+    }
+    // Cancelar = "esta tarefa não se aplica". Exige motivo e perfil de gestão,
+    // e a tarefa sai do cálculo de progresso.
+    if (status === 'CANCELADA') {
+      if (!hasPermission(user.role, 'SUPERVISOR')) {
+        return NextResponse.json({ error: 'Apenas supervisores e gestores podem cancelar tarefas' }, { status: 403 })
+      }
+      if (!String(motivo || '').trim()) {
+        return NextResponse.json({ error: 'Informe o motivo do cancelamento' }, { status: 400 })
+      }
+    }
 
     // Busca tarefa atual para checks
     const tarefaAtual = await prisma.tarefa.findUnique({
@@ -143,6 +158,8 @@ export async function PATCH(request: NextRequest) {
       ...(observacao       !== undefined && { observacao: observacao || null }),
       ...(titulo           !== undefined && { titulo: String(titulo).trim() }),
       ...(status === 'CONCLUIDA'         && { dataConclusao: new Date() }),
+      ...((status === 'PENDENTE' || status === 'EM_ANDAMENTO') && { dataConclusao: null }),
+      ...(status === 'CANCELADA'         && { observacao: `Cancelada: ${String(motivo).trim()}` }),
     }
 
     // prazo: operacional pode setar prazo apenas se NÃO for tarefa de campo aguardando definição
@@ -285,8 +302,9 @@ export async function PATCH(request: NextRequest) {
 
     // ── Auto-avanço de pipeline ao concluir tarefas ──────────────────────
     if (updateData.status) {
+      // Tarefas canceladas não contam para o progresso
       const todasTarefas = await prisma.tarefa.findMany({
-        where: { projetoId: tarefaAtual.projetoId },
+        where: { projetoId: tarefaAtual.projetoId, status: { not: 'CANCELADA' } },
         select: { id: true, status: true },
       })
       const totalTarefas  = todasTarefas.length
@@ -298,9 +316,9 @@ export async function PATCH(request: NextRequest) {
       })
 
       if (proj) {
-        if (updateData.status === 'CONCLUIDA') {
+        if (updateData.status === 'CONCLUIDA' || updateData.status === 'CANCELADA') {
           // Primeira tarefa concluída → avança de OPERACIONAL para EM_EXECUCAO
-          if (proj.etapaPipeline === 'OPERACIONAL' && concluidas === 1) {
+          if (updateData.status === 'CONCLUIDA' && proj.etapaPipeline === 'OPERACIONAL' && concluidas === 1) {
             await prisma.projeto.update({
               where: { id: proj.id },
               data: { etapaPipeline: 'EM_EXECUCAO', statusOperacional: 'EM_ANDAMENTO' },
@@ -323,7 +341,7 @@ export async function PATCH(request: NextRequest) {
               data: { statusOperacional: 'CONCLUIDO' },
             })
           }
-        } else if (updateData.status === 'PENDENTE') {
+        } else if (updateData.status === 'PENDENTE' || updateData.status === 'EM_ANDAMENTO') {
           // Desmarcou → se estava CONCLUIDO, volta para EM_ANDAMENTO
           if (proj.statusOperacional === 'CONCLUIDO') {
             await prisma.projeto.update({
@@ -333,6 +351,18 @@ export async function PATCH(request: NextRequest) {
           }
         }
       }
+    }
+
+    if (status === 'CANCELADA') {
+      await prisma.log.create({
+        data: {
+          usuarioId: user.id,
+          acao: 'CANCELAR_TAREFA',
+          entidade: 'Tarefa',
+          entidadeId: id,
+          detalhes: `Tarefa "${tarefaAtual.titulo}" do projeto ${tarefaAtual.projeto?.codigo} cancelada. Motivo: ${String(motivo).trim()}`,
+        },
+      })
     }
 
     return NextResponse.json({ tarefa })

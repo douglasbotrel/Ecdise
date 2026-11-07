@@ -21,6 +21,9 @@ export interface JWTPayload {
   nome: string
   role: string
   departamento: string
+  modulosAcesso?: string | null
+  iat?: number
+  exp?: number
 }
 
 export function signToken(payload: JWTPayload): string {
@@ -54,13 +57,22 @@ export async function getCurrentUser(): Promise<JWTPayload | null> {
     const payload = verifyToken(token)
     if (!payload) return null
 
+    // Perfil, departamento e módulos vêm sempre do banco: uma mudança de perfil
+    // ou desativação vale na hora, sem esperar o token expirar.
     const usuario = await prisma.usuario.findUnique({
       where: { id: payload.id },
-      select: { ativo: true },
+      select: { ativo: true, role: true, departamento: true, nome: true, email: true, modulosAcesso: true },
     })
     if (!usuario || !usuario.ativo) return null
 
-    return payload
+    return {
+      ...payload,
+      role: usuario.role,
+      departamento: usuario.departamento,
+      nome: usuario.nome,
+      email: usuario.email,
+      modulosAcesso: usuario.modulosAcesso,
+    }
   } catch {
     return null
   }

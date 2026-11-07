@@ -10,7 +10,8 @@ import {
   X, Home, Hash, ChevronDown, ChevronUp, AlertTriangle,
   Pencil, Save,
 } from 'lucide-react'
-import { formatDate } from '@/lib/utils'
+import SenhaRevelavel from '@/components/SenhaRevelavel'
+import { formatDate, hojeISO } from '@/lib/utils'
 import ExcluirProjetoButton from '@/components/ExcluirProjetoButton'
 
 // ── Categorização visual das pendências (calculada a partir de status + prazo) ──
@@ -120,7 +121,8 @@ export default function AcompanhamentoDetalhe() {
 
   // ── Salvar credenciais de acesso ao SIGLA (CPF + senha do cliente) ──
   async function salvarCredSigla() {
-    if (!credSiglaForm.login.trim() || !credSiglaForm.senha.trim()) {
+    const jaTemSenha = (() => { try { return !!JSON.parse(projeto?.credenciais || '{}').SIGLA?.temSenha } catch { return false } })()
+    if (!credSiglaForm.login.trim() || (!credSiglaForm.senha.trim() && !jaTemSenha)) {
       toast.error('Preencha CPF e senha')
       return
     }
@@ -149,7 +151,7 @@ export default function AcompanhamentoDetalhe() {
   })
   const [salvandoLicenca, setSalvandoLicenca] = useState(false)
 
-  const HOJE_STR = new Date().toISOString().split('T')[0]
+  const HOJE_STR = hojeISO()
 
   const loadProjeto = useCallback(async () => {
     setLoading(true)
@@ -585,7 +587,7 @@ export default function AcompanhamentoDetalhe() {
             <button
               onClick={() => {
                 const creds = projeto.credenciais ? (() => { try { return JSON.parse(projeto.credenciais) } catch { return {} } })() : {}
-                setCredSiglaForm({ login: creds.SIGLA?.login || '', senha: creds.SIGLA?.senha || '' })
+                setCredSiglaForm({ login: creds.SIGLA?.login || '', senha: '' })
                 setEditandoCredSigla(true)
               }}
               className="flex items-center gap-1 text-xs text-green-600 hover:text-green-700 font-medium"
@@ -609,7 +611,7 @@ export default function AcompanhamentoDetalhe() {
             <input
               value={credSiglaForm.senha}
               onChange={e => setCredSiglaForm(p => ({ ...p, senha: e.target.value }))}
-              placeholder="Senha"
+              placeholder="Senha (em branco = manter a atual)"
               className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
             />
             <div className="sm:col-span-2 flex justify-end gap-2 pt-1">
@@ -633,7 +635,7 @@ export default function AcompanhamentoDetalhe() {
           return creds.SIGLA?.login ? (
             <div className="flex flex-wrap gap-4 text-sm">
               <span><span className="text-gray-400">CPF:</span> <span className="font-mono text-gray-800">{creds.SIGLA.login}</span></span>
-              <span><span className="text-gray-400">Senha:</span> <span className="font-mono text-gray-800">{creds.SIGLA.senha}</span></span>
+              <span><span className="text-gray-400">Senha:</span> <SenhaRevelavel projetoId={projeto.id} sistema="SIGLA" temSenha={!!creds.SIGLA.temSenha} /></span>
             </div>
           ) : (
             <p className="text-sm text-gray-400 italic">

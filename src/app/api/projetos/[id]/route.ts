@@ -1,17 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getCurrentUser } from '@/lib/auth'
+import { podeAvancar, PROXIMA_ETAPA, ROLES_DIRECAO, ROLES_GESTAO_OPERACIONAL } from '@/lib/pipeline'
+import { credenciaisPublicas, mesclarCredenciais } from '@/lib/credenciais'
 
-// Qual etapa vem depois de cada etapa ao "salvar/confirmar"
-const PROXIMA_ETAPA: Record<string, string> = {
-  SOLICITACAO:         'EM_ANALISE_RAPIDA',
-  EM_ANALISE_RAPIDA:   'ANALISE_CONCLUIDA',
-  ANALISE_CONCLUIDA:   'AGUARDANDO_CONTRATO',  // ADM valida → direto para contratos
-  AGUARDANDO_CONTRATO: 'AGUARDANDO_SINAL',      // Contratos elabora → financeiro aguarda sinal
-  AGUARDANDO_SINAL:    'OPERACIONAL',            // Financeiro confirma pagamento → área técnica
-  OPERACIONAL:         'EM_EXECUCAO',
-  EM_EXECUCAO:         'CONCLUIDO',
-}
 
 async function criarNotificacaoEtapa(etapa: string, projeto: any) {
   const notifs: { usuarioId: string; titulo: string; mensagem: string; tipo: string; link: string }[] = []
@@ -28,7 +20,7 @@ async function criarNotificacaoEtapa(etapa: string, projeto: any) {
         titulo: '✅ Análise concluída — aguardando sua validação',
         mensagem: `${base}: análise técnica rápida finalizada. Revise os serviços recomendados e valide para negociação.`,
         tipo: 'success',
-        link: '/comercial',
+        link: `/comercial?busca=${encodeURIComponent(projeto.codigo)}`,
       }))
       break
     }
@@ -68,7 +60,7 @@ async function criarNotificacaoEtapa(etapa: string, projeto: any) {
           titulo: '🚀 Novo projeto operacional',
           mensagem: `${base}: sinal recebido. Atribua um analista e defina o prazo para iniciar.`,
           tipo: 'info',
-          link: '/operacional',
+          link: `/operacional/${projeto.id}`,
         })
       }
       break
@@ -150,7 +142,11 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
       return NextResponse.json({ error: 'Projeto não encontrado' }, { status: 404 })
     }
 
-    return NextResponse.json({ projeto })
+    // Senhas de órgãos nunca saem aqui: a tela recebe só o login e usa
+    // /api/projetos/:id/credenciais para revelar a senha (com registro em log).
+    return NextResponse.json({
+      projeto: { ...projeto, credenciais: credenciaisPublicas(projeto.credenciais) },
+    })
   } catch (error) {
     return NextResponse.json({ error: 'Erro interno' }, { status: 500 })
   }
@@ -167,51 +163,118 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
 
     // Avança pipeline quando o responsável da etapa atual confirma
     const avancarPipeline = body.avancarPipeline === true
+    const encerrar = body.encerrar === true
+    const motivo = String(body.motivo || '').trim()
 
-    // Liberação sem pagamento: apenas ADMIN pode avançar de AGUARDANDO_SINAL → OPERACIONAL sem pagamento
+    // Liberação sem pagamento: apenas a direção pode avançar de AGUARDANDO_SINAL → OPERACIONAL sem pagamento
     if (body.liberarSemPagamento === true) {
-      if (!['ADMIN', 'GESTOR_GERAL'].includes(user.role)) {
+      if (!ROLES_DIRECAO.includes(user.role)) {
         return NextResponse.json({ error: 'Sem permissão para liberar sem pagamento' }, { status: 403 })
       }
       if (projeto.etapaPipeline !== 'AGUARDANDO_SINAL') {
         return NextResponse.json({ error: 'Projeto não está em Aguardando Sinal' }, { status: 400 })
       }
+      if (!motivo) {
+        return NextResponse.json({ error: 'Informe o motivo da liberação sem pagamento' }, { status: 400 })
+      }
+    }
+
+    // Definir a etapa diretamente (salto) é exceção da direção
+    if (body.etapaPipeline && body.etapaPipeline !== projeto.etapaPipeline && !ROLES_DIRECAO.includes(user.role)) {
+      return NextResponse.json({ error: 'Apenas a direção pode alterar a etapa diretamente' }, { status: 403 })
+    }
+
+    // Regras de transição no servidor: quem pode confirmar a etapa atual
+    if (avancarPipeline && PROXIMA_ETAPA[projeto.etapaPipeline]) {
+      if (!podeAvancar(projeto.etapaPipeline, user, projeto)) {
+        return NextResponse.json({ error: 'Você não tem permissão para avançar esta etapa' }, { status: 403 })
+      }
+      // Concluir o projeto é feito pelo Encerramento (encerrar: true)
+      if (projeto.etapaPipeline === 'EM_EXECUCAO') {
+        return NextResponse.json({ error: 'Use o Encerramento para concluir o projeto' }, { status: 400 })
+      }
+    }
+
+    // Saída de AGUARDANDO_SINAL exige pagamento confirmado, ou motivo quando o contrato não tem valor
+    let observacaoSemValor: string | null = null
+    if (avancarPipeline && !body.liberarSemPagamento && projeto.etapaPipeline === 'AGUARDANDO_SINAL') {
+      const contrato = await prisma.contrato.findUnique({
+        where: { projetoId: projeto.id },
+        select: { id: true, valorTotal: true },
+      }).catch(() => null)
+      const semValor = !contrato || !contrato.valorTotal || Number(contrato.valorTotal) <= 0
+      const pagos = contrato ? await prisma.pagamento.count({ where: { contratoId: contrato.id, status: 'PAGO' } }) : 0
+      if (semValor) {
+        if (!motivo) {
+          return NextResponse.json({ error: 'Contrato sem valor: informe o motivo para liberar ao Operacional' }, { status: 400 })
+        }
+        observacaoSemValor = `Contrato sem valor liberado para Operacional por ${user.nome || user.email}. Motivo: ${motivo}`
+      } else if (!body.dataAprovacao && pagos === 0) {
+        return NextResponse.json({ error: 'Confirme o pagamento do sinal (data do pagamento) antes de liberar' }, { status: 400 })
+      }
+    }
+
+    // Status operacional: só gestão operacional ou o responsável pelo projeto
+    if (body.statusOperacional && body.statusOperacional !== projeto.statusOperacional) {
+      const podeStatus = ROLES_GESTAO_OPERACIONAL.includes(user.role) ||
+        [projeto.responsavelId, projeto.gestorResponsavelId].includes(user.id)
+      if (!podeStatus) {
+        return NextResponse.json({ error: 'Sem permissão para alterar o status operacional' }, { status: 403 })
+      }
+    }
+
+    // Concluir (status CONCLUIDO ou encerramento) exige todas as tarefas fechadas
+    if (encerrar || (body.statusOperacional === 'CONCLUIDO' && projeto.statusOperacional !== 'CONCLUIDO')) {
+      if (encerrar && !ROLES_GESTAO_OPERACIONAL.includes(user.role) && projeto.gestorResponsavelId !== user.id) {
+        return NextResponse.json({ error: 'Sem permissão para encerrar o projeto' }, { status: 403 })
+      }
+      const abertas = await prisma.tarefa.count({
+        where: { projetoId: projeto.id, status: { notIn: ['CONCLUIDA', 'CANCELADA'] } },
+      })
+      if (abertas > 0 && !(user.role === 'ADMIN' && body.forcarConclusao === true)) {
+        return NextResponse.json(
+          { error: `Ainda há ${abertas} atividade(s) aberta(s). Conclua ou cancele antes de finalizar.` },
+          { status: 400 }
+        )
+      }
     }
 
     let novaEtapa = projeto.etapaPipeline
-    if ((avancarPipeline || body.liberarSemPagamento) && PROXIMA_ETAPA[projeto.etapaPipeline]) {
+    if (encerrar) {
+      novaEtapa = 'CONCLUIDO'
+    } else if ((avancarPipeline || body.liberarSemPagamento) && PROXIMA_ETAPA[projeto.etapaPipeline]) {
       novaEtapa = PROXIMA_ETAPA[projeto.etapaPipeline]
     } else if (body.etapaPipeline && body.etapaPipeline !== projeto.etapaPipeline) {
       novaEtapa = body.etapaPipeline
     }
 
-    // Histórico de etapa
-    if (novaEtapa !== projeto.etapaPipeline) {
-      await prisma.historicoStatus.create({
-        data: {
-          projetoId: params.id,
-          statusAnterior: projeto.etapaPipeline,
-          statusNovo: novaEtapa,
-          campo: 'etapaPipeline',
-          observacao: body.liberarSemPagamento
-            ? `Liberado para Operacional sem confirmação de pagamento pelo ADM (${user.nome || user.email}). Motivo: ${body.motivo || 'não informado'}`
-            : (body.observacaoTransicao || null),
-          usuarioId: user.id,
-        }
-      }).catch(() => {})
-    }
+    const novoStatusOperacional: string | null = encerrar ? 'CONCLUIDO' : (body.statusOperacional || null)
 
-    // Histórico de statusOperacional
-    if (body.statusOperacional && body.statusOperacional !== projeto.statusOperacional) {
-      await prisma.historicoStatus.create({
-        data: {
-          projetoId: params.id,
-          statusAnterior: projeto.statusOperacional,
-          statusNovo: body.statusOperacional,
-          campo: 'statusOperacional',
-          usuarioId: user.id,
-        }
-      }).catch(() => {})
+    // Históricos gravados na MESMA transação da atualização
+    const historicos: any[] = []
+    if (novaEtapa !== projeto.etapaPipeline) {
+      historicos.push({
+        projetoId: params.id,
+        statusAnterior: projeto.etapaPipeline,
+        statusNovo: novaEtapa,
+        campo: 'etapaPipeline',
+        observacao: body.liberarSemPagamento
+          ? `Liberado para Operacional sem confirmação de pagamento pelo ADM (${user.nome || user.email}). Motivo: ${motivo}`
+          : encerrar
+            ? `Projeto encerrado por ${user.nome || user.email}`
+            : (observacaoSemValor || body.observacaoTransicao || null),
+        usuarioId: user.id,
+      })
+    }
+    if (novoStatusOperacional && novoStatusOperacional !== projeto.statusOperacional) {
+      historicos.push({
+        projetoId: params.id,
+        statusAnterior: projeto.statusOperacional,
+        statusNovo: novoStatusOperacional,
+        campo: 'statusOperacional',
+        observacao: motivo || null,
+        usuarioId: user.id,
+      })
     }
 
     // ── Validações de datas ──────────────────────────────────────────────────
@@ -249,18 +312,34 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
       avancarPipeline &&
       projeto.etapaPipeline === 'OPERACIONAL' &&
       novaEtapa === 'EM_EXECUCAO' &&
-      !body.statusOperacional
+      !novoStatusOperacional
         ? 'EM_ANDAMENTO'
         : null
+    if (autoStatusOperacional && projeto.statusOperacional !== autoStatusOperacional) {
+      historicos.push({
+        projetoId: params.id,
+        statusAnterior: projeto.statusOperacional,
+        statusNovo: autoStatusOperacional,
+        campo: 'statusOperacional',
+        observacao: 'Execução iniciada',
+        usuarioId: user.id,
+      })
+    }
 
-    const projetoAtualizado = await prisma.projeto.update({
+    const credenciaisNovas = body.credenciais !== undefined
+      ? mesclarCredenciais(projeto.credenciais, body.credenciais)
+      : undefined
+
+    const [projetoAtualizado] = await prisma.$transaction([
+      prisma.projeto.update({
       where: { id: params.id },
       data: {
         etapaPipeline: novaEtapa,
         ...(body.statusComercial && { statusComercial: body.statusComercial }),
-        ...((body.statusOperacional || autoStatusOperacional) && {
-          statusOperacional: body.statusOperacional || autoStatusOperacional,
+        ...((novoStatusOperacional || autoStatusOperacional) && {
+          statusOperacional: novoStatusOperacional || autoStatusOperacional,
         }),
+        ...(encerrar && { dataConclusao: projeto.dataConclusao || new Date() }),
         ...(body.tipoServico !== undefined && { tipoServico: body.tipoServico }),
         ...(body.caminhoSIGLA !== undefined && { caminhoSIGLA: body.caminhoSIGLA || null }),
         ...(body.descricao !== undefined && { descricao: body.descricao }),
@@ -274,7 +353,7 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
         ...(body.observacoesAnalise !== undefined && { observacoesAnalise: body.observacoesAnalise }),
         ...(body.servicosRecomendados !== undefined && { servicosRecomendados: body.servicosRecomendados }),
         ...(body.servicosContratados !== undefined && { servicosContratados: body.servicosContratados }),
-        ...(body.credenciais        !== undefined && { credenciais: body.credenciais }),
+        ...(credenciaisNovas        !== undefined && { credenciais: credenciaisNovas }),
         ...(body.valorSinal !== undefined && { valorSinal: body.valorSinal ? parseFloat(body.valorSinal) : null }),
         ...(body.valorPrestacao !== undefined && { valorPrestacao: body.valorPrestacao ? parseFloat(body.valorPrestacao) : null }),
         ...(body.numeroPrestacoes !== undefined && { numeroPrestacoes: body.numeroPrestacoes ? parseInt(body.numeroPrestacoes) : null }),
@@ -297,7 +376,9 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
         analistaRapido: { select: { id: true, nome: true } },
         supervisor: { select: { id: true, nome: true } },
       }
-    })
+    }),
+      ...historicos.map(h => prisma.historicoStatus.create({ data: h })),
+    ])
 
     // Notificações para a nova etapa
     if (novaEtapa !== projeto.etapaPipeline) {
@@ -365,7 +446,9 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
       }
     })
 
-    return NextResponse.json({ projeto: projetoAtualizado })
+    return NextResponse.json({
+      projeto: { ...projetoAtualizado, credenciais: credenciaisPublicas(projetoAtualizado.credenciais) },
+    })
   } catch (error) {
     console.error('Erro ao atualizar projeto:', error)
     return NextResponse.json({ error: 'Erro interno' }, { status: 500 })

@@ -8,6 +8,7 @@ import {
 } from 'lucide-react'
 import { useLockBodyScroll } from '@/hooks/useLockBodyScroll'
 import { detectarTarefaEspecial } from '@/lib/tarefaEspecial'
+import { hojeISO, formatDataPura } from '@/lib/utils'
 
 const ROLES_GESTAO = ['ADMIN', 'GESTOR_GERAL', 'GESTOR_OPERACIONAL', 'GESTOR_ADMINISTRATIVO', 'SUPERVISOR']
 
@@ -29,7 +30,7 @@ function segundaFeiraDaSemana(data: Date): Date {
 }
 
 function formatDataCurta(d: string | Date) {
-  return new Date(d).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })
+  return formatDataPura(d, { day: '2-digit', month: '2-digit' })
 }
 
 function agruparPorProjeto(lista: any[]) {
@@ -228,10 +229,10 @@ export default function TarefasSemanaPage() {
       const res = await fetch(`/api/projetos/${projetoId}`)
       const data = await res.json().catch(() => null)
       const projeto = data?.projeto
-      const hojeStr = new Date().toISOString().split('T')[0]
+      const hojeStr = hojeISO()
       if (tipo === 'SIGLA' || tipo === 'CTF') {
         const creds = projeto?.credenciais ? JSON.parse(projeto.credenciais) : {}
-        setCredForm({ login: creds[tipo]?.login || '', senha: creds[tipo]?.senha || '' })
+        setCredForm({ login: creds[tipo]?.login || '', senha: '' })
       } else if (tipo === 'PROTOCOLO') {
         setProtocoloForm({
           data: projeto?.protocoloData ? projeto.protocoloData.split('T')[0] : hojeStr,

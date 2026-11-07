@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { getCurrentUser } from '@/lib/auth'
+import { exigirModulo } from '@/lib/permissoes'
 
 export async function GET(request: NextRequest) {
   try {
-    const user = await getCurrentUser()
-    if (!user) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
+    const auth = await exigirModulo('financeiro', 'contratos')
+    if (auth instanceof NextResponse) return auth
+    const user = auth
 
     const { searchParams } = new URL(request.url)
     const contratoId = searchParams.get('contratoId')
@@ -56,8 +57,9 @@ export async function GET(request: NextRequest) {
 
 export async function PATCH(request: NextRequest) {
   try {
-    const user = await getCurrentUser()
-    if (!user) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
+    const auth = await exigirModulo('financeiro', 'contratos')
+    if (auth instanceof NextResponse) return auth
+    const user = auth
 
     const body = await request.json()
     const { id, status, dataPagamento, formaPagamento, comprovante, observacoes,
