@@ -45,7 +45,7 @@ Gere `JWT_SECRET` e `NEXTAUTH_SECRET` novos para cada cliente — nunca reaprove
 
 ## Passo 4 — Primeiro deploy
 
-Dispare o deploy (ou ele já roda automático após salvar as variáveis). O comando de build (`prisma generate && prisma db push && next build`) cria todas as tabelas do zero nesse banco novo, sem precisar rodar nenhuma migração manual. Acompanhe o log e confirme que a etapa `prisma db push` terminou sem erro antes de seguir.
+Antes do primeiro deploy, crie as tabelas no banco novo rodando, na sua máquina e com a `DATABASE_URL` do cliente, `npx prisma migrate deploy` (veja `docs/migracoes.md`). O build (`prisma generate && next build`) não altera mais o banco. Depois dispare o deploy e acompanhe o log.
 
 ## Passo 5 — Criar o primeiro usuário (bootstrap)
 

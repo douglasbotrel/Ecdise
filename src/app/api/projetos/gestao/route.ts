@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getCurrentUser } from '@/lib/auth'
+import { hojeISO } from '@/lib/utils'
 
 const ROLES_PERMITIDOS = ['ADMIN', 'GESTOR_GERAL', 'GESTOR_OPERACIONAL']
 
@@ -12,12 +13,15 @@ export async function GET() {
       return NextResponse.json({ error: 'Sem permissão' }, { status: 403 })
     }
 
-    const hoje = new Date()
-    hoje.setHours(23, 59, 59, 999)
+    // Prazos são gravados como meia-noite UTC do dia (data pura). Atrasada é
+    // a tarefa cujo prazo é ANTERIOR a hoje no Brasil — vencer hoje não é atraso.
+    const inicioHoje = new Date(`${hojeISO()}T00:00:00.000Z`)
 
     const projetos = await prisma.projeto.findMany({
       where: {
         etapaPipeline: { in: ['OPERACIONAL', 'EM_EXECUCAO'] },
+        statusOperacional: { notIn: ['CONCLUIDO', 'CANCELADO'] },
+        emAcompanhamento: false,
         excluido: false,
       },
       include: {
@@ -37,11 +41,11 @@ export async function GET() {
     })
 
     const projetosComStats = projetos.map(p => {
-      const tarefas      = p.tarefas
+      const tarefas      = p.tarefas.filter(t => t.status !== 'CANCELADA')
       const total        = tarefas.length
       const concluidas   = tarefas.filter(t => t.status === 'CONCLUIDA').length
       const atrasadas    = tarefas.filter(
-        t => t.status !== 'CONCLUIDA' && t.prazo && new Date(t.prazo) < hoje
+        t => t.status !== 'CONCLUIDA' && t.prazo && new Date(t.prazo) < inicioHoje
       ).length
       const semResponsavel = tarefas.filter(
         t => t.status !== 'CONCLUIDA' && !t.responsavelId

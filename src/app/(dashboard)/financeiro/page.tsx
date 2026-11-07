@@ -6,7 +6,7 @@ import {
   DollarSign, AlertTriangle, CheckCircle, Clock,
   ChevronDown, ChevronRight, Upload, X, ArrowRight, ShieldAlert, AlertCircle, Check,
 } from 'lucide-react'
-import { formatDate, formatCurrency } from '@/lib/utils'
+import { formatDate, formatCurrency, hojeISO } from '@/lib/utils'
 
 const STATUS_PAG: Record<string, string> = {
   PENDENTE: 'Pendente', PAGO: 'Pago', VENCIDO: 'Vencido',
@@ -46,7 +46,7 @@ export default function FinanceiroPage() {
   // Modal pagamento
   const [modalPag, setModalPag]       = useState<ModalPagData | null>(null)
   const [formPag, setFormPag]         = useState({
-    dataPagamento: new Date().toISOString().split('T')[0],
+    dataPagamento: hojeISO(),
     formaPagamento: 'PIX',
     observacoes: '',
     valorRecebido: '',
@@ -107,7 +107,7 @@ export default function FinanceiroPage() {
       projetoId: p.contrato?.projeto?.id,
     })
     setFormPag({
-      dataPagamento: new Date().toISOString().split('T')[0],
+      dataPagamento: hojeISO(),
       formaPagamento: 'PIX',
       observacoes: '',
       valorRecebido: String(p.valor),

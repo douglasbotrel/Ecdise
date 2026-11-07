@@ -10,6 +10,8 @@ import {
 } from 'lucide-react'
 import { TIPOS_LICENCA, infoTipo, normalizarTipoLicenca, ehTipoAgua } from '@/lib/tiposLicenca'
 import { useLockBodyScroll } from '@/hooks/useLockBodyScroll'
+import { hojeISO, formatDataPura } from '@/lib/utils'
+import { confirmar } from '@/components/ui/dialogo'
 
 // Carregado só no navegador — Leaflet precisa do DOM, não funciona em SSR
 const MapaLicencas = dynamic(() => import('@/components/MapaLicencas'), {
@@ -23,7 +25,7 @@ const MapaLicencas = dynamic(() => import('@/components/MapaLicencas'), {
 
 function formatData(d: string | Date | null | undefined) {
   if (!d) return '—'
-  return new Date(d).toLocaleDateString('pt-BR')
+  return formatDataPura(d)
 }
 
 // Converte graus/minutos/segundos para decimal (N e E ficam positivos; S e W, negativos)
@@ -89,7 +91,7 @@ const FORM_VAZIO = {
   clienteId: '',
   numero: '',
   tipo: 'ATIVIDADE' as string,
-  dataEmissao: new Date().toISOString().split('T')[0],
+  dataEmissao: hojeISO(),
   dataValidade: '',
   areaPermitida: '',
   atividadePermitida: '',
@@ -299,7 +301,7 @@ export default function LicencasPage() {
   }
 
   async function excluirCondicionante(itemId: string, descricao: string) {
-    const confirmado = window.confirm(`Excluir a condicionante "${descricao}"? Esta ação não pode ser desfeita.`)
+    const confirmado = await confirmar({ titulo: 'Excluir condicionante?', mensagem: `"${descricao}" será removida. Esta ação não pode ser desfeita.`, textoConfirmar: 'Excluir', perigo: true })
     if (!confirmado) return
     try {
       const res = await fetch(`/api/condicionantes-licenca?id=${itemId}`, { method: 'DELETE' })

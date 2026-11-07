@@ -47,3 +47,10 @@ next-env.d.ts
 *-Douglas.ts
 *-Douglas.prisma
 *.local.prisma
+
+# logs locais
+*.log
+*-Douglas.*
+.env-Douglas*
+_remover-douglas-*.ps1
+*.patch

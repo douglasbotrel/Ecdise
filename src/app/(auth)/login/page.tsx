@@ -14,15 +14,20 @@ export default function LoginPage() {
   const [loading, setLoading]     = useState(false)
   const [lembrar, setLembrar]     = useState(false)
 
-  // Carregar dados salvos ao abrir a página
+  // Carregar o e-mail salvo ao abrir a página. A senha nunca é guardada no navegador;
+  // regravar sem ela limpa senhas salvas por versões anteriores.
   useEffect(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY)
       if (saved) {
-        const { email: e, senha: s } = JSON.parse(saved)
-        if (e) setEmail(e)
-        if (s) setSenha(s)
-        setLembrar(true)
+        const { email: e } = JSON.parse(saved)
+        if (e) {
+          setEmail(e)
+          setLembrar(true)
+          localStorage.setItem(STORAGE_KEY, JSON.stringify({ email: e }))
+        } else {
+          localStorage.removeItem(STORAGE_KEY)
+        }
       }
     } catch {}
   }, [])
@@ -48,13 +53,17 @@ export default function LoginPage() {
 
       // Salvar ou limpar conforme opção
       if (lembrar) {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify({ email, senha }))
+        localStorage.setItem(STORAGE_KEY, JSON.stringify({ email }))
       } else {
         localStorage.removeItem(STORAGE_KEY)
       }
 
       toast.success(`Bem-vindo, ${data.usuario.nome}!`)
-      window.location.href = '/dashboard'
+      // Volta para a página de origem (só caminhos internos, nunca outro site)
+      const destino = new URLSearchParams(window.location.search).get('redirect') || ''
+      window.location.href = destino.startsWith('/') && !destino.startsWith('//') && !destino.startsWith('/login')
+        ? destino
+        : '/dashboard'
     } catch {
       toast.error('Erro ao conectar com o servidor')
     } finally {
@@ -135,7 +144,7 @@ export default function LoginPage() {
                 onChange={e => setLembrar(e.target.checked)}
                 className="w-4 h-4 rounded border-gray-300 text-green-600 focus:ring-green-500 cursor-pointer"
               />
-              <span className="text-sm text-gray-600">Lembrar meus dados</span>
+              <span className="text-sm text-gray-600">Lembrar meu e-mail</span>
             </label>
 
             <button

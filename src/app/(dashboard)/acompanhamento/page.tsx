@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import Link from 'next/link'
+import { formatDataPura } from '@/lib/utils'
 import {
   Search, FileSearch, ChevronRight, MapPin, FileText,
   Award, AlertCircle, Upload, RefreshCw, Clock,
@@ -221,7 +222,7 @@ export default function AcompanhamentoPage() {
                       </span>
                     </td>
                     <td className="px-4 py-2.5 text-sm text-gray-600">
-                      {prazo ? prazo.toLocaleDateString('pt-BR') : '—'}
+                      {prazo ? formatDataPura(prazo) : '—'}
                     </td>
                     <td className={`px-4 py-2.5 text-sm ${corPrazo(dias)}`}>
                       {textoPrazo(dias)}

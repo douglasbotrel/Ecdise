@@ -1,13 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
+import crypto from 'crypto'
 import { prisma } from '@/lib/prisma'
+import { lerCredenciais } from '@/lib/credenciais'
 
 // Autenticação por token fixo — definir SIGLA_BOT_TOKEN nas env vars do Vercel
 function verificarToken(req: NextRequest): boolean {
   const authHeader = req.headers.get('authorization') ?? ''
   const token = authHeader.replace('Bearer ', '').trim()
   const esperado = process.env.SIGLA_BOT_TOKEN
-  if (!esperado) return false
-  return token === esperado
+  if (!esperado || !token) return false
+  const a = Buffer.from(token), b = Buffer.from(esperado)
+  return a.length === b.length && crypto.timingSafeEqual(a, b)
 }
 
 /**
@@ -44,8 +47,7 @@ export async function GET(req: NextRequest) {
     // Filtra apenas os que têm credenciais SIGLA preenchidas
     const resultado = projetos
       .map(p => {
-        let cred: Record<string, Record<string, string>> = {}
-        try { cred = JSON.parse(p.credenciais ?? '{}') } catch {}
+        const cred = lerCredenciais(p.credenciais)
 
         const sigla = cred['SIGLA'] ?? cred['sigla']
         if (!sigla?.login || !sigla?.senha) return null

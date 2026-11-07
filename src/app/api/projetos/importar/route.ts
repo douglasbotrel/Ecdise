@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getCurrentUser } from '@/lib/auth'
+import { gravarCredenciais } from '@/lib/credenciais'
 
 /**
  * POST /api/projetos/importar
@@ -68,7 +69,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Monta credenciais SIGLA em JSON
-    const credenciais = JSON.stringify({
+    const credenciais = gravarCredenciais({
       SIGLA: {
         login: siglaLogin.trim(),
         senha: siglaSenha.trim(),

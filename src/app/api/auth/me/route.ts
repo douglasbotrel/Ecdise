@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getCurrentUser } from '@/lib/auth'
+import { modulosLiberados } from '@/lib/permissoes'
 
 export async function GET() {
   try {
@@ -21,6 +22,7 @@ export async function GET() {
         avatar: true,
         ativo: true,
         criadoEm: true,
+        modulosAcesso: true,
       },
     })
 
@@ -28,7 +30,9 @@ export async function GET() {
       return NextResponse.json({ error: 'Usuário não encontrado' }, { status: 404 })
     }
 
-    return NextResponse.json({ usuario })
+    const { modulosAcesso, ...dados } = usuario
+    // null = sem restrição. O servidor também aplica estas regras nas APIs.
+    return NextResponse.json({ usuario: { ...dados, modulos: modulosLiberados(userPayload) } })
   } catch (error) {
     return NextResponse.json({ error: 'Erro interno' }, { status: 500 })
   }

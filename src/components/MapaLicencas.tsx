@@ -5,6 +5,7 @@ import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import { infoTipo, ehTipoAgua } from '@/lib/tiposLicenca'
+import { formatDataPura } from '@/lib/utils'
 
 // Ícones por tipo de licença — um "pin" em formato de gota (como o marcador
 // padrão), mas com cor e emoji próprios de cada tipo de licença (🌾 atividade,
@@ -43,7 +44,7 @@ function iconePorTipo(tipo: string | null | undefined) {
 
 function formatData(d: string | Date | null | undefined) {
   if (!d) return '—'
-  return new Date(d).toLocaleDateString('pt-BR')
+  return formatDataPura(d)
 }
 
 // Ajusta o zoom/centro pra caber todos os marcadores na tela
