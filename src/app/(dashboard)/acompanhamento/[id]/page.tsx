@@ -102,6 +102,29 @@ export default function AcompanhamentoDetalhe() {
   }
   const [salvandoTipo, setSalvandoTipo] = useState(false)
 
+  // Edição inline do Nº do processo no SIGLA (é o número que o robô procura)
+  const [editandoProtocolo, setEditandoProtocolo] = useState(false)
+  const [novoProtocolo, setNovoProtocolo]         = useState('')
+  const [salvandoProtocolo, setSalvandoProtocolo] = useState(false)
+
+  async function salvarProtocolo() {
+    const valor = novoProtocolo.trim()
+    if (!valor) { toast.error('Informe o Nº do processo'); return }
+    setSalvandoProtocolo(true)
+    try {
+      const res = await fetch(`/api/projetos/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ protocoloCodigoOrgao: valor }),
+      })
+      if (!res.ok) { toast.error('Erro ao salvar'); return }
+      toast.success('Nº do processo atualizado!')
+      setEditandoProtocolo(false)
+      loadProjeto()
+    } catch { toast.error('Erro ao salvar') }
+    finally { setSalvandoProtocolo(false) }
+  }
+
   async function salvarTipoServico() {
     if (!novoTipo.trim()) return
     setSalvandoTipo(true)
@@ -511,11 +534,44 @@ export default function AcompanhamentoDetalhe() {
           </p>
         </div>
         <div className="bg-white rounded-xl border border-gray-100 p-3 sm:p-4">
-          <div className="flex items-center gap-1.5 text-gray-400 mb-1">
-            <Hash className="w-3.5 h-3.5" />
-            <span className="text-xs">Protocolo</span>
+          <div className="flex items-center justify-between gap-1.5 text-gray-400 mb-1">
+            <span className="flex items-center gap-1.5">
+              <Hash className="w-3.5 h-3.5" />
+              <span className="text-xs">Nº do processo (SIGLA)</span>
+            </span>
+            {!editandoProtocolo && (
+              <button
+                onClick={() => { setNovoProtocolo(projeto.protocoloCodigoOrgao || ''); setEditandoProtocolo(true) }}
+                className="flex items-center gap-1 text-xs text-green-600 hover:text-green-700 font-medium"
+                title="Editar Nº do processo"
+              >
+                <Pencil className="w-3 h-3" /> Editar
+              </button>
+            )}
           </div>
-          <p className="font-semibold text-sm text-gray-900 truncate">{projeto.protocoloCodigoOrgao || '—'}</p>
+          {editandoProtocolo ? (
+            <div className="flex flex-col gap-1.5">
+              <input
+                value={novoProtocolo}
+                onChange={e => setNovoProtocolo(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') salvarProtocolo(); if (e.key === 'Escape') setEditandoProtocolo(false) }}
+                placeholder="Ex.: 25100019207/2025"
+                className="w-full px-2 py-1 border border-gray-200 rounded-lg text-sm font-mono focus:outline-none focus:ring-2 focus:ring-green-500"
+                autoFocus
+              />
+              <div className="flex justify-end gap-1.5">
+                <button onClick={() => setEditandoProtocolo(false)} className="px-2 py-1 text-xs font-medium text-gray-500 hover:bg-gray-50 rounded-lg">
+                  Cancelar
+                </button>
+                <button onClick={salvarProtocolo} disabled={salvandoProtocolo}
+                  className="flex items-center gap-1 px-2 py-1 text-xs font-medium bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50">
+                  <Save className="w-3 h-3" /> {salvandoProtocolo ? 'Salvando...' : 'Salvar'}
+                </button>
+              </div>
+            </div>
+          ) : (
+            <p className="font-semibold text-sm text-gray-900 truncate font-mono">{projeto.protocoloCodigoOrgao || '—'}</p>
+          )}
           {projeto.protocoloData && <p className="text-xs text-gray-400 mt-0.5">{formatDate(projeto.protocoloData)}</p>}
         </div>
       </div>
