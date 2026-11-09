@@ -23,9 +23,11 @@ def run(playwright: Playwright) -> None:
     page = context.new_page()
     page.goto("https://sigla.sema.ma.gov.br/sigla/index.jsf")
     page.get_by_role("cell", name="Módulo Empreendedor", exact=True).click()
-    page.locator('[id$=":cpf"]').fill(CPF)
-    page.locator('[id$=":senha"]').fill(SENHA)
-    page.get_by_role("button", name="Acessar").click()
+    # A tela tem dois campos ":cpf" (login e "Registrar") — usa só o formulário que tem senha
+    form = page.locator("form").filter(has=page.locator('[id$=":senha"]')).first
+    form.locator('input[name$=":cpf"]').first.fill(CPF)
+    form.locator('[id$=":senha"]').first.fill(SENHA)
+    form.get_by_role("button", name="Acessar").click()
     page.get_by_role("cell", name="Requerimentos", exact=True).click()
 
     context.close()

@@ -54,3 +54,7 @@ next-env.d.ts
 .env-Douglas*
 _remover-douglas-*.ps1
 *.patch
+
+# Robo SIGLA: prints/HTML de falhas (contem dados de clientes) e saida da ultima execucao
+sigla_checker/falhas/
+sigla_checker/ultima_execucao.txt

@@ -8,7 +8,7 @@ import { formatDataPura } from '@/lib/utils'
 import {
   Search, FileSearch, ChevronRight, MapPin, FileText,
   Award, AlertCircle, Upload, RefreshCw, Clock,
-  X, AlertTriangle, CheckCircle2, HelpCircle,
+  X, AlertTriangle, CheckCircle2, HelpCircle, Bot,
 } from 'lucide-react'
 
 // ── Categoriza pelo status das pendências registradas manualmente ──
@@ -133,6 +133,13 @@ export default function AcompanhamentoPage() {
           </p>
         </div>
         <div className="flex gap-2 w-full sm:w-auto">
+          <Link
+            href="/acompanhamento/robo-sigla"
+            className="flex items-center gap-2 px-4 py-2.5 border border-gray-200 bg-white hover:bg-gray-50 text-gray-700 text-sm font-semibold rounded-xl transition-colors flex-1 sm:flex-none justify-center"
+          >
+            <Bot className="w-4 h-4 text-green-600" />
+            Robô SIGLA
+          </Link>
           <Link
             href="/acompanhamento/importar"
             className="flex items-center gap-2 px-4 py-2.5 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold rounded-xl transition-colors flex-1 sm:flex-none justify-center"
