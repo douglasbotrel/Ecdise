@@ -312,7 +312,7 @@ export async function PATCH(request: NextRequest) {
 
       const proj = await prisma.projeto.findUnique({
         where: { id: tarefaAtual.projetoId },
-        select: { id: true, etapaPipeline: true, statusOperacional: true },
+        select: { id: true, etapaPipeline: true, statusOperacional: true, dataInicio: true },
       })
 
       if (proj) {
@@ -321,17 +321,32 @@ export async function PATCH(request: NextRequest) {
           if (updateData.status === 'CONCLUIDA' && proj.etapaPipeline === 'OPERACIONAL' && concluidas === 1) {
             await prisma.projeto.update({
               where: { id: proj.id },
-              data: { etapaPipeline: 'EM_EXECUCAO', statusOperacional: 'EM_ANDAMENTO' },
-            })
-            await prisma.historicoStatus.create({
               data: {
-                projetoId: proj.id,
-                statusAnterior: 'NAO_INICIADO',
-                statusNovo: 'EM_ANDAMENTO',
-                campo: 'statusOperacional',
-                observacao: 'Iniciado automaticamente ao concluir primeira tarefa',
-                usuarioId: user.id,
+                etapaPipeline: 'EM_EXECUCAO',
+                statusOperacional: 'EM_ANDAMENTO',
+                // início real da execução — usado no KPI "Tempo médio Operacional" do BI
+                ...(!proj.dataInicio && { dataInicio: new Date() }),
               },
+            })
+            await prisma.historicoStatus.createMany({
+              data: [
+                {
+                  projetoId: proj.id,
+                  statusAnterior: 'OPERACIONAL',
+                  statusNovo: 'EM_EXECUCAO',
+                  campo: 'etapaPipeline',
+                  observacao: 'Execução iniciada automaticamente ao concluir a primeira tarefa',
+                  usuarioId: user.id,
+                },
+                {
+                  projetoId: proj.id,
+                  statusAnterior: proj.statusOperacional,
+                  statusNovo: 'EM_ANDAMENTO',
+                  campo: 'statusOperacional',
+                  observacao: 'Iniciado automaticamente ao concluir primeira tarefa',
+                  usuarioId: user.id,
+                },
+              ],
             }).catch(() => {})
           }
           // Todas concluídas → finaliza parte operacional

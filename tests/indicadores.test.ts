@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import {
   chaveDia, chaveMes, hojeDataPura, inicioMesSP, ultimosMeses,
   resumoPagamentos, evolucaoFinanceira, recebidoPorForma,
-  resumoEtapas, contarPorMes, servicosContratados, mediaDias,
+  resumoEtapas, contarPorMes, servicosContratados, mediaDias, inicioExecucao, diasEntre,
   type PagamentoKPI,
 } from '../src/lib/indicadores.ts'
 
@@ -120,4 +120,23 @@ test('média de dias ignora pares inconsistentes e informa a amostra válida', (
   ])
   assert.deepEqual(r, { media: 15, amostra: 2 })
   assert.deepEqual(mediaDias([]), { media: null, amostra: 0 })
+})
+
+test('protocolo no mesmo dia do início conta 0 dias (não é descartado)', () => {
+  // início 14h em SP (17h UTC); protocolo gravado como data pura do mesmo dia
+  assert.equal(diasEntre('2026-09-10T17:00:00.000Z', '2026-09-10T00:00:00.000Z'), 0)
+  assert.equal(diasEntre('2026-09-10T17:00:00.000Z', '2026-09-25T00:00:00.000Z'), 15)
+})
+
+test('início da execução: dataInicio, senão histórico, senão aprovação', () => {
+  const hist = [
+    { campo: 'etapaPipeline', statusNovo: 'OPERACIONAL', criadoEm: '2026-09-01T12:00:00.000Z' },
+    { campo: 'statusOperacional', statusNovo: 'EM_ANDAMENTO', criadoEm: '2026-09-05T12:00:00.000Z' },
+  ]
+  assert.deepEqual(inicioExecucao({ dataInicio: '2026-09-03T12:00:00.000Z' }, hist),
+    { data: new Date('2026-09-03T12:00:00.000Z'), estimado: false })
+  assert.equal(inicioExecucao({}, hist).data?.toISOString(), '2026-09-05T12:00:00.000Z')
+  assert.equal(inicioExecucao({}, hist.slice(0, 1)).data?.toISOString(), '2026-09-01T12:00:00.000Z')
+  assert.equal(inicioExecucao({ dataAprovacao: '2026-08-30T00:00:00.000Z' }, []).data?.toISOString(), '2026-08-30T00:00:00.000Z')
+  assert.deepEqual(inicioExecucao({}, []), { data: null, estimado: false })
 })

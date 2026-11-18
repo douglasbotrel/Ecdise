@@ -363,6 +363,10 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
         ...(body.gestorResponsavelId !== undefined && { gestorResponsavelId: body.gestorResponsavelId || null }),
         ...(body.dataPrazo !== undefined && { dataPrazo: body.dataPrazo ? new Date(body.dataPrazo) : null }),
         ...(body.dataInicio !== undefined && { dataInicio: body.dataInicio ? new Date(body.dataInicio) : null }),
+        // Entrou em execução por qualquer caminho (botão "Iniciar execução", pipeline...)
+        // sem informar a data → marca agora. Usado no KPI "Tempo médio Operacional" do BI.
+        ...(body.dataInicio === undefined && !projeto.dataInicio &&
+            novaEtapa === 'EM_EXECUCAO' && projeto.etapaPipeline !== 'EM_EXECUCAO' && { dataInicio: new Date() }),
         ...(body.dataConclusao !== undefined && { dataConclusao: body.dataConclusao ? new Date(body.dataConclusao) : null }),
         ...(body.dataAprovacao !== undefined && { dataAprovacao: body.dataAprovacao ? new Date(body.dataAprovacao) : null }),
         ...(body.protocoloData !== undefined && { protocoloData: body.protocoloData ? new Date(body.protocoloData) : null }),

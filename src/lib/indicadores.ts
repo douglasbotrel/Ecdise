@@ -205,10 +205,38 @@ export function servicosContratados(projetos: { servicos: string | null; valorCo
     .sort((a, b) => b.qtd - a.qtd || b.valor - a.valor)
 }
 
+// Início da execução de um projeto. Usa dataInicio; para projetos antigos (antes
+// de a data ser gravada em todos os caminhos) recupera pelo histórico de status:
+// 1º entrada em execução → 2º entrada no Operacional (sinal recebido) → 3º dataAprovacao.
+export function inicioExecucao(
+  p: { dataInicio?: Date | string | null; dataAprovacao?: Date | string | null },
+  historico: { campo: string; statusNovo: string; criadoEm: Date | string }[],
+): { data: Date | null; estimado: boolean } {
+  if (p.dataInicio) return { data: new Date(p.dataInicio), estimado: false }
+  const primeiro = (filtro: (h: { campo: string; statusNovo: string }) => boolean) => {
+    const datas = historico.filter(filtro).map(h => new Date(h.criadoEm).getTime())
+    return datas.length ? new Date(Math.min(...datas)) : null
+  }
+  const data =
+    primeiro(h => (h.campo === 'etapaPipeline' && h.statusNovo === 'EM_EXECUCAO') ||
+                  (h.campo === 'statusOperacional' && h.statusNovo === 'EM_ANDAMENTO')) ??
+    primeiro(h => h.campo === 'etapaPipeline' && h.statusNovo === 'OPERACIONAL') ??
+    (p.dataAprovacao ? new Date(p.dataAprovacao) : null)
+  return { data, estimado: data !== null }
+}
+
 // Média em dias entre dois marcos, ignorando pares inconsistentes (fim antes do início).
+// Dias de calendário entre dois marcos (protocolo/emissão são datas puras e o
+// início tem hora: comparar instantes daria negativo quando tudo ocorre no mesmo dia).
+export function diasEntre(inicio: Date | string, fim: Date | string): number {
+  const a = new Date(inicio), b = new Date(fim)
+  if (isNaN(a.getTime()) || isNaN(b.getTime())) return NaN
+  return (Date.parse(chaveDia(b)) - Date.parse(chaveDia(a))) / DIA_MS
+}
+
 export function mediaDias(pares: { inicio: Date | string; fim: Date | string }[]) {
   const dias = pares
-    .map(p => (new Date(p.fim).getTime() - new Date(p.inicio).getTime()) / DIA_MS)
+    .map(p => diasEntre(p.inicio, p.fim))
     .filter(d => Number.isFinite(d) && d >= 0)
   if (dias.length === 0) return { media: null as number | null, amostra: 0 }
   return {

@@ -168,6 +168,7 @@ export default function BIPage() {
             </p>
             <p className="text-[11px] text-gray-300 mt-1">
               {tempos.operacionalAmostra ?? 0} projeto(s) considerado(s)
+              {(tempos.operacionalEstimados ?? 0) > 0 && ` · ${tempos.operacionalEstimados} com início recuperado do histórico`}
             </p>
           </div>
           <div className="bg-white rounded-2xl border border-gray-100 p-5">

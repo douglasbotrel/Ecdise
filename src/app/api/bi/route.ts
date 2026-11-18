@@ -3,7 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { exigirModulo } from '@/lib/permissoes'
 import {
   hojeDataPura, somarDias, resumoPagamentos, evolucaoFinanceira, recebidoPorForma,
-  servicosContratados as agruparServicos, mediaDias,
+  servicosContratados as agruparServicos, mediaDias, inicioExecucao, diasEntre,
 } from '@/lib/indicadores'
 import { buscarPagamentosKPI, kpisProjetos } from '@/lib/indicadoresDb'
 
@@ -68,10 +68,16 @@ export async function GET(request: NextRequest) {
 
     // ── Tempos médios (operacional, protocolo→licença, tratativa de pendência) ──
     const [projetosOperacional, projetosComLicenca, pendenciasResolvidas] = await Promise.all([
-      // Do início da execução (dataInicio) até o protocolo no órgão
+      // Do início da execução até o protocolo no órgão (início recuperado pelo histórico quando falta dataInicio)
       prisma.projeto.findMany({
-        where: { dataInicio: { not: null }, protocoloData: { not: null }, excluido: false },
-        select: { dataInicio: true, protocoloData: true },
+        where: { protocoloData: { not: null }, excluido: false },
+        select: {
+          dataInicio: true, dataAprovacao: true, protocoloData: true,
+          historico: {
+            where: { campo: { in: ['etapaPipeline', 'statusOperacional'] } },
+            select: { campo: true, statusNovo: true, criadoEm: true },
+          },
+        },
       }),
       // Do protocolo até a emissão da licença
       prisma.projeto.findMany({
@@ -85,7 +91,11 @@ export async function GET(request: NextRequest) {
       }),
     ])
 
-    const tempoOperacional = mediaDias(projetosOperacional.map(p => ({ inicio: p.dataInicio!, fim: p.protocoloData! })))
+    const paresOperacional = projetosOperacional
+      .map(p => ({ ...inicioExecucao(p, p.historico), fim: p.protocoloData! }))
+      .filter(p => p.data && diasEntre(p.data, p.fim) >= 0)
+    const tempoOperacional = mediaDias(paresOperacional.map(p => ({ inicio: p.data!, fim: p.fim })))
+    const operacionalEstimados = paresOperacional.filter(p => p.estimado).length
     const tempoLicenca = mediaDias(
       projetosComLicenca
         .filter(p => p.licenca?.dataEmissao)
@@ -110,6 +120,7 @@ export async function GET(request: NextRequest) {
       tempos: {
         operacionalDias:    tempoOperacional.media,
         operacionalAmostra: tempoOperacional.amostra,
+        operacionalEstimados,
         licencaDias:        tempoLicenca.media,
         licencaAmostra:     tempoLicenca.amostra,
         pendenciaDias:      tempoPendencia.media,
