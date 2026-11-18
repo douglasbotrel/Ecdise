@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { exigirModulo } from '@/lib/permissoes'
+import { hojeDataPura, resumoPagamentos } from '@/lib/indicadores'
+import { FILTRO_PAGAMENTO_COBRAVEL } from '@/lib/indicadoresDb'
 
 export async function GET(request: NextRequest) {
   try {
@@ -14,7 +16,12 @@ export async function GET(request: NextRequest) {
 
     const where: any = { contrato: { projeto: { excluido: false } } }
     if (contratoId) where.contratoId = contratoId
-    if (status)     where.status = status
+    if (status === 'VENCIDO') {
+      // "Vencido" não é gravado no banco: é a parcela ainda cobrável cujo vencimento já passou
+      Object.assign(where, FILTRO_PAGAMENTO_COBRAVEL, { dataVencimento: { lt: hojeDataPura() } })
+    } else if (status) {
+      where.status = status
+    }
 
     const pagamentos = await prisma.pagamento.findMany({
       where,
@@ -32,21 +39,24 @@ export async function GET(request: NextRequest) {
     // Os totais SEMPRE consideram todos os status — independente do filtro de
     // aba aplicado acima — para não variarem/zerarem conforme o usuário troca
     // de aba (bug relatado: "Pendente"/"Pago"/"Vencido" mudavam ao trocar de filtro).
-    const whereTotais: any = { contrato: { projeto: { excluido: false } } }
-    if (contratoId) whereTotais.contratoId = contratoId
-    const paraTotais = status
+    // Mesmas regras do Dashboard e do BI (lib/indicadores): parcelas de contrato
+    // com desistência/cancelado não são cobradas; vencer hoje não é vencido.
+    const paraTotais = status || contratoId
       ? await prisma.pagamento.findMany({
-          where: whereTotais,
-          select: { status: true, valor: true, valorRecebido: true, residual: true },
+          where: { contrato: { projeto: { excluido: false } }, ...(contratoId && { contratoId }) },
+          select: {
+            status: true, valor: true, valorRecebido: true, residual: true, dataVencimento: true,
+            contrato: { select: { statusContrato: true, projeto: { select: { etapaPipeline: true } } } },
+          },
         })
       : pagamentos
 
+    const r = resumoPagamentos(paraTotais)
     const totais = {
-      totalPendente: paraTotais.filter(p => p.status === 'PENDENTE').reduce((s, p) => s + p.valor, 0),
-      totalPago:     paraTotais.filter(p => p.status === 'PAGO').reduce((s, p) => s + p.valor, 0)
-                   + paraTotais.filter(p => p.status === 'PARCIAL').reduce((s, p) => s + (p.valorRecebido ?? p.valor), 0),
-      totalVencido:  paraTotais.filter(p => p.status === 'VENCIDO').reduce((s, p) => s + p.valor, 0),
-      totalResidual: paraTotais.filter(p => p.status === 'PARCIAL').reduce((s, p) => s + (p.residual ?? 0), 0),
+      totalPendente: r.totalPendente,
+      totalPago:     r.totalRecebido,
+      totalVencido:  r.totalVencido,
+      totalResidual: r.totalResidual,
     }
 
     return NextResponse.json({ pagamentos, totais })

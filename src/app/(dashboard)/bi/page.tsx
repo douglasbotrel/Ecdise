@@ -22,7 +22,6 @@ function fmtEixo(v: number) {
 }
 
 export default function BIPage() {
-  const [dadosDash, setDadosDash]   = useState<any>(null)
   const [dadosBi, setDadosBi]       = useState<any>(null)
   const [loading, setLoading]       = useState(true)
   const [atualizando, setAtualizando] = useState(false)
@@ -30,12 +29,10 @@ export default function BIPage() {
   async function load() {
     setAtualizando(true)
     try {
-      const [resDash, resBi] = await Promise.all([
-        fetch('/api/dashboard'),
-        fetch('/api/bi'),
-      ])
-      if (resDash.ok) setDadosDash(await resDash.json())
-      if (resBi.ok)   setDadosBi(await resBi.json())
+      // Tudo vem de /api/bi — o /api/dashboard muda conforme o perfil do usuário
+      const resBi = await fetch('/api/bi')
+      if (!resBi.ok) throw new Error()
+      setDadosBi(await resBi.json())
     } catch {
       toast.error('Erro ao carregar dados')
     } finally {
@@ -54,9 +51,9 @@ export default function BIPage() {
     )
   }
 
-  if (!dadosDash) return null
+  if (!dadosBi) return null
 
-  const { estatisticas, porEtapa, evolucaoMensal } = dadosDash
+  const { estatisticas, porEtapa, evolucaoMensal } = dadosBi
 
   const pieData = (porEtapa || [])
     .filter((p: any) => p.count > 0)
@@ -112,12 +109,17 @@ export default function BIPage() {
         <div className="bg-white rounded-xl border border-gray-100 p-5">
           <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Total Recebido</p>
           <p className="text-2xl font-bold text-green-600">{formatCurrency(totaisFinanceiros.totalRecebido ?? 0)}</p>
-          <p className="text-xs text-gray-400 mt-1">{totaisFinanceiros.qtdRecebido ?? 0} pagamento(s) confirmado(s)</p>
+          <p className="text-xs text-gray-400 mt-1">{totaisFinanceiros.qtdRecebido ?? 0} pagamento(s) recebido(s), integrais ou parciais</p>
         </div>
         <div className="bg-white rounded-xl border border-gray-100 p-5">
           <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">A Receber (Pendente)</p>
           <p className="text-2xl font-bold text-yellow-600">{formatCurrency(totaisFinanceiros.totalPendente ?? 0)}</p>
-          <p className="text-xs text-gray-400 mt-1">{totaisFinanceiros.qtdPendente ?? 0} pagamento(s) em aberto</p>
+          <p className="text-xs text-gray-400 mt-1">{totaisFinanceiros.qtdPendente ?? 0} parcela(s) em aberto (inclui vencidas)</p>
+          {(totaisFinanceiros.totalResidual ?? 0) > 0 && (
+            <p className="text-xs text-orange-600 mt-1">
+              + {formatCurrency(totaisFinanceiros.totalResidual)} de residual em {totaisFinanceiros.qtdResidual} pagamento(s) parcial(is)
+            </p>
+          )}
         </div>
         <div className="bg-white rounded-xl border border-gray-100 p-5">
           <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Vencido</p>
@@ -318,7 +320,7 @@ export default function BIPage() {
       {servicosContratados.length > 0 && (
         <div className="bg-white rounded-2xl border border-gray-100 p-6">
           <h3 className="font-semibold text-gray-900 mb-1">Serviços Mais Contratados</h3>
-          <p className="text-xs text-gray-400 mb-4">Baseado nos serviços registrados em projetos ativos e concluídos</p>
+          <p className="text-xs text-gray-400 mb-4">Projetos não cancelados; o valor de cada contrato é rateado entre os serviços dele</p>
           <div className="space-y-3">
             {servicosContratados.map((item: any, i: number) => {
               const max = servicosContratados[0]?.qtd ?? 1

@@ -275,10 +275,10 @@ function ViewGestorOperacional({ dados }: { dados: any }) {
             <div className="w-full bg-gray-100 rounded-full h-2">
               <div className={`h-2 rounded-full transition-all ${eficienciaBar}`} style={{ width: `${taxaEficiencia ?? 0}%` }} />
             </div>
-            <p className="text-xs text-gray-400">{tarefasConcluidas ?? 0} concluídas de {(tarefasConcluidas ?? 0) + (tarefasTotais ?? 0)} no mês</p>
+            <p className="text-xs text-gray-400">{tarefasConcluidas ?? 0} concluídas no mês × {tarefasTotais ?? 0} ainda em aberto</p>
           </div>
           <div className="flex flex-col justify-center border-l border-gray-100 pl-6">
-            <p className="text-xs text-gray-400 mb-1">Tarefas pendentes (projetos ativos)</p>
+            <p className="text-xs text-gray-400 mb-1">Tarefas em aberto (projetos em operação)</p>
             <p className="text-2xl font-bold text-gray-900">{tarefasTotais ?? 0}</p>
             {(tarefasAtrasadas ?? 0) > 0 && (
               <p className="text-xs text-red-600 mt-1">⚠️ {tarefasAtrasadas} atrasada(s)</p>
@@ -522,6 +522,14 @@ function ViewAdmin({ dados }: { dados: any }) {
     'PROPOSTA_ACEITA', 'AGUARDANDO_CONTRATO', 'EM_CONTRATO', 'AGUARDANDO_SINAL', 'OPERACIONAL', 'EM_EXECUCAO',
   ]
   const etapaMap = Object.fromEntries((porEtapa || []).map((e: any) => [e.etapa, e.count]))
+  // Mesma lista para as fatias e para as cores (antes as cores vinham de outra lista e ficavam trocadas)
+  const pizzaPipeline = (porEtapa || [])
+    .filter((e: any) => e.count > 0 && e.etapa !== 'CONCLUIDO' && e.etapa !== 'CANCELADO')
+    .map((e: any) => ({
+      name: ETAPA_LABELS[e.etapa] || e.etapa,
+      value: e.count,
+      color: ETAPA_CORES[e.etapa] || '#94a3b8',
+    }))
 
   return (
     <div className="space-y-6">
@@ -590,15 +598,11 @@ function ViewAdmin({ dados }: { dados: any }) {
           <ResponsiveContainer width="100%" height={200}>
             <PieChart>
               <Pie
-                data={(porEtapa || []).filter((e: any) => e.count > 0 && e.etapa !== 'CONCLUIDO' && e.etapa !== 'CANCELADO').map((e: any) => ({
-                  name: ETAPA_LABELS[e.etapa] || e.etapa,
-                  value: e.count,
-                  color: ETAPA_CORES[e.etapa] || '#94a3b8',
-                }))}
+                data={pizzaPipeline}
                 cx="50%" cy="50%" innerRadius={45} outerRadius={75} paddingAngle={3} dataKey="value"
               >
-                {(porEtapa || []).filter((e: any) => e.count > 0).map((e: any, i: number) => (
-                  <Cell key={i} fill={ETAPA_CORES[e.etapa] || '#94a3b8'} />
+                {pizzaPipeline.map((e: any, i: number) => (
+                  <Cell key={i} fill={e.color} />
                 ))}
               </Pie>
               <Tooltip formatter={(v: any) => [v, 'Projetos']} />

@@ -1,124 +1,49 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { exigirModulo } from '@/lib/permissoes'
+import {
+  hojeDataPura, somarDias, resumoPagamentos, evolucaoFinanceira, recebidoPorForma,
+  servicosContratados as agruparServicos, mediaDias,
+} from '@/lib/indicadores'
+import { buscarPagamentosKPI, kpisProjetos } from '@/lib/indicadoresDb'
 
-// Filtro reutilizado em toda consulta de Pagamento — ignora projetos excluídos
-const PROJETO_ATIVO = { contrato: { projeto: { excluido: false } } }
-
+// O BI é autossuficiente: não depende de /api/dashboard, que devolve uma visão
+// diferente para cada perfil (um usuário do departamento BI via tudo zerado).
 export async function GET(request: NextRequest) {
   try {
     const auth = await exigirModulo('bi')
     if (auth instanceof NextResponse) return auth
-    const user = auth
 
-    const hoje = new Date()
-    const inicioHoje = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate())
-    const fimSeteDias = new Date(inicioHoje)
-    fimSeteDias.setDate(fimSeteDias.getDate() + 7)
-    fimSeteDias.setHours(23, 59, 59, 999)
+    const hoje = hojeDataPura()
+    const fimSeteDias = somarDias(hoje, 8) // até o fim do 7º dia
 
-    // ── Evolução financeira dos últimos 6 meses ─────────────────────────────
-    const evolucaoFinanceira = []
-
-    for (let i = 5; i >= 0; i--) {
-      const inicioMes = new Date(hoje.getFullYear(), hoje.getMonth() - i, 1)
-      const fimMes   = new Date(hoje.getFullYear(), hoje.getMonth() - i + 1, 0, 23, 59, 59)
-
-      const [recebido, pendente] = await Promise.all([
-        // Recebido: pagamentos com status PAGO e dataPagamento no mês
-        prisma.pagamento.aggregate({
-          where: {
-            status: 'PAGO',
-            dataPagamento: { gte: inicioMes, lte: fimMes },
-            ...PROJETO_ATIVO,
-          },
-          _sum: { valor: true },
-        }),
-        // Pendente: pagamentos ainda PENDENTE com dataVencimento no mês
-        prisma.pagamento.aggregate({
-          where: {
-            status: { in: ['PENDENTE', 'VENCIDO'] },
-            dataVencimento: { gte: inicioMes, lte: fimMes },
-            ...PROJETO_ATIVO,
-          },
-          _sum: { valor: true },
-        }),
-      ])
-
-      evolucaoFinanceira.push({
-        mes: inicioMes.toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' }),
-        recebido: recebido._sum.valor ?? 0,
-        pendente: pendente._sum.valor ?? 0,
-      })
-    }
-
-    // ── Totais gerais ───────────────────────────────────────────────────────
-    const [
-      totalRecebido,
-      totalPendente,
-      totalVencido,
-      pagamentosPorForma,
-    ] = await Promise.all([
-      prisma.pagamento.aggregate({
-        where: { status: 'PAGO', ...PROJETO_ATIVO },
-        _sum: { valor: true },
-        _count: true,
-      }),
-      prisma.pagamento.aggregate({
-        where: { status: 'PENDENTE', ...PROJETO_ATIVO },
-        _sum: { valor: true },
-        _count: true,
-      }),
-      prisma.pagamento.aggregate({
-        where: { status: 'PENDENTE', dataVencimento: { lt: hoje }, ...PROJETO_ATIVO },
-        _sum: { valor: true },
-        _count: true,
-      }),
-      // Distribuição por forma de pagamento
-      prisma.pagamento.groupBy({
-        by: ['formaPagamento'],
-        where: { status: 'PAGO', formaPagamento: { not: null }, ...PROJETO_ATIVO },
-        _sum: { valor: true },
-        _count: true,
-        orderBy: { _sum: { valor: 'desc' } },
+    const [kpis, pagamentos, projetosComServicos] = await Promise.all([
+      kpisProjetos(),
+      buscarPagamentosKPI(),
+      prisma.projeto.findMany({
+        where: { etapaPipeline: { not: 'CANCELADO' }, excluido: false },
+        select: {
+          servicosContratados: true,
+          contrato: { select: { valorTotal: true, servicosContratados: true, statusContrato: true } },
+        },
       }),
     ])
 
-    // ── Distribuição de serviços contratados ────────────────────────────────
-    // Parseia o JSON de cada projeto para contar serviços individualmente
-    const projetosComServicos = await prisma.projeto.findMany({
-      where: {
-        servicosContratados: { not: null },
-        etapaPipeline: { not: 'CANCELADO' },
-        excluido: false,
-      },
-      select: {
-        servicosContratados: true,
-        etapaPipeline: true,
-        contrato: { select: { valorTotal: true } },
-      },
-    })
+    // ── Financeiro ──────────────────────────────────────────────────────────
+    const fin = resumoPagamentos(pagamentos)
 
-    // Agrupa por nome do serviço: quantidade de projetos e valor total de contratos
-    const servicoMap: Record<string, { qtd: number; valor: number }> = {}
-    for (const p of projetosComServicos) {
-      if (!p.servicosContratados) continue
-      let lista: string[] = []
-      try { lista = JSON.parse(p.servicosContratados) } catch { continue }
-      for (const nome of lista) {
-        if (!nome) continue
-        if (!servicoMap[nome]) servicoMap[nome] = { qtd: 0, valor: 0 }
-        servicoMap[nome].qtd += 1
-        servicoMap[nome].valor += p.contrato?.valorTotal ?? 0
-      }
-    }
-    const servicosContratados = Object.entries(servicoMap)
-      .map(([nome, { qtd, valor }]) => ({ nome, qtd, valor }))
-      .sort((a, b) => b.qtd - a.qtd)
+    // ── Serviços contratados (valor do contrato rateado entre seus serviços) ─
+    const servicosContratados = agruparServicos(
+      projetosComServicos
+        .filter(p => !['DESISTENCIA', 'CANCELADO'].includes(p.contrato?.statusContrato ?? ''))
+        .map(p => ({
+          servicos: p.contrato?.servicosContratados || p.servicosContratados,
+          valorContrato: p.contrato?.valorTotal ?? null,
+        }))
+    )
 
     // ── Panorama de Pendências (Acompanhamento de Processos) ────────────────
-    // Considera apenas pendências de projetos atualmente em acompanhamento
-    // (e não excluídos, senão continuariam contando no painel para sempre)
+    // Apenas pendências de projetos em acompanhamento e não excluídos
     const filtroProjetoAcompanhamento = { projeto: { emAcompanhamento: true, excluido: false } }
 
     const [
@@ -131,18 +56,10 @@ export async function GET(request: NextRequest) {
         where: { status: 'ABERTA', ...filtroProjetoAcompanhamento },
       }),
       prisma.pendencia.count({
-        where: {
-          status: 'ABERTA',
-          prazoResposta: { gte: inicioHoje, lte: fimSeteDias },
-          ...filtroProjetoAcompanhamento,
-        },
+        where: { status: 'ABERTA', prazoResposta: { gte: hoje, lt: fimSeteDias }, ...filtroProjetoAcompanhamento },
       }),
       prisma.pendencia.count({
-        where: {
-          status: 'ABERTA',
-          prazoResposta: { lt: inicioHoje },
-          ...filtroProjetoAcompanhamento,
-        },
+        where: { status: 'ABERTA', prazoResposta: { lt: hoje }, ...filtroProjetoAcompanhamento },
       }),
       prisma.pendencia.count({
         where: { status: 'CONCLUIDA', ...filtroProjetoAcompanhamento },
@@ -150,59 +67,39 @@ export async function GET(request: NextRequest) {
     ])
 
     // ── Tempos médios (operacional, protocolo→licença, tratativa de pendência) ──
-    function mediaDias(pares: { inicio: Date; fim: Date }[]): number | null {
-      const dias = pares
-        .map(p => (p.fim.getTime() - p.inicio.getTime()) / 86_400_000)
-        .filter(d => d >= 0)
-      if (dias.length === 0) return null
-      return Math.round((dias.reduce((a, b) => a + b, 0) / dias.length) * 10) / 10
-    }
-
     const [projetosOperacional, projetosComLicenca, pendenciasResolvidas] = await Promise.all([
-      // Tempo médio operacional: do início da execução (dataInicio) até o protocolo no órgão
+      // Do início da execução (dataInicio) até o protocolo no órgão
       prisma.projeto.findMany({
         where: { dataInicio: { not: null }, protocoloData: { not: null }, excluido: false },
         select: { dataInicio: true, protocoloData: true },
       }),
-      // Tempo médio até a licença: do protocolo até a emissão da licença
+      // Do protocolo até a emissão da licença
       prisma.projeto.findMany({
         where: { protocoloData: { not: null }, licenca: { isNot: null }, excluido: false },
         select: { protocoloData: true, licenca: { select: { dataEmissao: true } } },
       }),
-      // Tempo médio de tratativa de pendência: da abertura até a entrega da resposta
+      // Da abertura da pendência até a entrega da resposta
       prisma.pendencia.findMany({
         where: { dataEntrega: { not: null }, projeto: { excluido: false } },
         select: { data: true, dataEntrega: true },
       }),
     ])
 
-    const tempoMedioOperacionalDias = mediaDias(
-      projetosOperacional.map(p => ({ inicio: p.dataInicio!, fim: p.protocoloData! }))
-    )
-    const tempoMedioLicencaDias = mediaDias(
+    const tempoOperacional = mediaDias(projetosOperacional.map(p => ({ inicio: p.dataInicio!, fim: p.protocoloData! })))
+    const tempoLicenca = mediaDias(
       projetosComLicenca
         .filter(p => p.licenca?.dataEmissao)
         .map(p => ({ inicio: p.protocoloData!, fim: p.licenca!.dataEmissao }))
     )
-    const tempoMedioPendenciaDias = mediaDias(
-      pendenciasResolvidas.map(p => ({ inicio: p.data, fim: p.dataEntrega! }))
-    )
+    const tempoPendencia = mediaDias(pendenciasResolvidas.map(p => ({ inicio: p.data, fim: p.dataEntrega! })))
 
     return NextResponse.json({
-      evolucaoFinanceira,
-      totais: {
-        totalRecebido:    totalRecebido._sum.valor   ?? 0,
-        qtdRecebido:      totalRecebido._count,
-        totalPendente:    totalPendente._sum.valor    ?? 0,
-        qtdPendente:      totalPendente._count,
-        totalVencido:     totalVencido._sum.valor     ?? 0,
-        qtdVencido:       totalVencido._count,
-      },
-      pagamentosPorForma: pagamentosPorForma.map(p => ({
-        forma:  p.formaPagamento ?? 'Não informado',
-        valor:  p._sum.valor ?? 0,
-        qtd:    p._count,
-      })),
+      estatisticas: kpis.estatisticas,
+      porEtapa: kpis.porEtapa,
+      evolucaoMensal: kpis.evolucaoMensal,
+      evolucaoFinanceira: evolucaoFinanceira(pagamentos),
+      totais: fin,
+      pagamentosPorForma: recebidoPorForma(pagamentos),
       servicosContratados,
       pendencias: {
         abertas:     pendenciasAbertas,
@@ -211,12 +108,12 @@ export async function GET(request: NextRequest) {
         respondidas: pendenciasRespondidas,
       },
       tempos: {
-        operacionalDias:   tempoMedioOperacionalDias,
-        operacionalAmostra: projetosOperacional.length,
-        licencaDias:        tempoMedioLicencaDias,
-        licencaAmostra:     projetosComLicenca.filter(p => p.licenca?.dataEmissao).length,
-        pendenciaDias:      tempoMedioPendenciaDias,
-        pendenciaAmostra:   pendenciasResolvidas.length,
+        operacionalDias:    tempoOperacional.media,
+        operacionalAmostra: tempoOperacional.amostra,
+        licencaDias:        tempoLicenca.media,
+        licencaAmostra:     tempoLicenca.amostra,
+        pendenciaDias:      tempoPendencia.media,
+        pendenciaAmostra:   tempoPendencia.amostra,
       },
     })
   } catch (error) {

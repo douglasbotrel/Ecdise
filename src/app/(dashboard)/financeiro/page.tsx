@@ -6,7 +6,11 @@ import {
   DollarSign, AlertTriangle, CheckCircle, Clock,
   ChevronDown, ChevronRight, Upload, X, ArrowRight, ShieldAlert, AlertCircle, Check,
 } from 'lucide-react'
-import { formatDate, formatCurrency, hojeISO } from '@/lib/utils'
+import { formatDate, formatCurrency, hojeISO, isAtrasada } from '@/lib/utils'
+import { pagamentoCancelado, pagamentoEmAberto, valorRecebido } from '@/lib/indicadores'
+
+// Parcela ainda cobrável com vencimento anterior a hoje (vencer hoje não é atraso)
+const estaVencido = (p: any) => pagamentoEmAberto(p) && isAtrasada(p.dataVencimento)
 
 const STATUS_PAG: Record<string, string> = {
   PENDENTE: 'Pendente', PAGO: 'Pago', VENCIDO: 'Vencido',
@@ -190,9 +194,11 @@ export default function FinanceiroPage() {
   }
 
   function grupoStatus(pags: any[]) {
-    if (pags.every(p => p.status === 'PAGO')) return 'PAGO'
-    if (pags.some(p => p.status === 'PENDENTE' && new Date(p.dataVencimento) < new Date())) return 'VENCIDO'
-    return 'PENDENTE'
+    if (pags.length > 0 && pags.every(p => pagamentoCancelado(p))) return 'CANCELADO'
+    if (pags.some(estaVencido)) return 'VENCIDO'
+    if (pags.some(p => pagamentoEmAberto(p))) return 'PENDENTE'
+    if (pags.some(p => p.status === 'PARCIAL' && !pagamentoCancelado(p))) return 'PARCIAL'
+    return 'PAGO'
   }
 
   return (
@@ -254,8 +260,9 @@ export default function FinanceiroPage() {
             const { contrato, pagamentos: pags } = grupo
             const expanded    = expandidos.has(key)
             const pagos       = pags.filter(p => p.status === 'PAGO').length
-            const totalValor  = pags.reduce((s, p) => s + p.valor, 0)
-            const totalPago   = pags.filter(p => p.status === 'PAGO').reduce((s, p) => s + p.valor, 0)
+            // Parcelas canceladas (ou de contrato cancelado) só entram se algo foi recebido nelas
+            const totalValor  = pags.filter(p => !pagamentoCancelado(p) || valorRecebido(p) > 0).reduce((s, p) => s + p.valor, 0)
+            const totalPago   = pags.reduce((s, p) => s + valorRecebido(p), 0)
             const status      = grupoStatus(pags)
             const primeiroPendente = pags.find(p => p.status === 'PENDENTE')
 
@@ -344,7 +351,7 @@ export default function FinanceiroPage() {
                       </thead>
                       <tbody className="divide-y divide-gray-50">
                         {pags.map(p => {
-                          const vencido = p.status === 'PENDENTE' && new Date(p.dataVencimento) < new Date()
+                          const vencido = estaVencido(p)
                           return (
                             <tr key={p.id} className={`${vencido ? 'bg-red-50/30' : ''} hover:bg-gray-50/50 transition-colors`}>
                               <td className="px-5 py-3 pl-16 text-sm text-gray-700">{p.descricao}</td>
